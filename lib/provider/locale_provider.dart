@@ -11,15 +11,12 @@ class LocaleProvider with ChangeNotifier {
     _loadLocale(); // Load saved locale on initialization
   }
 
-  // Method to load the saved locale from SharedPreferences
   Future<void> _loadLocale() async {
     final prefs = await SharedPreferences.getInstance();
     final String? languageCode = prefs.getString(_selectedLocaleKey);
     if (languageCode != null && languageCode.isNotEmpty) {
       _locale = Locale(languageCode);
     }
-    // If no locale is saved, _locale remains null, and MaterialApp will use the system default
-    // or the first in supportedLocales if system default is not supported.
     notifyListeners(); // Notify listeners even if no locale was loaded, to trigger initial build
   }
 

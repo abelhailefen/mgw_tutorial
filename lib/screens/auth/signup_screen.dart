@@ -1,8 +1,20 @@
+// lib/screens/auth/signup_screen.dart
 import 'package:flutter/material.dart';
-import 'package:mgw_tutorial/screens/main_screen.dart'; // For navigation
-import 'package:provider/provider.dart';               // For LocaleProvider
-import 'package:mgw_tutorial/provider/locale_provider.dart'; // Your LocaleProvider
-import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // Generated localizations
+import 'package:mgw_tutorial/screens/auth/login_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:mgw_tutorial/provider/locale_provider.dart';
+import 'package:mgw_tutorial/provider/auth_provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+// Widgets from lib/widgets/auth/ (or wherever they are)
+import 'package:mgw_tutorial/widgets/auth/auth_screen_header.dart';
+import 'package:mgw_tutorial/widgets/auth/auth_card_wrapper.dart';
+import 'package:mgw_tutorial/widgets/auth/auth_form_title.dart';
+import 'package:mgw_tutorial/widgets/auth/auth_navigation_link.dart';
+
+// Widgets moved to lib/widgets/
+import 'package:mgw_tutorial/widgets/phone_form_field.dart';
+import 'package:mgw_tutorial/widgets/password_form_field.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -16,11 +28,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
- 
-  final List<String> _languageCodes = ['en', 'am', 'om'];
- 
+  final List<String> _supportedLanguageCodes = ['en', 'am', 'om'];
   bool _isPasswordVisible = false;
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -35,41 +44,60 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
   }
 
-  Future<void> _createAccount() async {
-    final l10n = AppLocalizations.of(context)!; // Get l10n for messages
+  Future<void> _handleSignUp() async {
+    final l10n = AppLocalizations.of(context)!;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+    authProvider.clearError();
+
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
+      final String phoneNumber = _phoneController.text.trim();
+      final String password = _passwordController.text;
+      final String languageCode = localeProvider.locale?.languageCode ?? 'en';
 
-      await Future.delayed(const Duration(seconds: 2));
-
-      final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
-      print('Phone: +251${_phoneController.text}');
-      print('Password: ${_passwordController.text}');
-      print('Language from Provider: ${localeProvider.locale?.languageCode ?? 'en'}'); // Example
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.accountCreationSimulatedMessage)),
+      bool success = await authProvider.signUpSimple(
+        phoneNumber: '+251$phoneNumber',
+        password: password,
+        languageCode: languageCode,
       );
 
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.signUpSuccessMessage)),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.apiError?.message ?? l10n.signUpFailedErrorGeneral),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!; // Get l10n instance
-    final localeProvider = Provider.of<LocaleProvider>(context); // listen: true to rebuild on locale change
+    final l10n = AppLocalizations.of(context)!;
+    final authProvider = Provider.of<AuthProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context); // For language dropdown
 
-    // Map language codes to display names
+    // Prepare for language dropdown
     final Map<String, String> languageDisplayNames = {
       'en': l10n.english,
       'am': l10n.amharic,
-      'om': l10n.afaanOromo, 
+      'om': l10n.afaanOromo,
     };
+    String currentLanguageCode = localeProvider.locale?.languageCode ?? 'en';
+    if (!_supportedLanguageCodes.contains(currentLanguageCode)) {
+      currentLanguageCode = _supportedLanguageCodes.first;
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -80,181 +108,85 @@ class _SignUpScreenState extends State<SignUpScreen> {
             children: <Widget>[
               Align(
                 alignment: Alignment.topRight,
-                child: _buildLanguageDropdown(theme, l10n, localeProvider, languageDisplayNames),
+                // Using Flutter's built-in DropdownButtonFormField for simplicity here
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8.0),
+                    border: Border.all(color: Colors.grey[400]!),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: currentLanguageCode,
+                      icon: Icon(Icons.arrow_drop_down, color: Colors.blue[700]),
+                      elevation: 2,
+                      style: TextStyle(color: Colors.blue[700], fontSize: 14),
+                      onChanged: (String? newLanguageCode) {
+                        if (newLanguageCode != null) {
+                          localeProvider.setLocale(Locale(newLanguageCode));
+                        }
+                      },
+                      items: _supportedLanguageCodes
+                          .map<DropdownMenuItem<String>>((String langCode) {
+                        return DropdownMenuItem<String>(
+                          value: langCode,
+                          child: Text(languageDisplayNames[langCode] ?? langCode.toUpperCase()),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
-              Text(
-                l10n.mgwTutorialTitle, 
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue[800],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.signUpToStartLearning, 
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[700],
-                ),
+              AuthScreenHeader(
+                title: l10n.mgwTutorialTitle,
+                subtitle: l10n.signUpToStartLearning,
               ),
               const SizedBox(height: 40),
-              Card(
-                elevation: 4.0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        Text(
-                          l10n.signUpTitle, 
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[800],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        TextFormField(
-                          controller: _phoneController,
-                          decoration: InputDecoration(
-                            labelText: l10n.phoneNumberLabel, 
-                            hintText: l10n.phoneNumberHint,  
-                            prefixIcon: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 14.0),
-                              child: Text(
-                                '+251 ',
-                                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                              ),
+              AuthCardWrapper(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      AuthFormTitle(title: l10n.signUpTitle),
+                      const SizedBox(height: 24),
+                      PhoneFormField(
+                        controller: _phoneController,
+                        l10n: l10n,
+                      ),
+                      const SizedBox(height: 20),
+                      PasswordFormField(
+                        controller: _passwordController,
+                        isPasswordVisible: _isPasswordVisible,
+                        onToggleVisibility: _togglePasswordVisibility,
+                        l10n: l10n,
+                      ),
+                      const SizedBox(height: 30),
+                      authProvider.isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : ElevatedButton(
+                              onPressed: _handleSignUp,
+                              child: Text(l10n.createAccountButton),
                             ),
-                          ),
-                          keyboardType: TextInputType.phone,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return l10n.phoneNumberValidationErrorRequired; 
-                            }
-                            if (!RegExp(r'^[0-9]{9}$').hasMatch(value)) {
-                              return l10n.phoneNumberValidationErrorInvalid; 
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _passwordController,
-                          decoration: InputDecoration(
-                            labelText: l10n.passwordLabel, 
-                            hintText: l10n.passwordHint,  
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _isPasswordVisible
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: Colors.grey[600],
-                              ),
-                              onPressed: _togglePasswordVisibility,
-                            ),
-                          ),
-                          obscureText: !_isPasswordVisible,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return l10n.passwordValidationErrorRequired; 
-                            }
-                            if (value.length < 6) {
-                              return l10n.passwordValidationErrorLength; 
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 30),
-                        _isLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : ElevatedButton(
-                                onPressed: _createAccount,
-                                child: Text(l10n.createAccountButton), 
-                              ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    l10n.alreadyHaveAccount, 
-                    style: TextStyle(color: Colors.grey[700]),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const MainScreen()),
-                      );
-                    },
-                    child: Text(
-                      l10n.signInLink, // Localized
-                      style: TextStyle(
-                        color: Colors.blue[700],
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: const Size(50,30),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        alignment: Alignment.centerLeft
-                      )
-                  ),
-                ],
+              AuthNavigationLink(
+                leadingText: l10n.alreadyHaveAccount,
+                linkText: l10n.signInLink,
+                onLinkPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  );
+                },
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLanguageDropdown(ThemeData theme, AppLocalizations l10n, LocaleProvider localeProvider, Map<String, String> languageDisplayNames) {
-
-    String currentLanguageCode = localeProvider.locale?.languageCode ?? 'en';
-    if (!_languageCodes.contains(currentLanguageCode)) {
-        currentLanguageCode = 'en';
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8.0),
-        border: Border.all(color: Colors.grey[400]!),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: currentLanguageCode, // Use the language code from provider
-          icon: Icon(Icons.arrow_drop_down, color: Colors.blue[700]),
-          elevation: 2,
-          style: TextStyle(color: Colors.blue[700], fontSize: 14),
-          onChanged: (String? newLanguageCode) {
-            if (newLanguageCode != null) {
-              localeProvider.setLocale(Locale(newLanguageCode));
-            }
-          },
-          items: _languageCodes.map<DropdownMenuItem<String>>((String langCode) {
-            return DropdownMenuItem<String>(
-              value: langCode,
-              child: Text(languageDisplayNames[langCode] ?? langCode.toUpperCase()), // Display localized name
-            );
-          }).toList(),
         ),
       ),
     );

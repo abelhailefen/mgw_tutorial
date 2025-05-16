@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class CourseCard extends StatelessWidget {
+class SemestersCard extends StatelessWidget {
   final String title;
   final String imageUrl;
   final List<String> subjectsLeft;
@@ -8,7 +8,7 @@ class CourseCard extends StatelessWidget {
   final String price;
   final VoidCallback? onTap;
 
-  const CourseCard({
+  const SemestersCard({
     super.key,
     required this.title,
     required this.imageUrl,
