@@ -24,24 +24,24 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
     super.initState();
     Future.microtask(() {
       final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
-      if (discussionProvider.posts.isEmpty || discussionProvider.postsError != null) { // Fetch if empty or error
-        discussionProvider.fetchPosts();
-      }
+      // Fetch posts if the list is empty or to ensure freshness on screen entry
+      discussionProvider.fetchPosts(); // Consider adding forceRefresh: true if always needed
     });
   }
 
   void _navigateToCreatePostScreen() async {
     final result = await Navigator.of(context).pushNamed(CreatePostScreen.routeName);
     if (result == true && mounted) {
-      // List will be updated by provider after successful post creation
-      // Optionally, show a snackbar or trigger a refresh if needed, though provider should handle UI update.
+      // Data will be updated by the provider if createPost was successful and it refetches or adds.
+      // Optionally, explicitly call fetchPosts here if needed.
+      // Provider.of<DiscussionProvider>(context, listen: false).fetchPosts();
     }
   }
 
    void _navigateToPostDetailScreen(Post post) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PostDetailScreen(post: post), // No need for Provider here directly
+        builder: (_) => PostDetailScreen(post: post),
       ),
     );
   }
@@ -51,7 +51,7 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
     final discussionProvider = Provider.of<DiscussionProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
+    final theme = Theme.of(context); // Get theme
 
     return Scaffold(
       appBar: AppBar(
@@ -59,36 +59,35 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () => discussionProvider.fetchPosts(),
-        color: theme.colorScheme.primary,
-        backgroundColor: theme.colorScheme.surface,
-        child: _buildPostBody(discussionProvider, authProvider, l10n, theme),
+        child: _buildPostBody(discussionProvider, authProvider, theme, l10n), // Pass theme & l10n
       ),
       floatingActionButton: authProvider.currentUser != null ? FloatingActionButton(
         onPressed: _navigateToCreatePostScreen,
-        // backgroundColor will be themed by FloatingActionButtonThemeData if defined, or use theme.colorScheme.secondary
-        child: Icon(Icons.add, color: theme.colorScheme.onSecondary), // Assuming onSecondary is contrasting
-        tooltip: l10n.appTitle.contains("መጂወ") ? 'ልጥፍ ፍጠር' : 'Create Post',
+        // --- COLOR CORRECTION FOR FAB ---
+        backgroundColor: theme.colorScheme.primary, // Will be dark blue on light, light blue on dark
+        child: Icon(
+          Icons.add,
+          color: theme.colorScheme.onPrimary, // Should contrast with primary
+        ),
+        // --- END COLOR CORRECTION ---
+        tooltip: l10n.appTitle.contains("መጂወ") ? "ልጥፍ ፍጠር" : 'Create Post',
       ) : null,
     );
   }
 
-  Widget _buildPostBody(DiscussionProvider discussionProvider, AuthProvider authProvider, AppLocalizations l10n, ThemeData theme) {
+  Widget _buildPostBody(DiscussionProvider discussionProvider, AuthProvider authProvider, ThemeData theme, AppLocalizations l10n) {
     if (discussionProvider.isLoadingPosts && discussionProvider.posts.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (discussionProvider.postsError != null && discussionProvider.posts.isEmpty) { // Show error only if list is empty
+    if (discussionProvider.postsError != null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                  discussionProvider.postsError!, // TODO: Better error localization
-                  style: TextStyle(color: theme.colorScheme.error),
-                  textAlign: TextAlign.center
-              ),
+              Text(discussionProvider.postsError!, style: TextStyle(color: theme.colorScheme.error), textAlign: TextAlign.center),
               const SizedBox(height: 10),
               ElevatedButton(
                 onPressed: () => discussionProvider.fetchPosts(),
@@ -107,12 +106,10 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.forum_outlined, size: 70, color: theme.iconTheme.color?.withOpacity(0.5)),
-              const SizedBox(height: 20),
               Text(
-                l10n.appTitle.contains("መጂወ") ? 'እስካሁን ምንም ውይይቶች የሉም። የመጀመሪያውን ለመጀመር ይሁኑ!' : 'No discussions yet. Be the first to start one!',
+                l10n.appTitle.contains("መጂወ") ? 'ምንም ውይይቶች የሉም። የመጀመሪያ ይሁኑ!' : 'No discussions yet. Be the first to start one!',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium,
+                style: theme.textTheme.titleMedium?.copyWith(fontSize: 18),
               ),
               const SizedBox(height: 20),
               if (authProvider.currentUser != null)
@@ -132,8 +129,8 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
       itemCount: discussionProvider.posts.length,
       itemBuilder: (ctx, index) {
         final post = discussionProvider.posts[index];
-        return Card( // Uses CardTheme
-          margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+        return Card(
+          // elevation, margin, shape from CardTheme
           child: InkWell(
             onTap: () => _navigateToPostDetailScreen(post),
             borderRadius: BorderRadius.circular(theme.cardTheme.shape is RoundedRectangleBorder ? (theme.cardTheme.shape as RoundedRectangleBorder).borderRadius.resolve(Directionality.of(context)).bottomLeft.x : 12.0),
@@ -145,14 +142,14 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
                   Text(
                     post.title,
                     style: theme.textTheme.titleLarge?.copyWith(
-                          color: theme.colorScheme.primary, // Make titles stand out
+                          color: theme.colorScheme.primary, // Make title stand out
                           fontWeight: FontWeight.w600
                         ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     post.description,
-                    style: theme.textTheme.bodyMedium,
+                    style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.85)),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -161,8 +158,7 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        // TODO: Localize 'By: '
-                        'By: ${post.author.name}',
+                        'By: ${post.author.name}', // TODO: Localize "By: "
                         style: theme.textTheme.bodySmall?.copyWith(
                               fontStyle: FontStyle.italic,
                               color: theme.colorScheme.onSurface.withOpacity(0.7),

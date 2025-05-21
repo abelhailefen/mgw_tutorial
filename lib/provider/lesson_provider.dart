@@ -1,5 +1,7 @@
 // lib/provider/lesson_provider.dart
 import 'dart:convert';
+import 'dart:async'; // For TimeoutException
+import 'dart:io';    // For SocketException
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:mgw_tutorial/models/lesson.dart';
@@ -13,7 +15,12 @@ class LessonProvider with ChangeNotifier {
   bool isLoadingForSection(int sectionId) => _isLoadingForSectionId[sectionId] ?? false;
   String? errorForSection(int sectionId) => _errorForSectionId[sectionId];
 
-  // <<< UPDATED BASE URL >>>
+  // User-friendly error messages
+  static const String _networkErrorMessage = "Sorry, there seems to be a network error. Please check your connection and try again.";
+  static const String _timeoutErrorMessage = "The request timed out. Please check your connection or try again later.";
+  static const String _unexpectedErrorMessage = "An unexpected error occurred while fetching lessons. Please try again later.";
+  static const String _failedToLoadLessonsMessage = "Failed to load lessons for this chapter. Please try again.";
+
   static const String _apiBaseUrl = "https://lessonservice.amtprinting19.com/api";
 
   Future<void> fetchLessonsForSection(int sectionId, {bool forceRefresh = false}) async {
@@ -22,8 +29,10 @@ class LessonProvider with ChangeNotifier {
     }
 
     _isLoadingForSectionId[sectionId] = true;
-    _errorForSectionId[sectionId] = null;
-    if (forceRefresh) { // Clear existing if forcing
+    if (forceRefresh || !_lessonsBySectionId.containsKey(sectionId)) {
+      _errorForSectionId[sectionId] = null;
+    }
+    if (forceRefresh) {
       _lessonsBySectionId.remove(sectionId);
     }
     notifyListeners();
@@ -32,7 +41,8 @@ class LessonProvider with ChangeNotifier {
     print("Fetching lessons for section $sectionId from: $url");
 
     try {
-      final response = await http.get(url, headers: {"Accept": "application/json"});
+      final response = await http.get(url, headers: {"Accept": "application/json"})
+                                .timeout(const Duration(seconds: 20));
       print("Lessons API Response for section $sectionId Status: ${response.statusCode}");
 
       if (response.statusCode == 200) {
@@ -44,21 +54,51 @@ class LessonProvider with ChangeNotifier {
           _lessonsBySectionId[sectionId]?.sort((a, b) => (a.order ?? 0).compareTo(b.order ?? 0));
           _errorForSectionId[sectionId] = null;
         } else {
-          _errorForSectionId[sectionId] = 'Failed to load lessons for section $sectionId: API response was not a list.';
+          _errorForSectionId[sectionId] = 'Failed to load lessons: Unexpected API response format.';
           _lessonsBySectionId[sectionId] = [];
         }
       } else {
-        _errorForSectionId[sectionId] = 'Failed to load lessons for section $sectionId. Status: ${response.statusCode}, Body: ${response.body}';
+         _handleHttpErrorResponse(response, sectionId, _failedToLoadLessonsMessage);
       }
-    } catch (e) {
-      _errorForSectionId[sectionId] = 'An error occurred fetching lessons for section $sectionId: ${e.toString()}';
+    } on TimeoutException catch (e) {
+      print("TimeoutException fetching lessons for section $sectionId: $e");
+      _errorForSectionId[sectionId] = _timeoutErrorMessage;
+      _lessonsBySectionId[sectionId] = [];
+    } on SocketException catch (e) {
+      print("SocketException fetching lessons for section $sectionId: $e");
+      _errorForSectionId[sectionId] = _networkErrorMessage;
+      _lessonsBySectionId[sectionId] = [];
+    } on http.ClientException catch (e) {
+      print("ClientException fetching lessons for section $sectionId: $e");
+      _errorForSectionId[sectionId] = _networkErrorMessage;
+      _lessonsBySectionId[sectionId] = [];
+    }
+    catch (e) {
+      print("Generic Exception fetching lessons for section $sectionId: $e");
+      _errorForSectionId[sectionId] = _unexpectedErrorMessage;
+      _lessonsBySectionId[sectionId] = [];
     } finally {
       _isLoadingForSectionId[sectionId] = false;
       notifyListeners();
     }
   }
-  
+
+  void _handleHttpErrorResponse(http.Response response, int sectionId, String defaultUserMessage) {
+    try {
+      final errorBody = json.decode(response.body);
+      if (errorBody is Map && errorBody.containsKey('message') && errorBody['message'] != null && errorBody['message'].toString().isNotEmpty) {
+        _errorForSectionId[sectionId] = errorBody['message'].toString();
+      } else {
+         _errorForSectionId[sectionId] = "$defaultUserMessage (Status: ${response.statusCode})";
+      }
+    } catch (e) {
+       _errorForSectionId[sectionId] = "$defaultUserMessage (Status: ${response.statusCode}). Response not parsable.";
+    }
+    _lessonsBySectionId[sectionId] = [];
+  }
+
   void clearErrorForSection(int sectionId) {
     _errorForSectionId[sectionId] = null;
+    // notifyListeners();
   }
 }

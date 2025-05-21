@@ -14,8 +14,8 @@
   "tigrigna": "Tigrigna",
   "afaanOromo": "Afaan Oromo",
   "welcomeMessage": "Welcome to MGW Tutorial!",
-  "testimonials" : "Testimonials",
-  "registerforcourses": "Register for courses",
+  "testimonials": "Testimonials",
+  "registerforcourses": "Enroll for Courses",
   "mycourses": "My Courses",
   "weeklyexam": "Weekly Exams",
   "sharetheapp": "Share the App",
@@ -23,7 +23,7 @@
   "discussiongroup": "Discussion Group",
   "contactus": "Contact Us",
   "refresh": "Refresh",
-  "getRegisteredTitle": "Get Registered",
+  "getRegisteredTitle": "Create Account",
   "studentNameLabel": "Student's Name",
   "studentNameValidationError": "Please enter student's name",
   "fatherNameLabel": "Father's Name",
@@ -40,7 +40,7 @@
   "selectServiceLabel": "Select Service",
   "selectServiceHint": "Select Service",
   "serviceValidationError": "Please select a service",
-  "paymentInstruction": "Transfer a total of 200ETB to one of the following accounts and then attach a screenshot of the confirmation below.",
+  "paymentInstruction": "After making the payment, please enter the name of the bank you used below and attach the payment confirmation screenshot. Our Bank Account Details:\n • CBE: 1000 XXX XXXX XXXX (Debebe W.)\n • Telebirr: 09XX XXX XXX (Debebe W.)",
   "bankAccountLabel": "Account",
   "bankHolderNameLabel": "Name",
   "copiedToClipboardMessage": "{accountNumber} copied to clipboard!",
@@ -58,7 +58,7 @@
   "termsAndConditionsLink": "terms and condition",
   "termsAndConditionsAnd": " and ",
   "privacyPolicyLink": "privacy policy",
-  "submitButton": "Get Registered",
+  "submitButton": "Create Account",
   "errorPickingImage": "Error picking image: {errorMessage}",
   "@errorPickingImage": {
     "placeholders": {
@@ -106,30 +106,254 @@
   "changePhoneNumberNotImplementedMessage": "Change Phone Number Tapped (Not Implemented)",
   "accountPasswordLabel": "Password",
   "changePasswordNotImplementedMessage": "Change Password Tapped (Not Implemented)",
-  "notificationsLabel": "Notifications",
   "notificationsEnabledMessage": "Notifications Enabled",
   "notificationsDisabledMessage": "Notifications Disabled",
   "changeButton": "Change",
-
   "phoneNumberCannotBeEmptyError": "Phone number cannot be empty.",
   "invalidPhoneNumberFormatError": "Invalid phone number format. Use 09..., 9..., or +2519...",
   "registrationSuccessMessage": "Registration successful! Please await admin approval.",
   "registrationFailedDefaultMessage": "Registration failed. Please try again.",
   "selectDepartmentHint": "Select Department / Stream",
-  "yearLabel": "Year / Grade",
+  "yearLabel": "Academic Year",
   "yearValidationErrorEmpty": "Please enter year.",
   "yearValidationErrorInvalid": "Please enter a valid year.",
   "departmentLabel": "Department",
-  "selectDepartmentHint": "Select Department",
   "pleaseSelectDepartmentError": "Please select a department.",
-  "yearLabel": "Academic Year",
   "selectYearHint": "Select Year",
   "pleaseSelectYearError": "Please select your academic year.",
-    "guestUser": "Guest User",
+  "guestUser": "Guest User",
   "pleaseLoginOrRegister": "Please login or register",
   "registeredUser": "Registered User",
   "logoutSuccess": "Logged out successfully.",
-   "selectSemesterLabel": "Select Semester", 
-  "selectSemesterHint": "Select a Semester", 
-  "pleaseSelectSemesterError": "Please select a semester."
+  "selectSemesterLabel": "Select Semester",
+  "selectSemesterHint": "Select a Semester",
+  "pleaseSelectSemesterError": "Please select a semester.",
+  "deviceInfoNotAvailable": "Device information not available. Please wait and try again.",
+  "deviceInfoProcessing": "Device information is still being processed. Please try again shortly.",
+  "deviceInfoInitializing": "Initializing... Please try logging in again.",
+  "deviceInfoProceedingDefault": "Could not fully determine device info. Proceeding with available data.",
+  "initializing": "Initializing...",
+  "enrollForSemesterTitle": "Enroll for {semesterName}",
+  "@enrollForSemesterTitle": {
+    "placeholders": {
+      "semesterName": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedSemesterLabel": "Selected Semester:",
+  "priceLabel": "Price:",
+  "coursesIncludedLabel": "Courses Included:",
+  "bankNamePaymentLabel": "Bank Name of Payment",
+  "bankNamePaymentHint": "e.g., Commercial Bank of Ethiopia, Awash Bank",
+  "bankNameValidationError": "Please enter the bank name.",
+  "enrollmentRequestSuccess": "Enrollment request submitted successfully! Please await approval.",
+  "enrollmentRequestFailed": "Failed to submit enrollment request.",
+  "selectPaymentBankPrompt": "Please select a payment bank for reference.",
+  "goBackButton": "Go Back",
+  "createPostTitle": "Create New Post",
+  "postTitleLabel": "Post Title",
+  "postTitleHint": "Enter a clear and concise title",
+  "postTitleValidationRequired": "Please enter a title.",
+  "postTitleValidationLength": "Title must be at least 5 characters long.",
+  "postDescriptionLabel": "Post Description",
+  "postDescriptionHint": "Share your thoughts or questions in detail...",
+  "postDescriptionValidationRequired": "Please enter a description.",
+  "postDescriptionValidationLength": "Description must be at least 10 characters long.",
+  "submitPostButton": "Submit Post",
+  "postCreatedSuccess": "Post created successfully!",
+  "postCreateFailed": "Failed to create post. Please try again.",
+  "editPostTitle": "Edit Post",
+  "generalTitleLabel": "Title",
+  "generalTitleEmptyValidation": "Title cannot be empty",
+  "generalDescriptionLabel": "Description",
+  "generalDescriptionEmptyValidation": "Description cannot be empty",
+  "cancelButton": "Cancel",
+  "saveButton": "Save",
+  "postUpdatedSuccess": "Post updated!",
+  "postUpdateFailed": "Failed to update post.",
+  "deletePostTitle": "Delete Post",
+  "deletePostConfirmation": "Are you sure you want to delete this post and all its comments? This action cannot be undone.",
+  "deleteButton": "Delete",
+  "postDeletedSuccess": "Post deleted successfully!",
+  "postDeleteFailed": "Failed to delete post.",
+  "commentPostedSuccess": "Comment posted!",
+  "commentPostFailed": "Failed to post comment.",
+  "replyPostedSuccess": "Reply posted!",
+  "replyPostFailed": "Failed to post reply.",
+  "updateGenericSuccess": "Update successful!",
+  "updateGenericFailed": "Update failed.",
+  "deleteCommentTitle": "Delete Comment",
+  "deleteReplyTitle": "Delete Reply",
+  "deleteItemConfirmation": "Are you sure you want to delete this {itemType}? This action cannot be undone.",
+  "@deleteItemConfirmation": {
+    "placeholders": {
+      "itemType": {
+        "type": "String"
+      }
+    }
+  },
+  "itemDeletedSuccess": "{itemType} deleted successfully!",
+  "@itemDeletedSuccess": {
+    "placeholders": {
+      "itemType": {
+        "type": "String"
+      }
+    }
+  },
+  "itemDeleteFailed": "Failed to delete {itemType}.",
+  "@itemDeleteFailed": {
+    "placeholders": {
+      "itemType": {
+        "type": "String"
+      }
+    }
+  },
+  "commentsSectionHeader": "Comments",
+  "noCommentsYet": "No comments yet. Be the first!",
+  "writeCommentHint": "Write a comment...",
+  "commentValidationEmpty": "Comment cannot be empty.",
+  "postCommentTooltip": "Post Comment",
+  "replyButtonLabel": "Reply",
+  "cancelReplyButtonLabel": "Cancel",
+  "writeReplyHint": "Write a reply...",
+  "replyValidationEmpty": "Reply cannot be empty.",
+  "editFieldValidationEmpty": "Cannot be empty",
+  "saveChangesButton": "Save Changes",
+  "viewAllReplies": "View all {replyCount} replies...",
+  "@viewAllReplies": {
+    "placeholders": {
+      "replyCount": {
+        "type": "String"
+      }
+    }
+  },
+  "commentItemDisplay": "Comment",
+  "replyItemDisplay": "Reply",
+  "darkModeLabel": "Dark Mode",
+  "darkModeSubtitle": "Enable or disable dark theme",
+  "receiveNotificationsSubtitle": "Receive important updates",
+  "pushNotificationsEnabled": "Push Notifications Enabled",
+  "pushNotificationsDisabled": "Push Notifications Disabled",
+  "viewPrivacyPolicyAction": "View Privacy Policy",
+  "viewTermsAction": "View Terms of Service",
+  "actionNotImplemented": "{featureName}: Not Implemented Yet",
+  "@actionNotImplemented": {
+    "placeholders": {
+      "featureName": {
+        "type": "String"
+      }
+    }
+  },
+  "couldNotLaunchUrl": "Could not launch {urlString}",
+  "@couldNotLaunchUrl": {
+    "placeholders": {
+      "urlString": {
+        "type": "String"
+      }
+    }
+  },
+  "shareAppSubject": "MGW Tutorial App",
+  "emailSupportSubject": "App Support Query",
+  "contactViaEmail": "Contact via Email",
+  "callUs": "Call Us",
+  "visitOurWebsite": "Visit our Website",
+  "refreshingData": "Refreshing data...",
+  "dataRefreshed": "Data refreshed!",
+  "errorRefreshingData": "Error refreshing data. Please check your internet connection.",
+  "notesSectionTitle": "Notes",
+  "notesSectionDescription": "Notes we have collected from students all around the country.",
+  "notesComingSoon": "Notes section coming soon!",
+  "coursesDetailsComingSoon": "Courses details coming soon.",
+  "semesterCardTapped": "{semesterName} (ID: {semesterId}) Tapped",
+  "@semesterCardTapped": {
+    "placeholders": {
+      "semesterName": {
+        "type": "String"
+      },
+      "semesterId": {
+        "type": "String"
+      }
+    }
+  },
+  "enrollNowButton": "Enroll Now",
+  "currencySymbol": "ETB",
+  "submitEnrollmentRequestButton": "Submit Enrollment Request",
+  "currentPasswordLabel": "Current Password",
+  "newPasswordLabel": "New Password",
+  "confirmNewPasswordLabel": "Confirm New Password",
+  "passwordsDoNotMatch": "Passwords do not match",
+  "newPhoneNumberLabel": "New Phone Number",
+  "otpEnterPrompt": "Enter OTP",
+  "otpValidationErrorRequired": "Please enter OTP",
+  "otpValidationErrorLength": "OTP must be 6 digits",
+  "otpNewPhoneSameAsCurrentError": "New phone number cannot be the same as current.",
+  "otpRequestButton": "Request OTP",
+  "otpVerifyButton": "Verify OTP",
+  "passwordChangedSuccess": "Password changed successfully!",
+  "passwordChangeFailed": "Failed to change password.",
+  "otpSentSuccess": "OTP sent successfully.",
+  "otpRequestFailed": "Failed to request OTP.",
+  "phoneUpdateSuccess": "Phone number updated successfully.",
+  "phoneUpdateFailed": "Failed to update phone number.",
+  "videoItemType": "Video",
+  "documentItemType": "Document",
+  "quizItemType": "Quiz",
+  "textItemType": "Text",
+  "unknownItemType": "Content",
+  "noVideosAvailable": "No videos available.",
+  "noDocumentsAvailable": "No documents available.",
+  "noTextLessonsAvailable": "No text lessons available.",
+  "noQuizzesAvailable": "No quizzes available.",
+  "itemNotAvailable": "{contentType} not available.",
+  "@itemNotAvailable": {
+    "placeholders": {
+      "contentType": {
+        "type": "String"
+      }
+    }
+  },
+  "couldNotLaunchItem": "Could not launch {urlString}",
+  "@couldNotLaunchItem": {
+    "placeholders": {
+      "urlString": {
+        "type": "String"
+      }
+    }
+  },
+  "noLaunchableContent": "No launchable content for: {itemName}",
+  "@noLaunchableContent": {
+    "placeholders": {
+      "itemName": {
+        "type": "String"
+      }
+    }
+  },
+  "chaptersTitle": "Chapters",
+  "failedToLoadChaptersError": "Failed to load chapters.\n{error}",
+  "@failedToLoadChaptersError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noChaptersForCourse": "No chapters found for this course.",
+  "failedToLoadLessonsError": "Failed to load lessons.\n{error}",
+  "@failedToLoadLessonsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noLessonsInChapter": "No lessons in this chapter yet.",
+  "noCoursesAvailable": "No courses available at the moment.",
+  "shareYourTestimonialTitle": "Share Your Testimonial",
+  "titleLabel": "Title",
+  "titleValidationPrompt": "Please enter a title",
+  "yourExperienceLabel": "Your Experience",
+  "experienceValidationPrompt": "Please describe your experience",
+  "submitButtonGeneral": "Submit",
+  "testimonialSubmittedSuccess": "Testimonial submitted! It will appear after approval."
 }

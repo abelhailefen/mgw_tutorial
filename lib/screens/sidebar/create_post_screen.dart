@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // For localization
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class CreatePostScreen extends StatefulWidget {
   static const routeName = '/create-post';
@@ -27,7 +27,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    _formKey.currentState!.save();
+    // _formKey.currentState!.save(); // Not needed with controllers
 
     final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
@@ -41,17 +41,23 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (mounted) {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(
-               content: Text(l10n.appTitle.contains("መጂወ") ? 'ልጥፍ በተሳካ ሁኔታ ተፈጥሯል!' : 'Post created successfully!'),
-               backgroundColor: theme.colorScheme.primaryContainer,
-               behavior: SnackBarBehavior.floating,
-           ),
+          SnackBar(
+            content: Text(
+              l10n.postCreatedSuccess,
+              style: TextStyle(color: theme.colorScheme.onPrimary),
+            ),
+            backgroundColor: theme.colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         Navigator.of(context).pop(true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(discussionProvider.submitPostError ?? (l10n.appTitle.contains("መጂወ") ? 'ልጥፍ መፍጠር አልተሳካም። እባክዎ እንደገና ይሞክሩ።' : 'Failed to create post. Please try again.')),
+            content: Text(
+              discussionProvider.submitPostError ?? l10n.postCreateFailed,
+              style: TextStyle(color: theme.colorScheme.onErrorContainer),
+            ),
             backgroundColor: theme.colorScheme.errorContainer,
             behavior: SnackBarBehavior.floating,
           ),
@@ -64,11 +70,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Widget build(BuildContext context) {
     final discussionProvider = Provider.of<DiscussionProvider>(context);
     final l10n = AppLocalizations.of(context)!;
-    // final theme = Theme.of(context); // Not strictly needed here as InputDecorationTheme handles it
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.appTitle.contains("መጂወ") ? 'አዲስ ልጥፍ ፍጠር' : 'Create New Post'),
+        title: Text(l10n.createPostTitle),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -80,15 +85,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(
-                  labelText: l10n.appTitle.contains("መጂወ") ? 'የልጥፍ ርዕስ' : 'Post Title',
-                  hintText: l10n.appTitle.contains("መጂወ") ? 'ግልጽ እና አጭር ርዕስ ያስገቡ' : 'Enter a clear and concise title',
+                  labelText: l10n.postTitleLabel,
+                  hintText: l10n.postTitleHint,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return l10n.appTitle.contains("መጂወ") ? 'እባክዎ ርዕስ ያስገቡ።' : 'Please enter a title.';
+                    return l10n.postTitleValidationRequired;
                   }
                   if (value.trim().length < 5) {
-                    return l10n.appTitle.contains("መጂወ") ? 'ርዕስ ቢያንስ 5 ቁምፊዎች መሆን አለበት።' : 'Title must be at least 5 characters long.';
+                    return l10n.postTitleValidationLength;
                   }
                   return null;
                 },
@@ -98,18 +103,18 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               TextFormField(
                 controller: _descriptionController,
                 decoration: InputDecoration(
-                  labelText: l10n.appTitle.contains("መጂወ") ? 'የልጥፍ መግለጫ' : 'Post Description',
-                  hintText: l10n.appTitle.contains("መጂወ") ? 'ሀሳቦችዎን ወይም ጥያቄዎችዎን በዝርዝር ያካፍሉ...' : 'Share your thoughts or questions in detail...',
+                  labelText: l10n.postDescriptionLabel,
+                  hintText: l10n.postDescriptionHint,
                   alignLabelWithHint: true,
                 ),
                 maxLines: 8,
                 minLines: 5,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return l10n.appTitle.contains("መጂወ") ? 'እባክዎ መግለጫ ያስገቡ።' : 'Please enter a description.';
+                    return l10n.postDescriptionValidationRequired;
                   }
                   if (value.trim().length < 10) {
-                    return l10n.appTitle.contains("መጂወ") ? 'መግለጫ ቢያንስ 10 ቁምፊዎች መሆን አለበት።' : 'Description must be at least 10 characters long.';
+                    return l10n.postDescriptionValidationLength;
                   }
                   return null;
                 },
@@ -120,7 +125,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
                       onPressed: _submitPost,
-                      child: Text(l10n.appTitle.contains("መጂወ") ? 'ልጥፍ አስገባ' : 'Submit Post'),
+                      child: Text(l10n.submitPostButton),
                     ),
             ],
           ),

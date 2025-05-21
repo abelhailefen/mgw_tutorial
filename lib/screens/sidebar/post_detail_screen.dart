@@ -11,6 +11,7 @@ import 'package:mgw_tutorial/widgets/discussion/comment_item_view.dart';
 import 'package:mgw_tutorial/widgets/discussion/comment_input_field.dart';
 import 'package:mgw_tutorial/widgets/discussion/edit_input_field.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 
 class PostDetailScreen extends StatefulWidget {
   static const routeName = '/post-detail';
@@ -25,17 +26,21 @@ class PostDetailScreen extends StatefulWidget {
 class _PostDetailScreenState extends State<PostDetailScreen> {
   final _topLevelCommentController = TextEditingController();
   final _topLevelCommentFormKey = GlobalKey<FormState>();
+
   int? _replyingToCommentId;
   final _replyController = TextEditingController();
   final _replyFormKey = GlobalKey<FormState>();
+
   int? _editingCommentId;
   int? _editingReplyId;
   int? _editingReplyParentCommentId;
   final _editTextController = TextEditingController();
   final _editFormKey = GlobalKey<FormState>();
+
   final _editPostTitleController = TextEditingController();
   final _editPostDescriptionController = TextEditingController();
   final _editPostFormKey = GlobalKey<FormState>();
+
   late Post _currentPost;
 
   @override
@@ -48,21 +53,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Future<void> _fetchData({bool forceRefresh = false}) async {
     if (!mounted) return;
     final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
+    
     if (forceRefresh) {
-      await discussionProvider.fetchPosts();
+      await discussionProvider.fetchPosts(); 
       final updatedPostFromList = discussionProvider.posts.firstWhere(
             (p) => p.id == widget.post.id,
             orElse: () => _currentPost);
       if (mounted) {
-        setState(() { _currentPost = updatedPostFromList; });
+        setState(() {
+          _currentPost = updatedPostFromList;
+        });
       }
     }
+    
     await discussionProvider.fetchCommentsForPost(_currentPost.id, forceRefresh: forceRefresh);
+    
     if (mounted) {
       final comments = discussionProvider.commentsForPost(_currentPost.id);
       for (var comment in comments) {
         if (forceRefresh || !discussionProvider.allRepliesLoadedForComment(comment.id)) {
-           discussionProvider.fetchRepliesForComment(comment.id, forceRefresh: forceRefresh);
+           await discussionProvider.fetchRepliesForComment(comment.id, forceRefresh: forceRefresh);
         }
       }
     }
@@ -78,6 +88,30 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     super.dispose();
   }
 
+  void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: TextStyle(color: theme.colorScheme.onPrimary)),
+        backgroundColor: theme.colorScheme.primary,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+        backgroundColor: theme.colorScheme.errorContainer,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   void _showEditPostDialog() {
     final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
@@ -87,39 +121,47 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (BuildContext context, StateSetter setDialogState) {
+          final authProviderLoading = Provider.of<DiscussionProvider>(context, listen: true).isUpdatingItem; // Listen to specific loading state
+
           return AlertDialog(
             backgroundColor: theme.dialogBackgroundColor,
-            title: Text(l10n.appTitle.contains("መጂወ") ? 'ልጥፍ አርትዕ' : 'Edit Post', style: theme.textTheme.titleLarge),
-            contentPadding: const EdgeInsets.all(20),
+            title: Text(l10n.editPostTitle, style: theme.textTheme.titleLarge),
+            contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0),
             content: Form(
               key: _editPostFormKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: _editPostTitleController,
-                    decoration: InputDecoration(labelText: l10n.appTitle.contains("መጂወ") ? 'ርዕስ' : 'Title'),
-                    validator: (value) => (value == null || value.trim().isEmpty) ? (l10n.appTitle.contains("መጂወ") ? 'ርዕስ ባዶ መሆን አይችልም' : 'Title cannot be empty') : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _editPostDescriptionController,
-                    decoration: InputDecoration(labelText: l10n.appTitle.contains("መጂወ") ? 'መግለጫ' : 'Description', alignLabelWithHint: true),
-                    maxLines: 5, minLines: 3,
-                    validator: (value) => (value == null || value.trim().isEmpty) ? (l10n.appTitle.contains("መጂወ") ? 'መግለጫ ባዶ መሆን አይችልም' : 'Description cannot be empty') : null,
-                  ),
-                ],
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: _editPostTitleController,
+                      decoration: InputDecoration(labelText: l10n.generalTitleLabel),
+                      validator: (value) => (value == null || value.trim().isEmpty) ? l10n.generalTitleEmptyValidation : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _editPostDescriptionController,
+                      decoration: InputDecoration(labelText: l10n.generalDescriptionLabel, alignLabelWithHint: true),
+                      maxLines: 5, minLines: 3,
+                      validator: (value) => (value == null || value.trim().isEmpty) ? l10n.generalDescriptionEmptyValidation : null,
+                    ),
+                  ],
+                ),
               ),
             ),
             actions: [
-              TextButton(child: Text(l10n.appTitle.contains("መጂወ") ? 'ሰርዝ' : 'Cancel', style: TextStyle(color: theme.colorScheme.primary)), onPressed: () => Navigator.of(ctx).pop()),
+              TextButton(
+                child: Text(l10n.cancelButton, style: TextStyle(color: theme.colorScheme.primary)),
+                onPressed: authProviderLoading ? null : () => Navigator.of(ctx).pop()
+              ),
               ElevatedButton(
-                child: discussionProvider.isUpdatingItem
+                child: authProviderLoading
                     ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(theme.colorScheme.onPrimary)))
-                    : Text(l10n.appTitle.contains("መጂወ") ? 'አስቀምጥ' : 'Save'),
-                onPressed: discussionProvider.isUpdatingItem ? null : () async {
+                    : Text(l10n.saveButton),
+                onPressed: authProviderLoading ? null : () async {
                   if (_editPostFormKey.currentState!.validate()) {
                     final success = await discussionProvider.updatePost(
                       postId: _currentPost.id,
@@ -129,12 +171,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     if (!mounted) return;
                     Navigator.of(ctx).pop();
                     if (success) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? 'ልጥፍ ተዘምኗል!' : 'Post updated!'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
+                      _showSuccessSnackBar(l10n.postUpdatedSuccess);
                       await _fetchData(forceRefresh: true);
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(discussionProvider.updateItemError ?? (l10n.appTitle.contains("መጂወ") ? 'ልጥፍ ማዘመን አልተሳካም።' : 'Failed to update post.')), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating),
-                      );
+                      _showErrorSnackBar(discussionProvider.updateItemError ?? l10n.postUpdateFailed);
                     }
                   }
                 },
@@ -150,16 +190,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+
     final bool? confirmDelete = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: theme.dialogBackgroundColor,
-        title: Text(l10n.appTitle.contains("መጂወ") ? 'ልጥፍ ሰርዝ' : 'Delete Post', style: theme.textTheme.titleLarge),
-        content: Text(l10n.appTitle.contains("መጂወ") ? 'ይህን ልጥፍ እና ሁሉንም አስተያየቶቹን መሰረዝ እርግጠኛ ነዎት? ይህ እርምጃ መመለስ አይቻልም።' : 'Are you sure you want to delete this post and all its comments? This action cannot be undone.', style: theme.textTheme.bodyLarge),
+        title: Text(l10n.deletePostTitle, style: theme.textTheme.titleLarge),
+        content: Text(l10n.deletePostConfirmation, style: theme.textTheme.bodyMedium),
         actions: <Widget>[
-          TextButton(child: Text(l10n.appTitle.contains("መጂወ") ? 'ሰርዝ' : 'Cancel', style: TextStyle(color: theme.colorScheme.primary)), onPressed: () => Navigator.of(ctx).pop(false)),
+          TextButton(child: Text(l10n.cancelButton, style: TextStyle(color: theme.colorScheme.primary)), onPressed: () => Navigator.of(ctx).pop(false)),
           TextButton(
-            child: Text(l10n.appTitle.contains("መጂወ") ? 'ሰርዝ' : 'Delete', style: TextStyle(color: theme.colorScheme.error)),
+            child: Text(l10n.deleteButton, style: TextStyle(color: theme.colorScheme.error)),
             onPressed: () => Navigator.of(ctx).pop(true),
           ),
         ],
@@ -170,12 +212,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final success = await discussionProvider.deletePost(_currentPost.id);
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? 'ልጥፍ በተሳካ ሁኔታ ተሰርዟል!' : 'Post deleted successfully!'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
+          _showSuccessSnackBar(l10n.postDeletedSuccess);
           Navigator.of(context).pop();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(discussionProvider.deleteItemError ?? (l10n.appTitle.contains("መጂወ") ? 'ልጥፍ መሰረዝ አልተሳካም።' : 'Failed to delete post.')), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating),
-          );
+          _showErrorSnackBar(discussionProvider.deleteItemError ?? l10n.postDeleteFailed);
         }
       }
     }
@@ -185,7 +225,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (!_topLevelCommentFormKey.currentState!.validate()) return;
     final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
     final success = await discussionProvider.createTopLevelComment(
       postId: _currentPost.id,
       commentText: _topLevelCommentController.text.trim(),
@@ -194,9 +233,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (success) {
         _topLevelCommentController.clear();
         FocusScope.of(context).unfocus();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? 'አስተያየት ተለጥፏል!' : 'Comment posted!'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
+        _showSuccessSnackBar(l10n.commentPostedSuccess);
+        await _fetchData(forceRefresh: true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(discussionProvider.submitCommentError ?? (l10n.appTitle.contains("መጂወ") ? 'አስተያየት መለጠፍ አልተሳካም።' : 'Failed to post comment.')), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating));
+        _showErrorSnackBar(discussionProvider.submitCommentError ?? l10n.commentPostFailed);
       }
     }
   }
@@ -217,7 +257,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (!_replyFormKey.currentState!.validate()) return;
     final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
     final success = await discussionProvider.createReply(
       parentCommentId: parentCommentId,
       content: _replyController.text.trim(),
@@ -227,9 +266,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         _replyController.clear();
         setState(() { _replyingToCommentId = null; });
         FocusScope.of(context).unfocus();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? 'ምላሽ ተለጥፏል!' : 'Reply posted!'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
+        _showSuccessSnackBar(l10n.replyPostedSuccess);
+        await _fetchData(forceRefresh: true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(discussionProvider.submitReplyError ?? (l10n.appTitle.contains("መጂወ") ? 'ምላሽ መለጠፍ አልተሳካም።' : 'Failed to post reply.')), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating));
+        _showErrorSnackBar(discussionProvider.submitReplyError ?? l10n.replyPostFailed);
       }
     }
   }
@@ -267,7 +307,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (!_editFormKey.currentState!.validate()) return;
     final dp = Provider.of<DiscussionProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
     bool success = false;
 
     if (_editingCommentId != null) {
@@ -287,9 +326,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (mounted) {
       if (success) {
         _cancelEdit();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? 'ማዘመን ተሳክቷል!' : 'Update successful!'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
+        _showSuccessSnackBar(l10n.updateGenericSuccess);
+        await _fetchData(forceRefresh: true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(dp.updateItemError ?? (l10n.appTitle.contains("መጂወ") ? 'ማዘመን አልተሳካም።' : 'Update failed.')), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating));
+        _showErrorSnackBar(dp.updateItemError ?? l10n.updateGenericFailed);
       }
     }
   }
@@ -302,20 +342,22 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     await _confirmDeleteDialog("reply", replyId, parentId: parentCommentId);
   }
 
-  Future<void> _confirmDeleteDialog(String type, int id, {int? parentId}) async {
+  Future<void> _confirmDeleteDialog(String typeKey, int id, {int? parentId}) async {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final String itemTypeDisplay = type == "comment" ? (l10n.appTitle.contains("መጂወ") ? "አስተያየት" : "Comment") : (l10n.appTitle.contains("መጂወ") ? "ምላሽ" : "Reply");
+    String itemTypeDisplay = typeKey == "comment" ? l10n.commentItemDisplay : l10n.replyItemDisplay;
+
     final bool? confirmDelete = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: theme.dialogBackgroundColor,
-        title: Text('${l10n.appTitle.contains("መጂወ") ? "ሰርዝ " : "Delete "}$itemTypeDisplay', style: theme.textTheme.titleLarge),
-        content: Text(l10n.appTitle.contains("መጂወ") ? "ይህን $itemTypeDisplay መሰረዝ እርግጠኛ ነዎት? ይህ እርምጃ መመለስ አይቻልም።" : 'Are you sure you want to delete this $type? This action cannot be undone.', style: theme.textTheme.bodyLarge),
+        title: Text('${l10n.deleteButton} $itemTypeDisplay', style: theme.textTheme.titleLarge), // Using deleteButton for title prefix
+        content: Text(l10n.deleteItemConfirmation(itemTypeDisplay), style: theme.textTheme.bodyMedium),
         actions: <Widget>[
-          TextButton(child: Text(l10n.appTitle.contains("መጂወ") ? 'ሰርዝ' : 'Cancel', style: TextStyle(color: theme.colorScheme.primary)), onPressed: () => Navigator.of(ctx).pop(false)),
+          TextButton(child: Text(l10n.cancelButton, style: TextStyle(color: theme.colorScheme.primary)), onPressed: () => Navigator.of(ctx).pop(false)),
           TextButton(
-            child: Text(l10n.appTitle.contains("መጂወ") ? 'ሰርዝ' : 'Delete', style: TextStyle(color: theme.colorScheme.error)),
+            child: Text(l10n.deleteButton, style: TextStyle(color: theme.colorScheme.error)),
             onPressed: () => Navigator.of(ctx).pop(true),
           ),
         ],
@@ -325,16 +367,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (confirmDelete == true) {
       final dp = Provider.of<DiscussionProvider>(context, listen: false);
       bool success = false;
-      if (type == "comment") {
+      if (typeKey == "comment") {
         success = await dp.deleteComment(commentId: id, postId: _currentPost.id);
-      } else if (type == "reply" && parentId != null) {
+      } else if (typeKey == "reply" && parentId != null) {
         success = await dp.deleteReply(parentCommentId: parentId, replyId: id);
       }
+
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$itemTypeDisplay ${l10n.appTitle.contains("መጂወ") ? "በተሳካ ሁኔታ ተሰርዟል!" : "deleted successfully!"}'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
+          _showSuccessSnackBar(l10n.itemDeletedSuccess(itemTypeDisplay));
+          await _fetchData(forceRefresh: true);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(dp.deleteItemError ?? '${l10n.appTitle.contains("መጂወ") ? "$itemTypeDisplay መሰረዝ አልተሳካም።" : "Failed to delete $type."}'), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating));
+          _showErrorSnackBar(dp.deleteItemError ?? l10n.itemDeleteFailed(itemTypeDisplay));
         }
       }
     }
@@ -358,8 +402,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           Expanded(
             child: RefreshIndicator(
               onRefresh: () => _fetchData(forceRefresh: true),
-              color: theme.colorScheme.primary,
-              backgroundColor: theme.colorScheme.surface,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
                 children: [
@@ -372,19 +414,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
                     child: Text(
-                      '${l10n.appTitle.contains("መጂወ") ? "አስተያየቶች" : "Comments"} (${comments.length})',
+                      '${l10n.commentsSectionHeader} (${comments.length})',
                       style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
                   if (discussionProvider.isLoadingCommentsForPost(_currentPost.id) && comments.isEmpty)
                     const Center(child: Padding(padding: EdgeInsets.all(16.0),child: CircularProgressIndicator())),
                   if (discussionProvider.commentErrorForPost(_currentPost.id) != null && comments.isEmpty)
-                    Center(child: Padding(padding: const EdgeInsets.all(16.0), child: Text(discussionProvider.commentErrorForPost(_currentPost.id)! , style: TextStyle(color: theme.colorScheme.error)) )),
+                    Center(child: Padding(padding: const EdgeInsets.all(16.0), child: Text(discussionProvider.commentErrorForPost(_currentPost.id)! ))),
                   if (comments.isEmpty && !discussionProvider.isLoadingCommentsForPost(_currentPost.id) && discussionProvider.commentErrorForPost(_currentPost.id) == null)
-                     Center(child: Padding(padding: const EdgeInsets.symmetric(vertical: 20.0), child: Text(l10n.appTitle.contains("መጂወ") ? 'እስካሁን ምንም አስተያየቶች የሉም። የመጀመሪያው ይሁኑ!' : 'No comments yet. Be the first!'))),
+                     Center(child: Padding(padding: const EdgeInsets.symmetric(vertical: 20.0), child: Text(l10n.noCommentsYet))),
 
                   ...comments.map((comment) => CommentItemView(
-                        key: ValueKey(comment.id),
+                        key: ValueKey(comment.id.toString() + comment.updatedAt.toIso8601String()),
                         comment: comment,
                         discussionProvider: discussionProvider,
                         authProvider: authProvider,
@@ -411,7 +453,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           onSubmit: _submitEdit,
                       ),
                     ),
-                  const SizedBox(height: 70),
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
@@ -422,9 +464,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               formKey: _topLevelCommentFormKey,
               discussionProvider: discussionProvider,
               onSubmit: _submitTopLevelComment,
+              l10n: l10n, // Pass l10n
             ),
         ],
       ),
     );
   }
 }
+

@@ -1,12 +1,14 @@
 // lib/widgets/discussion/comment_input_field.dart
 import 'package:flutter/material.dart';
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // Import AppLocalizations
 
 class CommentInputField extends StatelessWidget {
   final TextEditingController controller;
   final GlobalKey<FormState> formKey;
   final DiscussionProvider discussionProvider;
   final VoidCallback onSubmit;
+  final AppLocalizations l10n; // <<< ADDED l10n parameter
 
   const CommentInputField({
     super.key,
@@ -14,6 +16,7 @@ class CommentInputField extends StatelessWidget {
     required this.formKey,
     required this.discussionProvider,
     required this.onSubmit,
+    required this.l10n, // <<< ADDED l10n to constructor
   });
 
   @override
@@ -22,10 +25,10 @@ class CommentInputField extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
       decoration: BoxDecoration(
-        color: theme.cardTheme.color ?? theme.cardColor, // Use themed card color
+        color: theme.cardTheme.color ?? theme.cardColor,
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withOpacity(0.15), // Use themed shadow color
+            color: theme.shadowColor.withOpacity(0.15),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, -1),
@@ -40,16 +43,16 @@ class CommentInputField extends StatelessWidget {
               child: TextFormField(
                 controller: controller,
                 decoration: InputDecoration(
-                  hintText: 'Write a comment...', // TODO: Localize
+                  hintText: l10n.writeCommentHint, // <<< USE l10n
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(25.0),
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: theme.inputDecorationTheme.fillColor?.withOpacity(0.8) ?? theme.scaffoldBackgroundColor, // Slightly different fill
+                  fillColor: theme.inputDecorationTheme.fillColor?.withOpacity(0.8) ?? theme.scaffoldBackgroundColor,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Comment cannot be empty.' : null, // TODO: Localize
+                validator: (v) => (v == null || v.trim().isEmpty) ? l10n.commentValidationEmpty : null, // <<< USE l10n
                 textInputAction: TextInputAction.send,
                 onFieldSubmitted: (_) => onSubmit(),
               ),
@@ -67,7 +70,7 @@ class CommentInputField extends StatelessWidget {
                 : IconButton(
                     icon: Icon(Icons.send, color: theme.colorScheme.primary),
                     onPressed: onSubmit,
-                    tooltip: 'Post Comment', // TODO: Localize
+                    tooltip: l10n.postCommentTooltip, // <<< USE l10n
                   ),
           ],
         ),

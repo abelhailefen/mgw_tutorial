@@ -1,5 +1,7 @@
 // lib/provider/semester_provider.dart
 import 'dart:convert';
+import 'dart:async'; // For TimeoutException
+import 'dart:io';    // For SocketException
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:mgw_tutorial/models/semester.dart';
@@ -13,40 +15,41 @@ class SemesterProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  static const String _networkErrorMessage = "Sorry, there seems to be a network error. Please check your connection and try again.";
+  static const String _timeoutErrorMessage = "The request timed out. Please check your connection or try again later.";
+  static const String _unexpectedErrorMessage = "An unexpected error occurred while fetching semesters. Please try again later.";
+  static const String _failedToLoadSemestersMessage = "Failed to load semesters. Please try again.";
+
   static const String _apiBaseUrl = "https://mgw-backend.onrender.com/api";
 
-  // MODIFIED to accept forceRefresh
   Future<void> fetchSemesters({bool forceRefresh = false}) async {
-    // If not forcing refresh, and data exists and not currently loading, return.
     if (!forceRefresh && _semesters.isNotEmpty && !_isLoading) {
-      // print("Semesters already loaded. Skipping fetch.");
-      // notifyListeners(); // Optionally notify if UI needs to react to "using cached" state
+      // print("Semesters already loaded and not forcing refresh. Skipping fetch.");
       return;
     }
 
     _isLoading = true;
-    // If forcing refresh, clear existing data and error to ensure a clean fetch
-    if (forceRefresh) {
-      _semesters = [];
+    // Clear error if refreshing OR if it's an initial load (semesters list is empty)
+    if (forceRefresh || _semesters.isEmpty) {
       _error = null;
     }
-    // If not forcing but list is empty (initial load or previous error), clear error.
-    else if (_semesters.isEmpty) {
-        _error = null;
+    // If forcing refresh, also clear existing data to show loading indicator properly
+    if (forceRefresh) {
+      _semesters = [];
     }
-    notifyListeners();
+    notifyListeners(); // Notify for loading state and potential data clearing
 
     final url = Uri.parse('$_apiBaseUrl/semesters');
+    print("Fetching semesters from: $url (Force Refresh: $forceRefresh)");
 
     try {
-      print("Fetching semesters from: $url (Force Refresh: $forceRefresh)");
       final response = await http.get(
         url,
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
         },
-      );
+      ).timeout(const Duration(seconds: 20));
 
       print("Semesters API Response Status: ${response.statusCode}");
 
@@ -56,36 +59,52 @@ class SemesterProvider with ChangeNotifier {
           _semesters = extractedData
               .map((semesterJson) => Semester.fromJson(semesterJson as Map<String, dynamic>))
               .toList();
-          _error = null; // Clear error on success
+          _error = null;
         } else {
-          _error = 'Failed to load semesters: API response was not a list as expected.';
+          _error = "Failed to load semesters: Unexpected API response format.";
           _semesters = [];
         }
       } else {
-        String errorMessage = 'Failed to load semesters. Status Code: ${response.statusCode}';
-        // ... (your existing error message parsing logic) ...
-        try {
-          final errorData = json.decode(response.body);
-          if (errorData != null && errorData['message'] != null) {
-            errorMessage = errorData['message'];
-            if (errorData['code'] != null) {
-              errorMessage += ' (Code: ${errorData['code']})';
-            }
-          } else if (response.body.isNotEmpty) {
-            errorMessage += "\nAPI Response: ${response.body}";
-          }
-        } catch (e) {
-          errorMessage += "\nRaw API Response: ${response.body}";
-        }
-        _error = errorMessage;
+        _handleHttpErrorResponse(response, _failedToLoadSemestersMessage);
       }
+    } on TimeoutException catch (e) {
+      print("TimeoutException fetching semesters: $e");
+      _error = _timeoutErrorMessage;
+      _semesters = []; // Ensure data is cleared on timeout
+    } on SocketException catch (e) {
+      print("SocketException fetching semesters: $e");
+      _error = _networkErrorMessage;
+      _semesters = []; // Ensure data is cleared on socket error
+    } on http.ClientException catch (e) {
+      print("ClientException fetching semesters: $e");
+      _error = _networkErrorMessage;
+      _semesters = []; // Ensure data is cleared on client error
     } catch (e) {
-      _error = 'An unexpected error occurred while fetching semesters: ${e.toString()}';
-      print("Exception during fetchSemesters: $_error");
+      print("Generic Exception during fetchSemesters: $e");
+      _error = _unexpectedErrorMessage;
+      _semesters = []; // Ensure data is cleared on generic error
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  void _handleHttpErrorResponse(http.Response response, String defaultUserMessage) {
+    try {
+      final errorBody = json.decode(response.body);
+      if (errorBody is Map && errorBody.containsKey('message') && errorBody['message'] != null && errorBody['message'].toString().isNotEmpty) {
+        _error = errorBody['message'].toString();
+      } else {
+        _error = "$defaultUserMessage (Status: ${response.statusCode})";
+      }
+    } catch (e) {
+      _error = "$defaultUserMessage (Status: ${response.statusCode}). Response not parsable.";
+    }
+    _semesters = [];
+  }
+
+  void clearError() {
+    _error = null;
   }
 
   void clearSemesters() {

@@ -4,10 +4,8 @@ import 'package:mgw_tutorial/widgets/home/semesters_card.dart';
 import 'package:mgw_tutorial/widgets/home/notes_card.dart';
 import 'package:mgw_tutorial/provider/semester_provider.dart';
 import 'package:provider/provider.dart';
-// import 'package:mgw_tutorial/screens/registration/registration_screen.dart'; // Not used
 import 'package:mgw_tutorial/models/semester.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:flutter/foundation.dart'; // For kDebugMode
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -51,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '${semesterProvider.error}',
+                            semesterProvider.error!,
                             textAlign: TextAlign.center,
                             style: TextStyle(color: theme.colorScheme.error),
                           ),
@@ -78,44 +76,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 return Column(
                   children: semesterProvider.semesters.map((semester) {
-                    List<String> subjectsLeft = [];
-                    List<String> subjectsRight = [];
-                    for (int i = 0; i < semester.courses.length; i++) {
-                      if (i.isEven) {
-                        subjectsLeft.add(semester.courses[i].name);
-                      } else {
-                        subjectsRight.add(semester.courses[i].name);
-                      }
-                    }
-                    if (semester.courses.isEmpty) {
-                      subjectsLeft.add(l10n.appTitle.contains("መጂወ") ? "የኮርስ ዝርዝሮች በቅርቡ ይመጣሉ።" : "Courses details coming soon.");
-                    }
-
-                    final String effectiveImageUrl = semester.firstImageUrl ?? 'https://via.placeholder.com/600x300.png?text=Semester+Image';
-                    if (kDebugMode) {
-                       print("HomeScreen - Semester: ${semester.name}, Passing to SemestersCard imageUrl: $effectiveImageUrl");
-                    }
-
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: SemestersCard(
-                        title: '${semester.name} - ${semester.year}',
-                        imageUrl: effectiveImageUrl,
-                        subjectsLeft: subjectsLeft,
-                        subjectsRight: subjectsRight,
-                        price: semester.price,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text('${semester.name} (ID: ${semester.id}) Tapped'),
-                                backgroundColor: theme.colorScheme.primaryContainer,
-                                behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                           if (kDebugMode) {
-                               print('Tapped on semester: ${semester.name}, ID: ${semester.id}');
-                           }
-                        },
+                        semester: semester,
                       ),
                     );
                   }).toList(),
@@ -123,14 +87,14 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             const SizedBox(height: 16),
-            NotesCard(
+            NotesCard( // CORRECTED: Added parameters
               title: l10n.appTitle.contains("መጂወ") ? 'ማስታወሻዎች' : 'Notes',
               description: l10n.appTitle.contains("መጂወ") ? 'ከአገር ዙሪያ ከተማሪዎች የሰበሰብናቸው ማስታወሻዎች።' : 'Notes we have collected from students all around the country.',
               imageUrl: 'https://via.placeholder.com/600x200.png?text=Notes+Preview',
               onTap: () {
                  ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                        content: Text(l10n.appTitle.contains("መጂወ") ? 'የማስታወሻዎች ክፍል በቅርቡ ይመጣል!' : 'Notes section coming soon!'),
+                        content: Text(l10n.appTitle.contains("መጂወ") ? 'የማስታወሻዎች ክፍል በቅርቡ ይመጣል!' : 'Notes section coming soon!', style: TextStyle(color: theme.colorScheme.onSecondaryContainer)),
                         backgroundColor: theme.colorScheme.secondaryContainer,
                         behavior: SnackBarBehavior.floating,
                     ),
@@ -138,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             const SizedBox(height: 24),
-            Padding(
+            Padding( // CORRECTED: Added padding
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Text(
                 l10n.appTitle.contains("መጂወ") ? 'ውጤታቸውን እያሳደጉ ካሉ ከ4,000 በላይ ተማሪዎች ጋር ይቀላቀሉ' : 'Join over 4,000 students who are already boosting their grades',

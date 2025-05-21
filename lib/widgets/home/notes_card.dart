@@ -1,5 +1,6 @@
 //lib/widgets/home/notes_card.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class NotesCard extends StatelessWidget {
   final String title;
@@ -18,12 +19,20 @@ class NotesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Card(
-      // Uses CardTheme from main.dart
       child: InkWell(
-        onTap: onTap ?? () { /* ... */ },
-        borderRadius: BorderRadius.circular(theme.cardTheme.shape is RoundedRectangleBorder ? (theme.cardTheme.shape as RoundedRectangleBorder).borderRadius.resolve(Directionality.of(context)).bottomLeft.x : 12.0), // Match card border radius
+        onTap: onTap ?? () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text(l10n.notesComingSoon, style: TextStyle(color: theme.colorScheme.onSecondaryContainer)),
+                  backgroundColor: theme.colorScheme.secondaryContainer,
+                  behavior: SnackBarBehavior.floating,
+              ),
+          );
+        },
+        borderRadius: BorderRadius.circular(theme.cardTheme.shape is RoundedRectangleBorder ? (theme.cardTheme.shape as RoundedRectangleBorder).borderRadius.resolve(Directionality.of(context)).bottomLeft.x : 12.0),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(

@@ -32,7 +32,7 @@ class _AccountScreenState extends State<AccountScreen> {
   final _changePhoneFormKey = GlobalKey<FormState>();
   final _newPhoneController = TextEditingController();
   final _otpController = TextEditingController();
-  bool _otpRequested = false;
+  // bool _otpRequested = false; // No longer needed at class level for dialog
 
   @override
   void dispose() {
@@ -44,10 +44,40 @@ class _AccountScreenState extends State<AccountScreen> {
     super.dispose();
   }
 
+  void _showThemedSuccessSnackBar(String message) {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(color: theme.colorScheme.onPrimary),
+        ),
+        backgroundColor: theme.colorScheme.primary,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showThemedErrorSnackBar(String message) {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(color: theme.colorScheme.onErrorContainer),
+        ),
+        backgroundColor: theme.colorScheme.errorContainer,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+
   Future<void> _changeProfilePicture() async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
     try {
       final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
@@ -55,24 +85,12 @@ class _AccountScreenState extends State<AccountScreen> {
           setState(() {
             _profileImageFile = File(pickedFile.path);
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.profilePictureSelectedMessage),
-              backgroundColor: theme.colorScheme.primaryContainer,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          _showThemedSuccessSnackBar(l10n.profilePictureSelectedMessage);
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.errorPickingImage(e.toString())),
-            backgroundColor: theme.colorScheme.errorContainer,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        _showThemedErrorSnackBar(l10n.errorPickingImage(e.toString()));
       }
     }
   }
@@ -83,11 +101,11 @@ class _AccountScreenState extends State<AccountScreen> {
     _currentPasswordController.clear();
     _newPasswordController.clear();
     _confirmNewPasswordController.clear();
-    setState(() {
-      _isCurrentPasswordVisible = false;
-      _isNewPasswordVisible = false;
-      _isConfirmNewPasswordVisible = false;
-    });
+    
+    // Reset visibility flags locally for the dialog instance
+    bool localIsCurrentPasswordVisible = false;
+    bool localIsNewPasswordVisible = false;
+    bool localIsConfirmNewPasswordVisible = false;
 
     showDialog(
       context: context,
@@ -95,7 +113,8 @@ class _AccountScreenState extends State<AccountScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setDialogState) {
-            final authProvider = Provider.of<AuthProvider>(context, listen: false);
+            final authProvider = Provider.of<AuthProvider>(context, listen: true);
+
             return AlertDialog(
               backgroundColor: theme.dialogBackgroundColor,
               title: Text(l10n.changePasswordNotImplementedMessage.split(" ")[0] + " " + l10n.accountPasswordLabel, style: theme.textTheme.titleLarge),
@@ -107,10 +126,9 @@ class _AccountScreenState extends State<AccountScreen> {
                     children: <Widget>[
                       PasswordFormField(
                         controller: _currentPasswordController,
-                        isPasswordVisible: _isCurrentPasswordVisible,
-                        onToggleVisibility: () => setDialogState(() => _isCurrentPasswordVisible = !_isCurrentPasswordVisible),
-                        labelText: l10n.appTitle.contains("መጂወ") ? "የአሁኑ የይለፍ ቃል" : "Current Password",
-                        hintText: "",
+                        isPasswordVisible: localIsCurrentPasswordVisible, // Use local state
+                        onToggleVisibility: () => setDialogState(() => localIsCurrentPasswordVisible = !localIsCurrentPasswordVisible),
+                        labelText: l10n.currentPasswordLabel,
                         l10n: l10n,
                         validator: (value) {
                           if (value == null || value.isEmpty) return l10n.passwordValidationErrorRequired;
@@ -120,10 +138,9 @@ class _AccountScreenState extends State<AccountScreen> {
                       const SizedBox(height: 16),
                       PasswordFormField(
                         controller: _newPasswordController,
-                        isPasswordVisible: _isNewPasswordVisible,
-                        onToggleVisibility: () => setDialogState(() => _isNewPasswordVisible = !_isNewPasswordVisible),
-                        labelText: l10n.appTitle.contains("መጂወ") ? "አዲስ የይለፍ ቃል" : "New Password",
-                        hintText: "",
+                        isPasswordVisible: localIsNewPasswordVisible, // Use local state
+                        onToggleVisibility: () => setDialogState(() => localIsNewPasswordVisible = !localIsNewPasswordVisible),
+                        labelText: l10n.newPasswordLabel,
                         l10n: l10n,
                          validator: (value) {
                           if (value == null || value.isEmpty) return l10n.passwordValidationErrorRequired;
@@ -134,14 +151,13 @@ class _AccountScreenState extends State<AccountScreen> {
                       const SizedBox(height: 16),
                        PasswordFormField(
                         controller: _confirmNewPasswordController,
-                        isPasswordVisible: _isConfirmNewPasswordVisible,
-                        onToggleVisibility: () => setDialogState(() => _isConfirmNewPasswordVisible = !_isConfirmNewPasswordVisible),
-                        labelText: l10n.appTitle.contains("መጂወ") ? "አዲስ የይለፍ ቃል አረጋግጥ" : "Confirm New Password",
-                        hintText: "",
+                        isPasswordVisible: localIsConfirmNewPasswordVisible, // Use local state
+                        onToggleVisibility: () => setDialogState(() => localIsConfirmNewPasswordVisible = !localIsConfirmNewPasswordVisible),
+                        labelText: l10n.confirmNewPasswordLabel,
                         l10n: l10n,
                         validator: (value) {
                           if (value == null || value.isEmpty) return l10n.passwordValidationErrorRequired;
-                          if (value != _newPasswordController.text) return l10n.appTitle.contains("መጂወ") ? "የይለፍ ቃሎች አይዛመዱም" : "Passwords do not match";
+                          if (value != _newPasswordController.text) return l10n.passwordsDoNotMatch;
                           return null;
                         },
                       ),
@@ -151,7 +167,7 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
               actions: <Widget>[
                 TextButton(
-                  child: Text(l10n.appTitle.contains("መጂወ") ? "ሰርዝ" : "Cancel", style: TextStyle(color: theme.colorScheme.primary)),
+                  child: Text(l10n.cancelButton, style: TextStyle(color: theme.colorScheme.primary)),
                   onPressed: authProvider.isLoading ? null : () => Navigator.of(ctx).pop(),
                 ),
                 ElevatedButton(
@@ -161,15 +177,12 @@ class _AccountScreenState extends State<AccountScreen> {
                         currentPassword: _currentPasswordController.text,
                         newPassword: _newPasswordController.text,
                       );
-                      if (mounted) {
-                         Navigator.of(ctx).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(result['message'] ?? "An error occurred."), // TODO: Localize
-                            backgroundColor: result['success'] ? theme.colorScheme.primaryContainer : theme.colorScheme.errorContainer,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
+                      if (!mounted) return;
+                      Navigator.of(ctx).pop();
+                      if (result['success']) {
+                        _showThemedSuccessSnackBar(result['message'] ?? l10n.passwordChangedSuccess);
+                      } else {
+                        _showThemedErrorSnackBar(result['message'] ?? l10n.passwordChangeFailed);
                       }
                     }
                   },
@@ -190,9 +203,8 @@ class _AccountScreenState extends State<AccountScreen> {
     final theme = Theme.of(context);
     _newPhoneController.clear();
     _otpController.clear();
-    setState(() {
-      _otpRequested = false;
-    });
+    
+    bool dialogOtpRequested = false; // Local state for the dialog
 
     showDialog(
       context: context,
@@ -200,7 +212,8 @@ class _AccountScreenState extends State<AccountScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setDialogState) {
-            final authProvider = Provider.of<AuthProvider>(context, listen: false);
+            final authProvider = Provider.of<AuthProvider>(context, listen: true);
+
             return AlertDialog(
               backgroundColor: theme.dialogBackgroundColor,
               title: Text(l10n.changePhoneNumberNotImplementedMessage.split(" ")[0] + " " + l10n.phoneNumberLabel, style: theme.textTheme.titleLarge),
@@ -210,10 +223,10 @@ class _AccountScreenState extends State<AccountScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      if (!_otpRequested)
+                      if (!dialogOtpRequested)
                         PhoneFormField(
                           controller: _newPhoneController,
-                          labelText: l10n.appTitle.contains("መጂወ") ? "አዲስ ስልክ ቁጥር" : "New Phone Number",
+                          labelText: l10n.newPhoneNumberLabel,
                           hintText: l10n.phoneNumberHint,
                           l10n: l10n,
                           validator: (value) {
@@ -224,7 +237,7 @@ class _AccountScreenState extends State<AccountScreen> {
                                return l10n.phoneNumberValidationErrorInvalid;
                             }
                             if (currentUserPhone != null && normalizedInput == currentUserPhone) {
-                                return l10n.appTitle.contains("መጂወ") ? "አዲስ ስልክ ቁጥር ከአሁኑ ጋር አንድ መሆን የለበትም" : "New phone number cannot be the same as current.";
+                                return l10n.otpNewPhoneSameAsCurrentError;
                             }
                             return null;
                           },
@@ -232,11 +245,11 @@ class _AccountScreenState extends State<AccountScreen> {
                       else
                         TextFormField(
                           controller: _otpController,
-                          decoration: InputDecoration(labelText: l10n.appTitle.contains("መጂወ") ? "OTP ያስገቡ" : "Enter OTP"),
+                          decoration: InputDecoration(labelText: l10n.otpEnterPrompt),
                           keyboardType: TextInputType.number,
                           validator: (value) {
-                            if (value == null || value.isEmpty) return l10n.appTitle.contains("መጂወ") ? "እባክዎ OTP ያስገቡ" : "Please enter OTP";
-                            if (value.length != 6) return l10n.appTitle.contains("መጂወ") ? "OTP 6 አሃዝ መሆን አለበት" : "OTP must be 6 digits";
+                            if (value == null || value.isEmpty) return l10n.otpValidationErrorRequired;
+                            if (value.length != 6) return l10n.otpValidationErrorLength;
                             return null;
                           },
                         ),
@@ -246,50 +259,42 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
               actions: <Widget>[
                 TextButton(
-                  child: Text(l10n.appTitle.contains("መጂወ") ? "ሰርዝ" : "Cancel", style: TextStyle(color: theme.colorScheme.primary)),
+                  child: Text(l10n.cancelButton, style: TextStyle(color: theme.colorScheme.primary)),
                   onPressed: authProvider.isLoading ? null : () => Navigator.of(ctx).pop(),
                 ),
                 ElevatedButton(
                   onPressed: authProvider.isLoading ? null : () async {
                     if (_changePhoneFormKey.currentState!.validate()) {
-                      if (!_otpRequested) {
-                        setDialogState(() {});
+                      if (!dialogOtpRequested) {
                         final result = await authProvider.requestPhoneChangeOTP(
                           newRawPhoneNumber: _newPhoneController.text,
                         );
-                        if (mounted) {
-                           if (result['success']) {
-                            setDialogState(() { _otpRequested = true; });
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message']!), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message']!), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating));
-                          }
+                        if (!mounted) return;
+                        if (result['success']) {
+                          setDialogState(() { dialogOtpRequested = true; });
+                           _showThemedSuccessSnackBar(result['message'] ?? l10n.otpSentSuccess);
+                        } else {
+                          _showThemedErrorSnackBar(result['message'] ?? l10n.otpRequestFailed);
                         }
                       } else {
-                        setDialogState(() {});
                         final result = await authProvider.verifyOtpAndChangePhone(
                           newRawPhoneNumber: _newPhoneController.text,
                           otp: _otpController.text,
                         );
-                        if (mounted) {
-                          Navigator.of(ctx).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(result['message'] ?? "An error occurred."), // TODO: Localize
-                              backgroundColor: result['success'] ? theme.colorScheme.primaryContainer : theme.colorScheme.errorContainer,
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          if (result['success']) {
-                            setState(() {});
-                          }
+                        if (!mounted) return;
+                        Navigator.of(ctx).pop();
+                        if (result['success']) {
+                           _showThemedSuccessSnackBar(result['message'] ?? l10n.phoneUpdateSuccess);
+                           setState(() {});
+                        } else {
+                           _showThemedErrorSnackBar(result['message'] ?? l10n.phoneUpdateFailed);
                         }
                       }
                     }
                   },
                   child: authProvider.isLoading
                     ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(theme.colorScheme.onPrimary)))
-                    : Text(_otpRequested ? (l10n.appTitle.contains("መጂወ") ? "OTP አረጋግጥ" : "Verify OTP") : (l10n.appTitle.contains("መጂወ") ? "OTP ጠይቅ" : "Request OTP")),
+                    : Text(dialogOtpRequested ? l10n.otpVerifyButton : l10n.otpRequestButton),
                 ),
               ],
             );
@@ -303,16 +308,14 @@ class _AccountScreenState extends State<AccountScreen> {
     if (!mounted) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
+
     await authProvider.logout();
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (Route<dynamic> route) => false,
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.logoutSuccess), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating),
-      );
+      _showThemedSuccessSnackBar(l10n.logoutSuccess);
     }
   }
 
@@ -333,7 +336,6 @@ class _AccountScreenState extends State<AccountScreen> {
         displayName = currentUser.phone;
       }
       displayPhone = currentUser.phone;
-      // userProfileNetworkUrl = currentUser.profileImageUrl;
     }
 
     Widget profilePictureWidget;
@@ -362,7 +364,7 @@ class _AccountScreenState extends State<AccountScreen> {
     }
 
     if (currentUser == null) {
-      return Scaffold( // Add Scaffold for consistent background
+      return Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -395,7 +397,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 children: [
                   profilePictureWidget,
                   const SizedBox(height: 8),
-                  Text(displayName, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.onBackground)),
+                  Text(displayName, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                   if (displayPhone.isNotEmpty)
                      Text(displayPhone, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7))),
                   const SizedBox(height: 12),
@@ -424,10 +426,10 @@ class _AccountScreenState extends State<AccountScreen> {
               onChange: _showChangePasswordDialog,
             ),
             const SizedBox(height: 30),
-            Card( // Uses CardTheme
+            Card(
               child: SwitchListTile(
                 title: Text(
-                  l10n.notificationsLabel,
+                  l10n.notifications, // <<< CORRECTED KEY
                   style: theme.textTheme.titleMedium,
                 ),
                 value: _notificationsEnabled,
@@ -435,13 +437,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   setState(() {
                     _notificationsEnabled = value;
                   });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(value ? l10n.notificationsEnabledMessage : l10n.notificationsDisabledMessage),
-                        backgroundColor: theme.colorScheme.primaryContainer,
-                        behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                  _showThemedSuccessSnackBar(value ? l10n.notificationsEnabledMessage : l10n.notificationsDisabledMessage);
                 },
                 activeColor: theme.colorScheme.primary,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
@@ -454,7 +450,6 @@ class _AccountScreenState extends State<AccountScreen> {
               onPressed: _handleLogout,
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.error,
-                foregroundColor: theme.colorScheme.onError,
               ),
             ),
             const SizedBox(height: 20),
@@ -472,7 +467,7 @@ class _AccountScreenState extends State<AccountScreen> {
     required VoidCallback onChange,
   }) {
     final theme = Theme.of(context);
-    return Card( // Uses CardTheme
+    return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         child: Row(
@@ -499,7 +494,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 ],
               ),
             ),
-            ElevatedButton( // Changed to ElevatedButton for better theming
+            ElevatedButton(
               onPressed: onChange,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),

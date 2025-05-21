@@ -1,5 +1,6 @@
 // lib/screens/auth/login_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:mgw_tutorial/screens/main_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/locale_provider.dart';
@@ -33,29 +34,61 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final DeviceInfoService _deviceInfoService = DeviceInfoService();
   String _deviceInfoString = 'Fetching device info...';
+  bool _isDeviceInfoFetchedInitially = false;
 
   @override
   void initState() {
     super.initState();
-    _getDeviceInfo();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeDeviceInfo();
+    });
   }
 
-  Future<void> _getDeviceInfo() async {
+  Future<void> _initializeDeviceInfo() async {
     if (!mounted) return;
+    await _getDeviceInfoInternal();
+    if (mounted) {
+      setState(() {
+        _isDeviceInfoFetchedInitially = true;
+      });
+    }
+  }
+
+  Future<String> _getDeviceInfoInternal() async {
+    if (!mounted) return "Mobile - Default, UnknownOS";
 
     final deviceData = await _deviceInfoService.getDeviceData();
     String brand = deviceData['brand'] ?? deviceData['name'] ?? 'UnknownBrand';
     String model = deviceData['model'] ?? deviceData['localizedModel'] ?? 'UnknownModel';
     String os = deviceData['systemName'] ?? deviceData['platform'] ?? 'UnknownOS';
-    String deviceType = _deviceInfoService.detectDeviceType(context);
+    String deviceType = "Unknown";
 
-
-    if (mounted) {
-      setState(() {
-        _deviceInfoString = '$deviceType - $brand $model, $os';
-        print("Device Info for Login: $_deviceInfoString");
-      });
+    if (mounted && ModalRoute.of(context) != null && ModalRoute.of(context)!.isActive) {
+        try {
+           deviceType = _deviceInfoService.detectDeviceType(context);
+        } catch (e) {
+            print("Error detecting device type in LoginScreen _getDeviceInfoInternal: $e. Using platform default.");
+            deviceType = (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
+                         ? "Mobile"
+                         : (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)
+                           ? "Computer"
+                           : "Web Browser";
+        }
+    } else {
+        deviceType = (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
+                         ? "Mobile"
+                         : (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)
+                           ? "Computer"
+                           : "Web Browser";
+        print("Context not active for MediaQuery in _getDeviceInfoInternal, using platform default for deviceType: $deviceType");
     }
+
+    String finalDeviceInfo = '$deviceType - $brand $model, $os';
+    if (mounted) {
+      _deviceInfoString = finalDeviceInfo;
+      print("Device Info for Login Updated: $_deviceInfoString");
+    }
+    return finalDeviceInfo;
   }
 
   @override
@@ -77,108 +110,126 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
     authProvider.clearError();
 
-    if (_formKey.currentState!.validate()) {
-      String rawPhoneInput = _phoneController.text.trim();
-      String loginPhoneNumber;
+    if (!_formKey.currentState!.validate()) {
+        return;
+    }
 
-      if (rawPhoneInput.isEmpty) {
+    String currentDeviceInfo = _deviceInfoString;
+
+    if (!_isDeviceInfoFetchedInitially || currentDeviceInfo == 'Fetching device info...' || currentDeviceInfo.contains("Unknown")) {
+        print("Device info not ready or unknown, attempting one more fetch before login.");
+        currentDeviceInfo = await _getDeviceInfoInternal();
+        if (mounted) {
+            setState(() {
+                _deviceInfoString = currentDeviceInfo;
+            });
+        }
+
+        if (currentDeviceInfo == 'Fetching device info...' || currentDeviceInfo.contains("Unknown")) {
+            print("Device info still not ideal after re-fetch, proceeding with current value: $currentDeviceInfo");
+            if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(
+                           l10n.deviceInfoProceedingDefault,
+                           style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
+                        ),
+                        backgroundColor: theme.colorScheme.secondaryContainer,
+                        behavior: SnackBarBehavior.floating,
+                    ),
+                );
+            }
+            if (currentDeviceInfo == 'Fetching device info...') {
+                currentDeviceInfo = "Mobile - Generic, UnknownOS"; // A safe default
+                if(mounted) setState(() => _deviceInfoString = currentDeviceInfo);
+            }
+        }
+    }
+
+    String rawPhoneInput = _phoneController.text.trim();
+    String loginPhoneNumber;
+
+    if (rawPhoneInput.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text(l10n.phoneNumberValidationErrorRequired),
+                content: Text(l10n.phoneNumberValidationErrorRequired, style: TextStyle(color: theme.colorScheme.onErrorContainer)),
                 backgroundColor: theme.colorScheme.errorContainer,
                 behavior: SnackBarBehavior.floating,
             ),
           );
         }
         return;
-      }
+    }
+    if (rawPhoneInput.startsWith('+251') && rawPhoneInput.length == 13) {
+      loginPhoneNumber = rawPhoneInput;
+    } else if (rawPhoneInput.length == 9 && !rawPhoneInput.startsWith('0')) {
+      loginPhoneNumber = '+251$rawPhoneInput';
+    } else if (rawPhoneInput.startsWith('0') && rawPhoneInput.length == 10) {
+      loginPhoneNumber = '+251${rawPhoneInput.substring(1)}';
+    } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    l10n.phoneNumberValidationErrorInvalid,
+                    style: TextStyle(color: theme.colorScheme.onErrorContainer),
+                ),
+                backgroundColor: theme.colorScheme.errorContainer,
+                behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+    }
 
-      // Phone number normalization logic (remains the same)
-      if (rawPhoneInput.startsWith('+251') && rawPhoneInput.length == 13) {
-        loginPhoneNumber = rawPhoneInput;
-      } else if (rawPhoneInput.length == 9 && !rawPhoneInput.startsWith('0')) {
-        loginPhoneNumber = '+251$rawPhoneInput';
-      } else if (rawPhoneInput.startsWith('0') && rawPhoneInput.length == 10) {
-        loginPhoneNumber = '+251${rawPhoneInput.substring(1)}';
+    final String password = _passwordController.text;
+
+    print("Attempting login with Phone: $loginPhoneNumber, Password: [HIDDEN], Device: $currentDeviceInfo");
+
+    bool success = await authProvider.login(
+      phoneNumber: loginPhoneNumber,
+      password: password,
+      deviceInfo: currentDeviceInfo,
+    );
+
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.loginSuccessMessage,
+              style: TextStyle(color: theme.colorScheme.onPrimary),
+            ),
+            backgroundColor: theme.colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+        );
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(l10n.phoneNumberValidationErrorInvalid),
-                backgroundColor: theme.colorScheme.errorContainer,
-                behavior: SnackBarBehavior.floating,
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              authProvider.apiError?.message ?? l10n.signInFailedErrorGeneral,
+              style: TextStyle(color: theme.colorScheme.onErrorContainer),
             ),
-          );
-        }
-        return;
-      }
-
-
-      final String password = _passwordController.text;
-
-      if (_deviceInfoString == 'Fetching device info...' || _deviceInfoString.isEmpty) {
-        await _getDeviceInfo();
-        if (_deviceInfoString == 'Fetching device info...' || _deviceInfoString.isEmpty) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-               SnackBar(
-                   // TODO: Localize this specific message if needed
-                   content: const Text("Device information not available. Please wait and try again."),
-                   backgroundColor: theme.colorScheme.errorContainer,
-                   behavior: SnackBarBehavior.floating,
-               ),
-            );
-          }
-          return;
-        }
-      }
-
-      print("Attempting login with Phone: $loginPhoneNumber, Password: [HIDDEN], Device: $_deviceInfoString");
-
-      bool success = await authProvider.login(
-        phoneNumber: loginPhoneNumber,
-        password: password,
-        deviceInfo: _deviceInfoString,
-      );
-
-      if (mounted) {
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(l10n.loginSuccessMessage),
-                backgroundColor: theme.colorScheme.primaryContainer, // Use a success-indicating color
-                behavior: SnackBarBehavior.floating,
-            ),
-          );
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainScreen()),
-          );
-        } else {
-          // Display the user-friendly message from AuthProvider
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authProvider.apiError?.message ?? l10n.signInFailedErrorGeneral),
-              backgroundColor: theme.colorScheme.errorContainer,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+            backgroundColor: theme.colorScheme.errorContainer,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
 
   String _getLanguageDisplayName(String langCode, AppLocalizations l10n) {
     switch (langCode) {
-      case 'en':
-        return l10n.english;
-      case 'am':
-        return l10n.amharic;
-      case 'or':
-        return l10n.afaanOromo;
-      default:
-        return langCode.toUpperCase();
+      case 'en': return l10n.english;
+      case 'am': return l10n.amharic;
+      case 'or': return l10n.afaanOromo;
+      default: return langCode.toUpperCase();
     }
   }
 
@@ -193,6 +244,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_supportedLanguageCodes.contains(currentLanguageCode)) {
       currentLanguageCode = _supportedLanguageCodes.isNotEmpty ? _supportedLanguageCodes.first : 'en';
     }
+
+    bool canAttemptLogin = _isDeviceInfoFetchedInitially;
 
     return Scaffold(
       body: SafeArea(
@@ -262,9 +315,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       authProvider.isLoading
                           ? const Center(child: CircularProgressIndicator())
                           : ElevatedButton(
-                              onPressed: _handleLogin,
+                              onPressed: canAttemptLogin ? _handleLogin : null,
                               child: Text(l10n.signInButton),
                             ),
+                       if (!canAttemptLogin && !authProvider.isLoading)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            l10n.initializing,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                          ),
+                        ),
                     ],
                   ),
                 ),

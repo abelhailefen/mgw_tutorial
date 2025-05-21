@@ -13,7 +13,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:mgw_tutorial/screens/sidebar/about_us_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/settings_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/discussion_group_screen.dart';
-import 'package:mgw_tutorial/screens/registration/registration_screen.dart';
+import 'package:mgw_tutorial/screens/enrollment/order_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/testimonials_screen.dart';
 
 // Import Providers to call their fetch methods
@@ -21,24 +21,26 @@ import 'package:mgw_tutorial/provider/semester_provider.dart';
 import 'package:mgw_tutorial/provider/api_course_provider.dart';
 import 'package:mgw_tutorial/provider/testimonial_provider.dart';
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
+import 'package:mgw_tutorial/provider/department_provider.dart';
 
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
-  final String _telegramChannelUrl = "https://t.me/YourTelegramChannelNameOrLink"; // Replace
-  final String _appShareLink = "https://play.google.com/store/apps/details?id=com.example.mgw_tutorial"; // Replace
+  final String _telegramChannelUrl = "https://t.me/YourTelegramChannelNameOrLink";
+  final String _appShareLink = "https://play.google.com/store/apps/details?id=your.app.id";
   final String _appShareMessage = "Check out MGW Tutorial, a great app for learning! ";
-  final String _contactEmail = "support@mgwtutorial.com"; // Replace
-  final String _contactPhoneNumber = "+251900000000"; // Replace
-  final String _websiteUrl = "https://www.zsecreteducation.com"; // Replace
+  final String _contactEmail = "support@mgwtutorial.com";
+  final String _contactPhoneNumber = "+251900000000";
+  final String _websiteUrl = "https://www.zsecreteducation.com";
 
 
   Future<void> _launchUrl(BuildContext context, String urlString, {bool isMail = false, bool isTel = false}) async {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     Uri uri;
     if (isMail) {
-      uri = Uri(scheme: 'mailto', path: urlString, queryParameters: {'subject': 'App Support Query'});
+      uri = Uri(scheme: 'mailto', path: urlString, queryParameters: {'subject': l10n.emailSupportSubject});
     } else if (isTel) {
       uri = Uri(scheme: 'tel', path: urlString);
     } else {
@@ -48,7 +50,11 @@ class AppDrawer extends StatelessWidget {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? "$urlString መክፈት አልተቻለም።" : 'Could not launch $urlString')),
+          SnackBar(
+            content: Text(l10n.couldNotLaunchUrl(urlString), style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+            backgroundColor: theme.colorScheme.errorContainer,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -56,10 +62,11 @@ class AppDrawer extends StatelessWidget {
 
   Future<void> _shareApp(BuildContext context) async {
     Navigator.of(context).pop();
+    final l10n = AppLocalizations.of(context)!;
     final box = context.findRenderObject() as RenderBox?;
     await Share.share(
-      _appShareMessage + _appShareLink,
-      subject: 'MGW Tutorial App', // TODO: Localize
+      _appShareMessage, // You might want to localize _appShareMessage too
+      subject: l10n.shareAppSubject,
       sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
     );
   }
@@ -78,7 +85,7 @@ class AppDrawer extends StatelessWidget {
             children: <Widget>[
               ListTile(
                 leading: Icon(Icons.email_outlined, color: theme.listTileTheme.iconColor),
-                title: Text(l10n.appTitle.contains("መጂወ") ? "በኢሜል ያግኙን" : "Contact via Email", style: TextStyle(color: theme.listTileTheme.textColor)),
+                title: Text(l10n.contactViaEmail, style: TextStyle(color: theme.listTileTheme.textColor)),
                 subtitle: Text(_contactEmail, style: TextStyle(color: theme.listTileTheme.textColor?.withOpacity(0.7))),
                 onTap: () {
                   Navigator.of(bCtx).pop();
@@ -88,7 +95,7 @@ class AppDrawer extends StatelessWidget {
               if (_contactPhoneNumber.isNotEmpty)
                 ListTile(
                   leading: Icon(Icons.phone_outlined, color: theme.listTileTheme.iconColor),
-                  title: Text(l10n.appTitle.contains("መጂወ") ? "በስልክ ይደውሉ" : "Call Us", style: TextStyle(color: theme.listTileTheme.textColor)),
+                  title: Text(l10n.callUs, style: TextStyle(color: theme.listTileTheme.textColor)),
                   subtitle: Text(_contactPhoneNumber, style: TextStyle(color: theme.listTileTheme.textColor?.withOpacity(0.7))),
                   onTap: () {
                     Navigator.of(bCtx).pop();
@@ -97,7 +104,7 @@ class AppDrawer extends StatelessWidget {
                 ),
               ListTile(
                 leading: Icon(Icons.web_outlined, color: theme.listTileTheme.iconColor),
-                title: Text(l10n.appTitle.contains("መጂወ") ? "የእኛን ድረ-ገጽ ይጎብኙ" : "Visit our Website", style: TextStyle(color: theme.listTileTheme.textColor)),
+                title: Text(l10n.visitOurWebsite, style: TextStyle(color: theme.listTileTheme.textColor)),
                 onTap: () {
                    Navigator.of(bCtx).pop();
                    _launchUrl(context, _websiteUrl);
@@ -114,53 +121,82 @@ class AppDrawer extends StatelessWidget {
     Navigator.of(context).pop();
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+
     ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? "ዳታ እየታደሰ ነው..." : 'Refreshing data...'), duration: const Duration(seconds: 2)),
+      SnackBar(
+        content: Text(l10n.refreshingData, style: TextStyle(color: theme.colorScheme.onPrimaryContainer)),
+        backgroundColor: theme.colorScheme.primaryContainer,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
+
     final semesterProvider = Provider.of<SemesterProvider>(context, listen: false);
     final apiCourseProvider = Provider.of<ApiCourseProvider>(context, listen: false);
     final testimonialProvider = Provider.of<TestimonialProvider>(context, listen: false);
     final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
+    final departmentProvider = Provider.of<DepartmentProvider>(context, listen: false);
+
+    List<Future<void>> refreshFutures = [
+      semesterProvider.fetchSemesters(forceRefresh: true),
+      apiCourseProvider.fetchCourses(forceRefresh: true),
+      testimonialProvider.fetchTestimonials(forceRefresh: true),
+      discussionProvider.fetchPosts(),
+      departmentProvider.fetchDepartments(),
+    ];
+
     try {
-      await semesterProvider.fetchSemesters(forceRefresh: true);
-      await apiCourseProvider.fetchCourses();
-      await testimonialProvider.fetchTestimonials(forceRefresh: true);
-      await discussionProvider.fetchPosts();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).removeCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? "ዳታ ታድሷል!" : 'Data refreshed!'), duration: const Duration(seconds: 2)),
-        );
-      }
-    } catch (e) {
+      await Future.wait(refreshFutures);
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).removeCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('${l10n.appTitle.contains("መጂወ") ? "ዳታ በማደስ ላይ ስህተት፡ " : "Error refreshing data: "}${e.toString()}'),
-              backgroundColor: theme.colorScheme.error,
-              behavior: SnackBarBehavior.floating), // Optional: for better visibility
+            content: Text(l10n.dataRefreshed, style: TextStyle(color: theme.colorScheme.onPrimary)),
+            backgroundColor: theme.colorScheme.primary,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        print("Error during global refresh: $e");
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.errorRefreshingData, style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+            backgroundColor: theme.colorScheme.errorContainer,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
   }
 
-  void _navigateTo(BuildContext context, String routeName) {
+  void _navigateTo(BuildContext context, String routeName, {Object? arguments}) {
     Navigator.of(context).pop();
-    Navigator.of(context).pushNamed(routeName);
+    Navigator.of(context).pushNamed(routeName, arguments: arguments);
   }
 
   void _showNotImplemented(BuildContext context, String featureName) {
     Navigator.of(context).pop();
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$featureName: ${l10n.appTitle.contains("መጂወ") ? "ገና አልተተገበረም" : "Not Implemented Yet"}')),
+      SnackBar(
+        content: Text(l10n.actionNotImplemented(featureName), style: TextStyle(color: theme.colorScheme.onSecondaryContainer)),
+        backgroundColor: theme.colorScheme.secondaryContainer,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
   void _handleLogout(BuildContext context, AuthProvider authProvider) async {
     Navigator.of(context).pop();
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     await authProvider.logout();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
@@ -168,7 +204,11 @@ class AppDrawer extends StatelessWidget {
         (Route<dynamic> route) => false,
       );
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.logoutSuccess)),
+        SnackBar(
+          content: Text(l10n.logoutSuccess, style: TextStyle(color: theme.colorScheme.onPrimary)),
+          backgroundColor: theme.colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -177,29 +217,25 @@ class AppDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context);
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false); // No need to listen if only reading once
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context); // Get the current theme
+    final theme = Theme.of(context);
 
     String userName = l10n.guestUser;
     String userDetail = l10n.pleaseLoginOrRegister;
-    String? userImageUrl; // Placeholder for user profile image URL
+    String? userImageUrl;
 
     Color headerBackgroundColor = theme.colorScheme.primaryContainer;
     Color headerTextColor = theme.colorScheme.onPrimaryContainer;
     Color avatarBackgroundColor = theme.colorScheme.surface;
     Color avatarIconColor = theme.colorScheme.primary;
 
-
     if (authProvider.currentUser != null) {
       userName = ('${authProvider.currentUser!.firstName} ${authProvider.currentUser!.lastName}').trim();
       if (userName.isEmpty) userName = authProvider.currentUser!.phone;
       userDetail = authProvider.currentUser!.phone;
-      // userImageUrl = authProvider.currentUser?.profilePictureUrl; // If you have this
     }
 
     return Drawer(
-      // backgroundColor will be set by theme.drawerTheme.backgroundColor
       child: ListView(
         padding: EdgeInsets.zero,
         children: <Widget>[
@@ -227,6 +263,7 @@ class AppDrawer extends StatelessWidget {
             iconColor: theme.listTileTheme.iconColor,
             collapsedIconColor: theme.listTileTheme.iconColor,
             childrenPadding: const EdgeInsets.only(left: 16.0),
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0),
             children: <Widget>[
               _buildDrawerSubItem(context: context, theme: theme, text: l10n.english, onTap: () { localeProvider.setLocale(const Locale('en')); Navigator.of(context).pop(); }),
               _buildDrawerSubItem(context: context, theme: theme, text: l10n.amharic, onTap: () { localeProvider.setLocale(const Locale('am')); Navigator.of(context).pop(); }),
@@ -235,11 +272,34 @@ class AppDrawer extends StatelessWidget {
           ),
           Divider(color: theme.dividerColor),
           _buildDrawerItem(
-            theme: theme, icon: Icons.app_registration, text: l10n.registerforcourses,
-            onTap: () { Navigator.of(context).pop(); Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegistrationScreen())); },
+            theme: theme,
+            icon: Icons.school_outlined,
+            text: l10n.registerforcourses,
+            onTap: () {
+              Navigator.of(context).pop();
+              if (authProvider.currentUser != null) {
+                Navigator.of(context).pushNamed(OrderScreen.routeName);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(l10n.pleaseLoginOrRegister, style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+                    backgroundColor: theme.colorScheme.errorContainer,
+                    behavior: SnackBarBehavior.floating,
+                    action: SnackBarAction(
+                      label: l10n.signInLink.toUpperCase(),
+                      textColor: theme.colorScheme.onErrorContainer,
+                      onPressed: () {
+                        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
+                      },
+                    ),
+                  ),
+                );
+              }
+            },
           ),
           _buildDrawerItem(
-            theme: theme, icon: Icons.school_outlined, text: l10n.mycourses,
+            theme: theme, icon: Icons.my_library_books_outlined,
+            text: l10n.mycourses,
             onTap: () => _showNotImplemented(context, l10n.mycourses),
           ),
           _buildDrawerItem(
@@ -280,7 +340,7 @@ class AppDrawer extends StatelessWidget {
             _buildDrawerItem(
               theme: theme, icon: Icons.logout, text: l10n.logout,
               onTap: () => _handleLogout(context, authProvider),
-              isError: true, // Special flag for logout color
+              isError: true,
             ),
         ],
       ),
@@ -288,7 +348,7 @@ class AppDrawer extends StatelessWidget {
   }
 
   Widget _buildDrawerItem({
-    required ThemeData theme, // Pass theme
+    required ThemeData theme,
     required IconData icon,
     required String text,
     required GestureTapCallback onTap,
@@ -303,17 +363,18 @@ class AppDrawer extends StatelessWidget {
       onTap: onTap,
       dense: true,
       visualDensity: VisualDensity.compact,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0),
     );
   }
 
   Widget _buildDrawerSubItem({
     required BuildContext context,
-    required ThemeData theme, // Pass theme
+    required ThemeData theme,
     required String text,
     required GestureTapCallback onTap,
   }) {
     return ListTile(
-      contentPadding: const EdgeInsets.only(left: 56.0),
+      contentPadding: const EdgeInsets.only(left: 56.0, right: 16.0),
       title: Text(text, style: TextStyle(color: theme.listTileTheme.textColor, fontSize: 14)),
       onTap: onTap,
       dense: true,

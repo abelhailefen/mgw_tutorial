@@ -131,7 +131,7 @@ class ReplyProvider with ChangeNotifier {
 
     // UPDATED URL for updating a specific reply
     // The API path implies the parentCommentId is part of the route to identify the reply.
-    final url = Uri.parse('$_apiBaseUrl/post-comments/$parentCommentId/replies/$replyId');
+    final url = Uri.parse('$_apiBaseUrl/comments/$parentCommentId/replies/$replyId');
     print("Updating reply $replyId (parent $parentCommentId) at: $url with new content: $newContent");
 
     try {
@@ -185,7 +185,7 @@ class ReplyProvider with ChangeNotifier {
     final int userId = _authProvider.currentUser!.id!;
 
     // UPDATED URL for deleting a specific reply
-    final url = Uri.parse('$_apiBaseUrl/post-comments/$parentCommentId/replies/$replyId');
+    final url = Uri.parse('$_apiBaseUrl/comments/$parentCommentId/replies/$replyId');
     print("Deleting reply $replyId (parent $parentCommentId) at: $url");
 
     try {

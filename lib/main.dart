@@ -31,11 +31,13 @@ import 'package:mgw_tutorial/screens/sidebar/post_detail_screen.dart';
 import 'package:mgw_tutorial/screens/library/course_sections_screen.dart';
 import 'package:mgw_tutorial/screens/library/lesson_list_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/testimonials_screen.dart';
+import 'package:mgw_tutorial/screens/enrollment/order_screen.dart';
 
 // Models
 import 'package:mgw_tutorial/models/post.dart';
 import 'package:mgw_tutorial/models/api_course.dart';
 import 'package:mgw_tutorial/models/section.dart';
+import 'package:mgw_tutorial/models/semester.dart'; // <<< ADDED IMPORT
 
 // Localization
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -68,29 +70,29 @@ void main() {
   );
 }
 
-// lib/main.dart
-// ... (other imports remain the same)
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  TextTheme _poppinsTextTheme(TextTheme base) {
+  TextTheme _poppinsTextTheme(TextTheme base, Color primaryTextColor, Color secondaryTextColor) {
     return base.copyWith(
-      displayLarge: base.displayLarge?.copyWith(fontFamily: 'Poppins'),
-      displayMedium: base.displayMedium?.copyWith(fontFamily: 'Poppins'),
-      displaySmall: base.displaySmall?.copyWith(fontFamily: 'Poppins'),
-      headlineLarge: base.headlineLarge?.copyWith(fontFamily: 'Poppins'),
-      headlineMedium: base.headlineMedium?.copyWith(fontFamily: 'Poppins'),
-      headlineSmall: base.headlineSmall?.copyWith(fontFamily: 'Poppins'),
-      titleLarge: base.titleLarge?.copyWith(fontFamily: 'Poppins'),
-      titleMedium: base.titleMedium?.copyWith(fontFamily: 'Poppins'),
-      titleSmall: base.titleSmall?.copyWith(fontFamily: 'Poppins'),
-      bodyLarge: base.bodyLarge?.copyWith(fontFamily: 'Poppins'),
-      bodyMedium: base.bodyMedium?.copyWith(fontFamily: 'Poppins'),
-      bodySmall: base.bodySmall?.copyWith(fontFamily: 'Poppins'),
-      labelLarge: base.labelLarge?.copyWith(fontFamily: 'Poppins'),
-      labelMedium: base.labelMedium?.copyWith(fontFamily: 'Poppins'),
-      labelSmall: base.labelSmall?.copyWith(fontFamily: 'Poppins'),
+      displayLarge: base.displayLarge?.copyWith(fontFamily: 'Poppins', color: primaryTextColor),
+      displayMedium: base.displayMedium?.copyWith(fontFamily: 'Poppins', color: primaryTextColor),
+      displaySmall: base.displaySmall?.copyWith(fontFamily: 'Poppins', color: primaryTextColor),
+      headlineLarge: base.headlineLarge?.copyWith(fontFamily: 'Poppins', color: primaryTextColor),
+      headlineMedium: base.headlineMedium?.copyWith(fontFamily: 'Poppins', color: primaryTextColor),
+      headlineSmall: base.headlineSmall?.copyWith(fontFamily: 'Poppins', color: primaryTextColor),
+      titleLarge: base.titleLarge?.copyWith(fontFamily: 'Poppins', color: primaryTextColor, fontWeight: FontWeight.w600),
+      titleMedium: base.titleMedium?.copyWith(fontFamily: 'Poppins', color: primaryTextColor, fontWeight: FontWeight.w500),
+      titleSmall: base.titleSmall?.copyWith(fontFamily: 'Poppins', color: primaryTextColor, fontWeight: FontWeight.w500),
+      bodyLarge: base.bodyLarge?.copyWith(fontFamily: 'Poppins', color: primaryTextColor),
+      bodyMedium: base.bodyMedium?.copyWith(fontFamily: 'Poppins', color: secondaryTextColor),
+      bodySmall: base.bodySmall?.copyWith(fontFamily: 'Poppins', color: secondaryTextColor),
+      labelLarge: base.labelLarge?.copyWith(fontFamily: 'Poppins', color: primaryTextColor, fontWeight: FontWeight.bold),
+      labelMedium: base.labelMedium?.copyWith(fontFamily: 'Poppins', color: primaryTextColor),
+      labelSmall: base.labelSmall?.copyWith(fontFamily: 'Poppins', color: secondaryTextColor),
+    ).apply(
+      bodyColor: primaryTextColor,
+      displayColor: primaryTextColor,
     );
   }
 
@@ -99,16 +101,6 @@ class MyApp extends StatelessWidget {
     final localeProvider = Provider.of<LocaleProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    // Create base typography first
-    final typographyLightBase = Typography.material2021(platform: TargetPlatform.android).black;
-    final typographyDarkBase = Typography.material2021(platform: TargetPlatform.android).white;
-
-    // Then apply Poppins to them
-    final TextTheme typographyLight = _poppinsTextTheme(typographyLightBase);
-    final TextTheme typographyDark = _poppinsTextTheme(typographyDarkBase);
-
-
-    // Define ColorSchemes using AppColors 
     const lightColorScheme = ColorScheme(
       brightness: Brightness.light,
       primary: AppColors.primaryLight,
@@ -171,19 +163,32 @@ class MyApp extends StatelessWidget {
       inversePrimary: AppColors.primaryLight,
     );
 
+    final TextTheme typographyLightBase = Typography.material2021(platform: TargetPlatform.android).black.copyWith(
+      bodyLarge: Typography.material2021(platform: TargetPlatform.android).black.bodyLarge?.copyWith(color: lightColorScheme.onSurface),
+      bodyMedium: Typography.material2021(platform: TargetPlatform.android).black.bodyMedium?.copyWith(color: lightColorScheme.onSurface.withOpacity(0.75)),
+      bodySmall: Typography.material2021(platform: TargetPlatform.android).black.bodySmall?.copyWith(color: lightColorScheme.onSurface.withOpacity(0.60)),
+    );
+
+    final TextTheme typographyDarkBase = Typography.material2021(platform: TargetPlatform.android).white.copyWith(
+      bodyLarge: Typography.material2021(platform: TargetPlatform.android).white.bodyLarge?.copyWith(color: darkColorScheme.onSurface),
+      bodyMedium: Typography.material2021(platform: TargetPlatform.android).white.bodyMedium?.copyWith(color: darkColorScheme.onSurface.withOpacity(0.75)),
+      bodySmall: Typography.material2021(platform: TargetPlatform.android).white.bodySmall?.copyWith(color: darkColorScheme.onSurface.withOpacity(0.60)),
+    );
+
+    final TextTheme poppinsTypographyLight = _poppinsTextTheme(typographyLightBase, lightColorScheme.onSurface, lightColorScheme.onSurface.withOpacity(0.75));
+    final TextTheme poppinsTypographyDark = _poppinsTextTheme(typographyDarkBase, darkColorScheme.onSurface, darkColorScheme.onSurface.withOpacity(0.75));
+
     return MaterialApp(
       title: 'MGW Tutorial',
       themeMode: themeProvider.themeMode,
-      theme: ThemeData.from(colorScheme: lightColorScheme).copyWith(
-        // Apply the Poppins-modified textTheme here
-        textTheme: typographyLight,
+      theme: ThemeData.from(colorScheme: lightColorScheme, textTheme: poppinsTypographyLight).copyWith(
         scaffoldBackgroundColor: lightColorScheme.background,
         appBarTheme: AppBarTheme(
           backgroundColor: AppColors.appBarBackgroundLight,
           elevation: 1.0,
           iconTheme: IconThemeData(color: lightColorScheme.onSurface),
           actionsIconTheme: IconThemeData(color: lightColorScheme.onSurface),
-          titleTextStyle: typographyLight.titleLarge?.copyWith( 
+          titleTextStyle: poppinsTypographyLight.titleLarge?.copyWith(
             fontSize: 20,
             fontWeight: FontWeight.w500,
           ),
@@ -198,7 +203,7 @@ class MyApp extends StatelessWidget {
             backgroundColor: lightColorScheme.primary,
             foregroundColor: lightColorScheme.onPrimary,
             padding: const EdgeInsets.symmetric(vertical: 16.0),
-            textStyle: typographyLight.labelLarge?.copyWith(fontSize: 16, fontWeight: FontWeight.bold), // Use themed typography
+            textStyle: poppinsTypographyLight.labelLarge?.copyWith(fontSize: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
           ),
         ),
@@ -217,8 +222,8 @@ class MyApp extends StatelessWidget {
           ),
           filled: true,
           fillColor: AppColors.inputFillLight,
-          hintStyle: typographyLight.bodyMedium?.copyWith(color: AppColors.inputHintLight), // Use themed typography
-          labelStyle: typographyLight.bodyMedium?.copyWith(color: lightColorScheme.onSurface.withOpacity(0.7)), // For floating labels
+          hintStyle: poppinsTypographyLight.bodyMedium?.copyWith(color: AppColors.inputHintLight),
+          labelStyle: poppinsTypographyLight.bodyMedium?.copyWith(color: lightColorScheme.onSurface.withOpacity(0.7)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
         ),
         cardTheme: CardTheme(
@@ -233,48 +238,37 @@ class MyApp extends StatelessWidget {
           unselectedItemColor: lightColorScheme.onSurface.withOpacity(0.6),
           type: BottomNavigationBarType.fixed,
           showUnselectedLabels: true,
-          selectedLabelStyle: typographyLight.bodySmall, // Use themed typography
-          unselectedLabelStyle: typographyLight.bodySmall, // Use themed typography
+          selectedLabelStyle: poppinsTypographyLight.bodySmall,
+          unselectedLabelStyle: poppinsTypographyLight.bodySmall?.copyWith(color: lightColorScheme.onSurface.withOpacity(0.6)),
         ),
         drawerTheme: DrawerThemeData(
           backgroundColor: AppColors.surfaceLight,
         ),
         listTileTheme: ListTileThemeData(
           iconColor: AppColors.iconLight,
-          textColor: typographyLight.bodyLarge?.color, // Use themed typography
-          titleTextStyle: typographyLight.titleMedium,
-          subtitleTextStyle: typographyLight.bodySmall,
+          textColor: poppinsTypographyLight.bodyLarge?.color,
+          titleTextStyle: poppinsTypographyLight.titleMedium,
+          subtitleTextStyle: poppinsTypographyLight.bodySmall,
         ),
         dividerColor: lightColorScheme.outline.withOpacity(0.5),
         iconTheme: IconThemeData(color: AppColors.iconLight),
-        // Redundant textTheme definition (already applied via copyWith)
-        // textTheme: typographyLight.copyWith(
-        //   titleLarge: typographyLight.titleLarge?.copyWith(color: lightColorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 20),
-        //   titleMedium: typographyLight.titleMedium?.copyWith(color: lightColorScheme.onSurface, fontWeight: FontWeight.w500, fontSize: 18),
-        //   titleSmall: typographyLight.titleSmall?.copyWith(color: lightColorScheme.onSurface, fontWeight: FontWeight.w500, fontSize: 16),
-        //   bodyLarge: typographyLight.bodyLarge?.copyWith(color: lightColorScheme.onSurface),
-        //   bodyMedium: typographyLight.bodyMedium?.copyWith(color: lightColorScheme.onSurface.withOpacity(0.75)),
-        // ),
         chipTheme: ChipThemeData(
           backgroundColor: AppColors.chipBackgroundLight,
-          labelStyle: typographyLight.bodySmall?.copyWith(color: AppColors.chipLabelLight, fontWeight: FontWeight.bold), // Use themed typography
+          labelStyle: poppinsTypographyLight.bodySmall?.copyWith(color: AppColors.chipLabelLight, fontWeight: FontWeight.bold),
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
           secondarySelectedColor: lightColorScheme.secondary,
           selectedColor: lightColorScheme.primary,
-          secondaryLabelStyle: typographyLight.bodySmall?.copyWith(color: lightColorScheme.onSecondary), // Use themed typography
+          secondaryLabelStyle: poppinsTypographyLight.bodySmall?.copyWith(color: lightColorScheme.onSecondary),
         ),
       ),
-      darkTheme: ThemeData.from(colorScheme: darkColorScheme).copyWith(
-        // Apply the Poppins-modified textTheme here
-        textTheme: typographyDark,
+      darkTheme: ThemeData.from(colorScheme: darkColorScheme, textTheme: poppinsTypographyDark).copyWith(
         scaffoldBackgroundColor: darkColorScheme.background,
         appBarTheme: AppBarTheme(
           backgroundColor: AppColors.appBarBackgroundDark,
           elevation: 1.0,
           iconTheme: IconThemeData(color: darkColorScheme.onSurface),
           actionsIconTheme: IconThemeData(color: darkColorScheme.onSurface),
-          titleTextStyle: typographyDark.titleLarge?.copyWith( // Use themed typography
-            // color: darkColorScheme.onSurface, // Already handled by textTheme
+          titleTextStyle: poppinsTypographyDark.titleLarge?.copyWith(
             fontSize: 20,
             fontWeight: FontWeight.w500,
           ),
@@ -289,7 +283,7 @@ class MyApp extends StatelessWidget {
             backgroundColor: darkColorScheme.primary,
             foregroundColor: darkColorScheme.onPrimary,
             padding: const EdgeInsets.symmetric(vertical: 16.0),
-            textStyle: typographyDark.labelLarge?.copyWith(fontSize: 16, fontWeight: FontWeight.bold), // Use themed typography
+            textStyle: poppinsTypographyDark.labelLarge?.copyWith(fontSize: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
           ),
         ),
@@ -308,8 +302,8 @@ class MyApp extends StatelessWidget {
           ),
           filled: true,
           fillColor: AppColors.inputFillDark,
-          hintStyle: typographyDark.bodyMedium?.copyWith(color: AppColors.inputHintDark), // Use themed typography
-          labelStyle: typographyDark.bodyMedium?.copyWith(color: darkColorScheme.onSurface.withOpacity(0.7)), // Use themed typography for labels
+          hintStyle: poppinsTypographyDark.bodyMedium?.copyWith(color: AppColors.inputHintDark),
+          labelStyle: poppinsTypographyDark.bodyMedium?.copyWith(color: darkColorScheme.onSurface.withOpacity(0.7)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
         ),
         cardTheme: CardTheme(
@@ -324,37 +318,32 @@ class MyApp extends StatelessWidget {
           unselectedItemColor: darkColorScheme.onSurface.withOpacity(0.6),
           type: BottomNavigationBarType.fixed,
           showUnselectedLabels: true,
-          selectedLabelStyle: typographyDark.bodySmall, // Use themed typography
-          unselectedLabelStyle: typographyDark.bodySmall, // Use themed typography
+          selectedLabelStyle: poppinsTypographyDark.bodySmall,
+          unselectedLabelStyle: poppinsTypographyDark.bodySmall?.copyWith(color: darkColorScheme.onSurface.withOpacity(0.6)),
         ),
         drawerTheme: DrawerThemeData(
           backgroundColor: AppColors.surfaceDark,
         ),
         listTileTheme: ListTileThemeData(
           iconColor: AppColors.iconDark,
-          textColor: typographyDark.bodyLarge?.color, // Use themed typography
-          titleTextStyle: typographyDark.titleMedium,
-          subtitleTextStyle: typographyDark.bodySmall,
+          textColor: poppinsTypographyDark.bodyLarge?.color,
+          titleTextStyle: poppinsTypographyDark.titleMedium,
+          subtitleTextStyle: poppinsTypographyDark.bodySmall,
         ),
         dividerColor: darkColorScheme.outline.withOpacity(0.5),
         iconTheme: IconThemeData(color: AppColors.iconDark),
-        // Redundant textTheme definition
-        // textTheme: typographyDark.copyWith(
-        //   titleLarge: typographyDark.titleLarge?.copyWith(color: darkColorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 20),
-        //   titleMedium: typographyDark.titleMedium?.copyWith(color: darkColorScheme.onSurface, fontWeight: FontWeight.w500, fontSize: 18),
-        //   titleSmall: typographyDark.titleSmall?.copyWith(color: darkColorScheme.onSurface, fontWeight: FontWeight.w500, fontSize: 16),
-        //   bodyLarge: typographyDark.bodyLarge?.copyWith(color: darkColorScheme.onSurface),
-        //   bodyMedium: typographyDark.bodyMedium?.copyWith(color: darkColorScheme.onSurface.withOpacity(0.75)),
-        // ),
-        popupMenuTheme: PopupMenuThemeData(color: AppColors.surfaceDark),
+        popupMenuTheme: PopupMenuThemeData(
+          color: AppColors.surfaceDark,
+          textStyle: poppinsTypographyDark.bodyMedium
+        ),
         dialogBackgroundColor: AppColors.surfaceDark,
         chipTheme: ChipThemeData(
           backgroundColor: AppColors.chipBackgroundDark,
-          labelStyle: typographyDark.bodySmall?.copyWith(color: AppColors.chipLabelDark, fontWeight: FontWeight.bold), // Use themed typography
+          labelStyle: poppinsTypographyDark.bodySmall?.copyWith(color: AppColors.chipLabelDark, fontWeight: FontWeight.bold),
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
           secondarySelectedColor: darkColorScheme.secondary,
           selectedColor: darkColorScheme.primary,
-          secondaryLabelStyle: typographyDark.bodySmall?.copyWith(color: darkColorScheme.onSecondary), // Use themed typography
+          secondaryLabelStyle: poppinsTypographyDark.bodySmall?.copyWith(color: darkColorScheme.onSecondary),
         ),
       ),
       debugShowCheckedModeBanner: false,
@@ -379,28 +368,33 @@ class MyApp extends StatelessWidget {
         DiscussionGroupScreen.routeName: (ctx) => const DiscussionGroupScreen(),
         CreatePostScreen.routeName: (ctx) => const CreatePostScreen(),
         TestimonialsScreen.routeName: (ctx) => const TestimonialsScreen(),
+        OrderScreen.routeName: (ctx) { // Route for OrderScreen
+          final args = ModalRoute.of(ctx)?.settings.arguments;
+          if (args is Semester) {
+            return OrderScreen(semesterToEnroll: args);
+          }
+          return Scaffold(appBar: AppBar(title: const Text("Error")), body: const Center(child: Text("Error: Semester data not provided.")));
+        },
         PostDetailScreen.routeName: (ctx) {
           final args = ModalRoute.of(ctx)?.settings.arguments;
           if (args is Post) {
             return PostDetailScreen(post: args);
           }
-          return Scaffold(appBar: AppBar(title: const Text("Error")), body: const Center(child: Text("Error: Invalid post data passed to PostDetailScreen.")));
+          return Scaffold(appBar: AppBar(title: const Text("Error")), body: const Center(child: Text("Error: Invalid post data.")));
         },
         CourseSectionsScreen.routeName: (ctx) {
           final args = ModalRoute.of(ctx)?.settings.arguments;
           if (args is ApiCourse) {
             return CourseSectionsScreen(course: args);
           }
-          return Scaffold(appBar: AppBar(title: const Text("Error")), body: const Center(child: Text("Error: Invalid course data passed to CourseSectionsScreen.")));
+          return Scaffold(appBar: AppBar(title: const Text("Error")), body: const Center(child: Text("Error: Invalid course data.")));
         },
         LessonListScreen.routeName: (ctx) {
           final args = ModalRoute.of(ctx)?.settings.arguments;
           if (args is Section) {
             return LessonListScreen(section: args);
           }
-          return Scaffold(
-              appBar: AppBar(title: const Text("Error")),
-              body: const Center(child: Text("Error: Invalid data type for Lesson List. Expected Section.")));
+          return Scaffold(appBar: AppBar(title: const Text("Error")), body: const Center(child: Text("Error: Invalid section data.")));
         },
       },
     );
