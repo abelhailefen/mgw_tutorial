@@ -128,5 +128,8 @@
     "guestUser": "Guest User",
   "pleaseLoginOrRegister": "Please login or register",
   "registeredUser": "Registered User",
-  "logoutSuccess": "Logged out successfully."
+  "logoutSuccess": "Logged out successfully.",
+   "selectSemesterLabel": "Select Semester", 
+  "selectSemesterHint": "Select a Semester", 
+  "pleaseSelectSemesterError": "Please select a semester."
 }

@@ -38,15 +38,19 @@ class Semester {
 
   factory Semester.fromJson(Map<String, dynamic> json) {
     var imageList = (json['images'] as List<dynamic>?)
-            ?.map((e) => e.toString()) // Use .toString() for safety if items might not be strings
+            ?.map((e) => e.toString())
             .toList() ??
         [];
+    if (kDebugMode) { // Only print in debug mode
+      print("Semester.fromJson - Raw images for semester ID ${json['id']}: $imageList");
+    }
+
     var courseListRaw = json['courses'] as List<dynamic>? ?? [];
     List<Course> parsedCourses =
         courseListRaw.map((courseData) => Course.fromJson(courseData)).toList();
 
     return Semester(
-      id: json['id'] as int? ?? 0, // Default if null
+      id: json['id'] as int? ?? 0,
       name: json['name'] as String? ?? 'Unnamed Semester',
       year: json['year'] as String? ?? 'N/A',
       price: json['price'] as String? ?? '0.00',
@@ -54,19 +58,46 @@ class Semester {
       courses: parsedCourses,
       createdAt: json['createdAt'] != null && (json['createdAt'] as String).isNotEmpty
           ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.fromMillisecondsSinceEpoch(0), // Default to epoch or a known placeholder
+          : DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: json['updatedAt'] != null && (json['updatedAt'] as String).isNotEmpty
           ? DateTime.parse(json['updatedAt'] as String)
-          : DateTime.fromMillisecondsSinceEpoch(0), // Default to epoch
+          : DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
   String? get firstImageUrl {
     if (images.isNotEmpty) {
-      if (images.first.startsWith('/')) {
-        return "https://mgw-backend-1.onrender.com${images.first}";
+      final imagePath = images.first;
+      if (kDebugMode) {
+        print("Semester ID: $id, firstImageUrl getter - Raw imagePath: $imagePath");
       }
-      return images.first;
+
+      if (imagePath.startsWith('http')) { // Already a full URL
+        if (kDebugMode) {
+          print("Semester ID: $id, firstImageUrl getter - Returning full URL: $imagePath");
+        }
+        return imagePath;
+      }
+
+      // Define your base URL here. Make sure it's correct.
+      const String imageBaseUrl = "https://mgw-backend.onrender.com"; // Ensure this is correct
+
+      if (imagePath.startsWith('/')) { // Path like /uploads/image.jpg
+        final fullUrl = "$imageBaseUrl$imagePath";
+        if (kDebugMode) {
+          print("Semester ID: $id, firstImageUrl getter - Path starts with '/', Generated URL: $fullUrl");
+        }
+        return fullUrl;
+      } else { // Path like uploads/image.jpg (needs a leading slash for concatenation)
+        final fullUrl = "$imageBaseUrl/$imagePath";
+        if (kDebugMode) {
+          print("Semester ID: $id, firstImageUrl getter - Path does NOT start with '/', Generated URL: $fullUrl");
+        }
+        return fullUrl;
+      }
+    }
+    if (kDebugMode) {
+      print("Semester ID: $id, firstImageUrl getter - No images found, returning null.");
     }
     return null;
   }

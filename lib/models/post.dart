@@ -1,17 +1,16 @@
 // lib/models/post.dart
-import 'package:mgw_tutorial/models/author.dart'; // Import Author model
-import 'package:mgw_tutorial/models/comment.dart';
+import 'package:mgw_tutorial/models/author.dart';
+import 'package:mgw_tutorial/models/comment.dart'; // Though comments list is not populated here
+
 class Post {
   final int id;
   final String title;
   final String description;
-  final int userId; // The ID of the user who created the post
+  final int userId;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final Author author; // Nested Author object
-
-  // Locally tracked, not from API GET /posts
-  List<Comment> comments; // To hold comments related to this post
+  final Author author;
+  final List<Comment> comments;
 
   Post({
     required this.id,
@@ -21,30 +20,66 @@ class Post {
     required this.createdAt,
     required this.updatedAt,
     required this.author,
-    this.comments = const [], // Default to an empty list
+    this.comments = const [],
   });
+  
+  static String _safeGetString(Map<String, dynamic> json, String key, String modelName) {
+    final value = json[key];
+    if (value == null) {
+      throw FormatException("Field '$key' is null in $modelName JSON, expected String. JSON: $json");
+    }
+    if (value is! String) {
+      throw FormatException("Field '$key' is not a String in $modelName JSON, expected String but got ${value.runtimeType}. JSON: $json");
+    }
+    return value;
+  }
 
   factory Post.fromJson(Map<String, dynamic> json) {
+    final authorJson = json['author'];
+    if (authorJson == null || authorJson is! Map<String, dynamic>) {
+        throw FormatException("Field 'author' is missing, null, or not a map in Post JSON. JSON: $json");
+    }
+
     return Post(
       id: json['id'] as int,
-      title: json['title'] as String,
-      description: json['description'] as String,
+      title: _safeGetString(json, 'title', 'Post'),
+      description: _safeGetString(json, 'description', 'Post'),
       userId: json['userId'] as int,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      author: Author.fromJson(json['author'] as Map<String, dynamic>),
-      // Comments are usually fetched separately or via a nested API call for a specific post
+      createdAt: DateTime.parse(_safeGetString(json, 'createdAt', 'Post')),
+      updatedAt: DateTime.parse(_safeGetString(json, 'updatedAt', 'Post')),
+      author: Author.fromJson(authorJson),
+      // Comments are usually fetched separately
+    );
+  }
+  // copyWith and toJson methods remain the same
+   Post copyWith({
+    int? id,
+    String? title,
+    String? description,
+    int? userId,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Author? author,
+    List<Comment>? comments,
+  }) {
+    return Post(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      userId: userId ?? this.userId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      author: author ?? this.author,
+      comments: comments ?? this.comments,
     );
   }
 
-  Map<String, dynamic> toJson() { // For creating/updating posts
+  Map<String, dynamic> toJson() {
     return {
-      'id': id, // Usually not sent on creation
+      'id': id,
       'title': title,
       'description': description,
       'userId': userId,
-      // createdAt and updatedAt are usually handled by the backend
-      // author is usually derived from userId on the backend during creation
     };
   }
 }

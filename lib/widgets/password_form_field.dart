@@ -24,20 +24,20 @@ class PasswordFormField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
+        // labelText, hintText, border, contentPadding will be largely handled by main.dart's InputDecorationTheme
         labelText: labelText ?? l10n.passwordLabel,
         hintText: hintText ?? l10n.passwordHint,
         suffixIcon: IconButton(
           icon: Icon(
             isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey[600],
+            color: theme.iconTheme.color?.withOpacity(0.7), // Use theme icon color
           ),
           onPressed: onToggleVisibility,
         ),
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 14.0),
       ),
       obscureText: !isPasswordVisible,
       validator: validator ?? (value) {

@@ -1,12 +1,13 @@
 // lib/screens/sidebar/discussion_group_screen.dart
 import 'package:flutter/material.dart';
 import 'package:mgw_tutorial/models/post.dart';
-import 'package:mgw_tutorial/provider/auth_provider.dart'; 
+import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
 import 'package:mgw_tutorial/screens/sidebar/post_detail_screen.dart';
 import 'package:intl/intl.dart';
 import 'create_post_screen.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // For localization
 
 class DiscussionGroupScreen extends StatefulWidget {
   static const routeName = '/discussion-group';
@@ -23,7 +24,7 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
     super.initState();
     Future.microtask(() {
       final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
-      if (discussionProvider.posts.isEmpty) {
+      if (discussionProvider.posts.isEmpty || discussionProvider.postsError != null) { // Fetch if empty or error
         discussionProvider.fetchPosts();
       }
     });
@@ -33,59 +34,65 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
     final result = await Navigator.of(context).pushNamed(CreatePostScreen.routeName);
     if (result == true && mounted) {
       // List will be updated by provider after successful post creation
+      // Optionally, show a snackbar or trigger a refresh if needed, though provider should handle UI update.
     }
   }
 
-   void _navigateToPostDetailScreen(Post post) { // Modified
+   void _navigateToPostDetailScreen(Post post) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PostDetailScreen(post: post),
+        builder: (_) => PostDetailScreen(post: post), // No need for Provider here directly
       ),
     );
-    
   }
 
   @override
   Widget build(BuildContext context) {
     final discussionProvider = Provider.of<DiscussionProvider>(context);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false); // Get AuthProvider here
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Discussion Group'), // TODO: Localize
+        title: Text(l10n.discussiongroup),
       ),
       body: RefreshIndicator(
         onRefresh: () => discussionProvider.fetchPosts(),
-        child: _buildPostBody(discussionProvider, authProvider), // <<< PASS authProvider HERE
+        color: theme.colorScheme.primary,
+        backgroundColor: theme.colorScheme.surface,
+        child: _buildPostBody(discussionProvider, authProvider, l10n, theme),
       ),
       floatingActionButton: authProvider.currentUser != null ? FloatingActionButton(
         onPressed: _navigateToCreatePostScreen,
-        backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
-        tooltip: 'Create Post', // TODO: Localize
+        // backgroundColor will be themed by FloatingActionButtonThemeData if defined, or use theme.colorScheme.secondary
+        child: Icon(Icons.add, color: theme.colorScheme.onSecondary), // Assuming onSecondary is contrasting
+        tooltip: l10n.appTitle.contains("መጂወ") ? 'ልጥፍ ፍጠር' : 'Create Post',
       ) : null,
     );
   }
 
-  // VVVVV MODIFY METHOD SIGNATURE HERE VVVVV
-  Widget _buildPostBody(DiscussionProvider discussionProvider, AuthProvider authProvider) {
-  // ^^^^^ PASS authProvider AS ARGUMENT ^^^^^
+  Widget _buildPostBody(DiscussionProvider discussionProvider, AuthProvider authProvider, AppLocalizations l10n, ThemeData theme) {
     if (discussionProvider.isLoadingPosts && discussionProvider.posts.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (discussionProvider.postsError != null) {
+    if (discussionProvider.postsError != null && discussionProvider.posts.isEmpty) { // Show error only if list is empty
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(discussionProvider.postsError!, style: TextStyle(color: Colors.red[700]), textAlign: TextAlign.center),
+              Text(
+                  discussionProvider.postsError!, // TODO: Better error localization
+                  style: TextStyle(color: theme.colorScheme.error),
+                  textAlign: TextAlign.center
+              ),
               const SizedBox(height: 10),
               ElevatedButton(
                 onPressed: () => discussionProvider.fetchPosts(),
-                child: const Text('Retry'), // TODO: Localize
+                child: Text(l10n.refresh),
               )
             ],
           ),
@@ -100,17 +107,18 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Icon(Icons.forum_outlined, size: 70, color: theme.iconTheme.color?.withOpacity(0.5)),
+              const SizedBox(height: 20),
               Text(
-                'No discussions yet. Be the first to start one!', // TODO: Localize
+                l10n.appTitle.contains("መጂወ") ? 'እስካሁን ምንም ውይይቶች የሉም። የመጀመሪያውን ለመጀመር ይሁኑ!' : 'No discussions yet. Be the first to start one!',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 18),
+                style: theme.textTheme.titleMedium,
               ),
               const SizedBox(height: 20),
-              // VVVVV ACCESS authProvider PASSED AS ARGUMENT VVVVV
               if (authProvider.currentUser != null)
                 ElevatedButton.icon(
                   icon: const Icon(Icons.add_comment_outlined),
-                  label: const Text("Start a Discussion"), // TODO: Localize
+                  label: Text(l10n.appTitle.contains("መጂወ") ? "ውይይት ጀምር" : "Start a Discussion"),
                   onPressed: _navigateToCreatePostScreen,
                 )
             ],
@@ -124,12 +132,11 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
       itemCount: discussionProvider.posts.length,
       itemBuilder: (ctx, index) {
         final post = discussionProvider.posts[index];
-        return Card(
-          elevation: 3,
+        return Card( // Uses CardTheme
           margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
           child: InkWell(
             onTap: () => _navigateToPostDetailScreen(post),
-            borderRadius: BorderRadius.circular(12.0),
+            borderRadius: BorderRadius.circular(theme.cardTheme.shape is RoundedRectangleBorder ? (theme.cardTheme.shape as RoundedRectangleBorder).borderRadius.resolve(Directionality.of(context)).bottomLeft.x : 12.0),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -137,15 +144,15 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
                 children: [
                   Text(
                     post.title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Theme.of(context).primaryColorDark,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                          color: theme.colorScheme.primary, // Make titles stand out
                           fontWeight: FontWeight.w600
                         ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     post.description,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[800]),
+                    style: theme.textTheme.bodyMedium,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -154,16 +161,17 @@ class _DiscussionGroupScreenState extends State<DiscussionGroupScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
+                        // TODO: Localize 'By: '
                         'By: ${post.author.name}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        style: theme.textTheme.bodySmall?.copyWith(
                               fontStyle: FontStyle.italic,
-                              color: Colors.grey[700],
+                              color: theme.colorScheme.onSurface.withOpacity(0.7),
                             ),
                       ),
                       Text(
                         DateFormat.yMMMd().add_jm().format(post.createdAt.toLocal()),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
+                        style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface.withOpacity(0.6),
                             ),
                       ),
                     ],

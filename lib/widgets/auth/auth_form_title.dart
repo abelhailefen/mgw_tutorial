@@ -8,12 +8,13 @@ class AuthFormTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Text(
       title,
       style: TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.bold,
-        color: Colors.blue[800],
+        color: theme.colorScheme.primary, // Use theme color
       ),
     );
   }

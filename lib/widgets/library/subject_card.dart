@@ -1,3 +1,4 @@
+//lib/widgets/library/subject_card.dart
 import 'package:flutter/material.dart';
 import 'package:mgw_tutorial/screens/library/subject_chapters_screen.dart';
 

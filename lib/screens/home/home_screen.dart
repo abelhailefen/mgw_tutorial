@@ -1,11 +1,13 @@
+// lib/screens/home/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:mgw_tutorial/widgets/home/semesters_card.dart';
 import 'package:mgw_tutorial/widgets/home/notes_card.dart';
 import 'package:mgw_tutorial/provider/semester_provider.dart';
 import 'package:provider/provider.dart';
-// import 'package:mgw_tutorial/screens/library/library_screen.dart'; // Not used in this snippet
-import 'package:mgw_tutorial/screens/registration/registration_screen.dart'; // Ensure this path is correct
-import 'package:mgw_tutorial/models/semester.dart'; // Import the Semester model
+// import 'package:mgw_tutorial/screens/registration/registration_screen.dart'; // Not used
+import 'package:mgw_tutorial/models/semester.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter/foundation.dart'; // For kDebugMode
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,25 +20,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch semesters when the screen is initialized
-    // Use listen:false because we are in initState
     Future.microtask(() =>
         Provider.of<SemesterProvider>(context, listen: false).fetchSemesters());
   }
 
-  void _navigateToRegistrationForm() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const RegistrationScreen()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
-      // appBar: AppBar( // Optional: Add an AppBar if your design needs one for HomeScreen
-      //   title: const Text('Home'),
-      // ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -44,15 +37,13 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Consumer<SemesterProvider>(
               builder: (context, semesterProvider, child) {
-                if (semesterProvider.isLoading) {
-                  // Show a loading indicator that doesn't take up the whole screen initially
-                  // or a more specific shimmer effect for the card area if preferred.
+                if (semesterProvider.isLoading && semesterProvider.semesters.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 50.0),
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-                if (semesterProvider.error != null) {
+                if (semesterProvider.error != null && semesterProvider.semesters.isEmpty) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -60,34 +51,33 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            // Using semesterProvider.error directly as it's formatted in provider
                             '${semesterProvider.error}',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.red[700]),
+                            style: TextStyle(color: theme.colorScheme.error),
                           ),
                           const SizedBox(height: 10),
                           ElevatedButton(
-                            onPressed: () => semesterProvider.fetchSemesters(),
-                            child: const Text('Retry'),
+                            onPressed: () => semesterProvider.fetchSemesters(forceRefresh: true),
+                            child: Text(l10n.refresh),
                           )
                         ],
                       ),
                     ),
                   );
                 }
-                if (semesterProvider.semesters.isEmpty) {
-                  return const Center(
+                if (semesterProvider.semesters.isEmpty && !semesterProvider.isLoading) {
+                  return Center(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 50.0),
-                        child: Text('No semesters available at the moment.',
-                            style: TextStyle(fontSize: 16)),
+                        padding: const EdgeInsets.symmetric(vertical: 50.0),
+                        child: Text(
+                            l10n.appTitle.contains("መጂወ") ? "በአሁኑ ሰዓት ምንም ሴሚስተሮች የሉም።" : 'No semesters available at the moment.',
+                            style: theme.textTheme.titleMedium
+                        ),
                       ));
                 }
 
-                // If data is available, build the list of SemestersCard
                 return Column(
                   children: semesterProvider.semesters.map((semester) {
-                    // Prepare subjects for the card
                     List<String> subjectsLeft = [];
                     List<String> subjectsRight = [];
                     for (int i = 0; i < semester.courses.length; i++) {
@@ -97,28 +87,34 @@ class _HomeScreenState extends State<HomeScreen> {
                         subjectsRight.add(semester.courses[i].name);
                       }
                     }
-                    // If no courses, provide a default message or leave empty
                     if (semester.courses.isEmpty) {
-                      subjectsLeft.add("Courses details coming soon.");
+                      subjectsLeft.add(l10n.appTitle.contains("መጂወ") ? "የኮርስ ዝርዝሮች በቅርቡ ይመጣሉ።" : "Courses details coming soon.");
+                    }
+
+                    final String effectiveImageUrl = semester.firstImageUrl ?? 'https://via.placeholder.com/600x300.png?text=Semester+Image';
+                    if (kDebugMode) {
+                       print("HomeScreen - Semester: ${semester.name}, Passing to SemestersCard imageUrl: $effectiveImageUrl");
                     }
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: SemestersCard(
                         title: '${semester.name} - ${semester.year}',
-                        // Use the helper getter from Semester model
-                        // Provide a fallback URL if firstImageUrl is null
-                        imageUrl: semester.firstImageUrl ?? 'https://via.placeholder.com/600x300.png?text=Semester+Image',
+                        imageUrl: effectiveImageUrl,
                         subjectsLeft: subjectsLeft,
                         subjectsRight: subjectsRight,
-                        price: semester.price, // Assuming price is a string like "150.00"
+                        price: semester.price,
                         onTap: () {
-                           // Example: Navigate to a SemesterDetailScreen
-                           // Navigator.of(context).push(MaterialPageRoute(builder: (_) => SemesterDetailScreen(semester: semester)));
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('${semester.name} (ID: ${semester.id}) Tapped')),
+                            SnackBar(
+                                content: Text('${semester.name} (ID: ${semester.id}) Tapped'),
+                                backgroundColor: theme.colorScheme.primaryContainer,
+                                behavior: SnackBarBehavior.floating,
+                            ),
                           );
-                           print('Tapped on semester: ${semester.name}, ID: ${semester.id}');
+                           if (kDebugMode) {
+                               print('Tapped on semester: ${semester.name}, ID: ${semester.id}');
+                           }
                         },
                       ),
                     );
@@ -127,37 +123,30 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             const SizedBox(height: 16),
-            // Assuming NotesCard takes a full URL or you have a placeholder/asset
-            const NotesCard(
-              title: 'Notes',
-              description: 'Notes we have collected from students all around the country.',
-              imageUrl: 'https://via.placeholder.com/600x200.png?text=Notes+Preview', // Placeholder
+            NotesCard(
+              title: l10n.appTitle.contains("መጂወ") ? 'ማስታወሻዎች' : 'Notes',
+              description: l10n.appTitle.contains("መጂወ") ? 'ከአገር ዙሪያ ከተማሪዎች የሰበሰብናቸው ማስታወሻዎች።' : 'Notes we have collected from students all around the country.',
+              imageUrl: 'https://via.placeholder.com/600x200.png?text=Notes+Preview',
+              onTap: () {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(l10n.appTitle.contains("መጂወ") ? 'የማስታወሻዎች ክፍል በቅርቡ ይመጣል!' : 'Notes section coming soon!'),
+                        backgroundColor: theme.colorScheme.secondaryContainer,
+                        behavior: SnackBarBehavior.floating,
+                    ),
+                );
+              },
             ),
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Text(
-                'Join over 4,000 students who are already boosting their grades',
+                l10n.appTitle.contains("መጂወ") ? 'ውጤታቸውን እያሳደጉ ካሉ ከ4,000 በላይ ተማሪዎች ጋር ይቀላቀሉ' : 'Join over 4,000 students who are already boosting their grades',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[800],
-                ),
+                style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onBackground.withOpacity(0.8)),
               ),
             ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: ElevatedButton(
-                onPressed: _navigateToRegistrationForm,
-                style: ElevatedButton.styleFrom(
-                  // backgroundColor: Theme.of(context).primaryColor, // Example theming
-                  // padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text('Get Registered Now', style: TextStyle(fontSize: 16)),
-              ),
-            ),
-            const SizedBox(height: 20), // For some spacing at the bottom
+            const SizedBox(height: 20),
           ],
         ),
       ),

@@ -15,19 +15,20 @@ class AuthNavigationLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         Text(
           leadingText,
-          style: TextStyle(color: Colors.grey[700]),
+          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)), // Use theme color
         ),
         TextButton(
           onPressed: onLinkPressed,
           child: Text(
             linkText,
             style: TextStyle(
-              color: Colors.blue[700],
+              color: theme.colorScheme.primary, // Use theme color
               fontWeight: FontWeight.bold,
             ),
           ),

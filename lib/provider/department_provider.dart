@@ -14,7 +14,7 @@ class DepartmentProvider with ChangeNotifier {
   String? get error => _error;
 
   // API Base URL - ensure this is consistent with your other providers
-  static const String _apiBaseUrl = "https://mgw-backend-1.onrender.com/api";
+  static const String _apiBaseUrl = "https://mgw-backend.onrender.com/api";
 
   Future<void> fetchDepartments() async {
     if (_departments.isNotEmpty) return; // Avoid refetching if already loaded

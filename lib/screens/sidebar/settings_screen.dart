@@ -1,9 +1,15 @@
+// lib/screens/sidebar/settings_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:mgw_tutorial/provider/locale_provider.dart';
+import 'package:mgw_tutorial/provider/theme_provider.dart';
+import 'package:mgw_tutorial/provider/auth_provider.dart';
+import 'package:mgw_tutorial/screens/auth/login_screen.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart'; // For T&C and Privacy Policy
 
 class SettingsScreen extends StatefulWidget {
-  // Define the routeName for navigation
   static const String routeName = '/settings';
-
   const SettingsScreen({super.key});
 
   @override
@@ -11,127 +17,149 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _darkModeEnabled = false;
-  String _selectedLanguage = 'English';
-  bool _receivePushNotifications = true;
-  bool _receiveEmailUpdates = false;
+  final List<String> _supportedLanguageCodes = ['en', 'am', 'or'];
+  bool _receivePushNotifications = true; // Local UI state
 
-  final List<String> _languages = ['English', 'Amarigna', 'Afaan Oromo'];
+  // TODO: Replace with actual URLs
+  final String _privacyPolicyUrl = "https://www.zsecreteducation.com/privacy-policy";
+  final String _termsAndConditionsUrl = "https://www.zsecreteducation.com/terms-conditions";
+
+  String _getLanguageDisplayName(BuildContext context, String langCode) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (langCode) {
+      case 'en': return l10n.english;
+      case 'am': return l10n.amharic;
+      case 'or': return l10n.afaanOromo;
+      default: return langCode.toUpperCase();
+    }
+  }
+
+   Future<void> _launchExternalUrl(BuildContext context, String urlString) async {
+    final Uri uri = Uri.parse(urlString);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.appTitle.contains("መጂወ") ? "$urlString መክፈት አልተቻለም።" : 'Could not launch $urlString'),
+            backgroundColor: theme.colorScheme.errorContainer,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
 
   @override
   Widget build(BuildContext context) {
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    String currentLanguageCode = localeProvider.locale?.languageCode ?? 'en';
+    if (!_supportedLanguageCodes.contains(currentLanguageCode)) {
+      currentLanguageCode = _supportedLanguageCodes.first;
+    }
+    bool isCurrentlyDarkMode = themeProvider.themeMode == ThemeMode.dark;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(l10n.settings),
       ),
-      body: ListView( // ListView is good for settings pages
+      body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         children: <Widget>[
           SwitchListTile(
-            title: const Text('Dark Mode'),
-            subtitle: const Text('Enable or disable dark theme'),
-            value: _darkModeEnabled,
+            title: Text(l10n.appTitle.contains("መጂወ") ? "ጨለማ ገፅታ" : "Dark Mode", style: theme.listTileTheme.titleTextStyle),
+            subtitle: Text(l10n.appTitle.contains("መጂወ") ? "የጨለማ ገፅታን አንቃ ወይም አሰናክል" : "Enable or disable dark theme", style: theme.listTileTheme.subtitleTextStyle),
+            value: isCurrentlyDarkMode,
             onChanged: (bool value) {
-              setState(() {
-                _darkModeEnabled = value;
-              });
-              // TODO: Implement actual theme switching logic
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Dark Mode ${value ? "Enabled" : "Disabled"} (UI not changed yet)')),
-              );
+              themeProvider.toggleTheme(value);
             },
-            secondary: Icon(_darkModeEnabled ? Icons.dark_mode : Icons.light_mode),
+            secondary: Icon(isCurrentlyDarkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined, color: theme.listTileTheme.iconColor),
+            activeColor: theme.colorScheme.primary,
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.language),
-            title: const Text('Language'),
-            trailing: DropdownButton<String>(
-              value: _selectedLanguage,
-              underline: const SizedBox(), // Hide default underline
-              icon: const Icon(Icons.arrow_drop_down),
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _selectedLanguage = newValue;
-                  });
-                  // TODO: Implement actual language switching logic
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Language set to $newValue (App not localized yet)')),
+            leading: Icon(Icons.language_outlined, color: theme.listTileTheme.iconColor),
+            title: Text(l10n.changeLanguage, style: theme.listTileTheme.titleTextStyle),
+            trailing: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: currentLanguageCode,
+                icon: Icon(Icons.arrow_drop_down, color: theme.iconTheme.color),
+                dropdownColor: theme.cardTheme.color, // Use card color for dropdown menu
+                onChanged: (String? newLanguageCode) {
+                  if (newLanguageCode != null) {
+                    localeProvider.setLocale(Locale(newLanguageCode));
+                  }
+                },
+                items: _supportedLanguageCodes
+                    .map<DropdownMenuItem<String>>((String langCode) {
+                  return DropdownMenuItem<String>(
+                    value: langCode,
+                    child: Text(_getLanguageDisplayName(context, langCode), style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
                   );
-                }
-              },
-              items: _languages.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
+                }).toList(),
+              ),
             ),
           ),
           const Divider(),
           SwitchListTile(
-            title: const Text('Push Notifications'),
-            subtitle: const Text('Receive important updates'),
+            title: Text(l10n.notifications, style: theme.listTileTheme.titleTextStyle),
+            subtitle: Text(l10n.appTitle.contains("መጂወ") ? "ጠቃሚ ዝመናዎችን ተቀበል" : "Receive important updates", style: theme.listTileTheme.subtitleTextStyle),
             value: _receivePushNotifications,
             onChanged: (bool value) {
               setState(() {
                 _receivePushNotifications = value;
               });
-              // TODO: Update notification preferences with backend/Firebase
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(l10n.appTitle.contains("መጂወ") ? 'የግፋ ማሳወቂያዎች ${value ? "ነቅተዋል" : "ቆመዋል"}' : 'Push Notifications ${value ? "Enabled" : "Disabled"}'),
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    behavior: SnackBarBehavior.floating,
+                ),
+              );
             },
-            secondary: const Icon(Icons.notifications_active),
-          ),
-          SwitchListTile(
-            title: const Text('Email Updates'),
-            subtitle: const Text('Receive news and offers via email'),
-            value: _receiveEmailUpdates,
-            onChanged: (bool value) {
-              setState(() {
-                _receiveEmailUpdates = value;
-              });
-              // TODO: Update email preferences with backend
-            },
-            secondary: const Icon(Icons.email_outlined),
+            secondary: Icon(Icons.notifications_active_outlined, color: theme.listTileTheme.iconColor),
+            activeColor: theme.colorScheme.primary,
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.policy_outlined),
-            title: const Text('Privacy Policy'),
-            onTap: () {
-              // TODO: Navigate to Privacy Policy screen or web view
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('View Privacy Policy (Not Implemented)')),
-              );
-            },
+            leading: Icon(Icons.policy_outlined, color: theme.listTileTheme.iconColor),
+            title: Text(l10n.privacyPolicyLink, style: theme.listTileTheme.titleTextStyle),
+            onTap: () => _launchExternalUrl(context, _privacyPolicyUrl),
           ),
           ListTile(
-            leading: const Icon(Icons.description_outlined),
-            title: const Text('Terms of Service'),
-            onTap: () {
-              // TODO: Navigate to Terms of Service screen or web view
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('View Terms of Service (Not Implemented)')),
-              );
-            },
+            leading: Icon(Icons.description_outlined, color: theme.listTileTheme.iconColor),
+            title: Text(l10n.termsAndConditionsLink, style: theme.listTileTheme.titleTextStyle),
+            onTap: () => _launchExternalUrl(context, _termsAndConditionsUrl),
           ),
           const Divider(),
-          ListTile(
-            leading: Icon(Icons.logout, color: Colors.red[700]),
-            title: Text('Logout', style: TextStyle(color: Colors.red[700])),
-            onTap: () {
-              // This should use the same logout logic as in AppDrawer
-              // For now, just navigate.
-              Navigator.of(context).pushNamedAndRemoveUntil(
-                '/signup',
-                (Route<dynamic> route) => false,
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Logged Out Successfully')),
-              );
-            },
-          ),
+          if (authProvider.currentUser != null)
+            ListTile(
+              leading: Icon(Icons.logout, color: theme.colorScheme.error),
+              title: Text(l10n.logout, style: TextStyle(color: theme.colorScheme.error)),
+              onTap: () async {
+                await authProvider.logout();
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (Route<dynamic> route) => false,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(l10n.logoutSuccess),
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+            ),
         ],
       ),
     );

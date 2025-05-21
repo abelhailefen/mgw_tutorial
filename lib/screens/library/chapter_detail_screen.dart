@@ -1,18 +1,13 @@
+// lib/screens/library/chapter_detail_screen.dart
 import 'package:flutter/material.dart';
-
-// Mock data for chapter content - extend _allSubjectChaptersData or fetch separately
-// For simplicity, we'll access parts of the chapter map passed as argument.
-// Example structure within a chapter map from _allSubjectChaptersData:
-// 'videos': [{'title': 'Video 1.1', 'url': '...'}, {'title': 'Video 1.2', 'url': '...'}],
-// 'notes': 'These are the detailed notes for the chapter...',
-// 'pdfs': [{'title': 'Chapter PDF', 'url': '...'}, {'title': 'Worksheet', 'url': '...'}],
-// 'exams': [{'title': 'Quiz 1', 'questionCount': 10}, {'title': 'Midterm Practice', 'questionCount': 25}]
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // For localization
 
 class ChapterDetailScreen extends StatelessWidget {
   static const routeName = '/chapter-detail';
 
   final String subjectTitle;
-  final Map<String, dynamic> chapter; // Contains chapter id, title, and potentially content links/data
+  final Map<String, dynamic> chapter;
 
   const ChapterDetailScreen({
     super.key,
@@ -20,111 +15,240 @@ class ChapterDetailScreen extends StatelessWidget {
     required this.chapter,
   });
 
+  Future<void> _launchUrl(BuildContext context, String urlString) async {
+    final Uri uri = Uri.parse(urlString);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(l10n.appTitle.contains("መጂወ") ? "$urlString መክፈት አልተቻለም።" : 'Could not launch $urlString'),
+              backgroundColor: theme.colorScheme.errorContainer,
+              behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Example: Accessing mock content (you'd populate this in _allSubjectChaptersData)
-    final List<Map<String, String>> videos = List<Map<String, String>>.from(chapter['videos'] ?? [
-      {'title': 'Basics of Algebra - Part 1', 'description': 'Introduction to variables and expressions'},
-      {'title': 'Basics of Algebra - Part 2', 'description': 'More on expressions'},
-    ]);
-    final String notesContent = chapter['notes'] ?? 'No notes available for this chapter yet.';
-    final List<Map<String, String>> pdfs = List<Map<String, String>>.from(chapter['pdfs'] ?? [
-      {'title': 'Chapter Summary PDF', 'url': '...'},
-    ]);
-    final List<Map<String, dynamic>> exams = List<Map<String, dynamic>>.from(chapter['exams'] ?? [
-      {'title': 'Practice Quiz', 'questionCount': 5},
-    ]);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
+    final List<dynamic> videosRaw = chapter['videos'] as List<dynamic>? ?? [];
+    final List<Map<String, String>> videos = videosRaw.map((v) {
+      if (v is Map) {
+        return {
+          'title': v['title']?.toString() ?? (l10n.appTitle.contains("መጂወ") ? "ርዕስ አልባ ቪዲዮ" : 'Untitled Video'),
+          'description': v['description']?.toString() ?? '',
+          'url': v['url']?.toString(),
+        };
+      }
+      return {'title': (l10n.appTitle.contains("መጂወ") ? "የማይሰራ የቪዲዮ መረጃ" : 'Invalid Video Data'), 'description': ''};
+    }).toList();
+
+    final String notesContent = (chapter['notes'] is String
+            ? chapter['notes']
+            : (chapter['notes'] is Map ? chapter['notes']['content']?.toString() : null)) ??
+        (l10n.appTitle.contains("መጂወ") ? "ለዚህ ምዕራፍ ምንም ማስታወሻዎች የሉም።" : 'No notes available for this chapter yet.');
+
+    final List<dynamic> pdfsRaw = chapter['pdfs'] as List<dynamic>? ?? [];
+    final List<Map<String, String>> pdfs = pdfsRaw.map((p) {
+      if (p is Map) {
+        return {
+          'title': p['title']?.toString() ?? (l10n.appTitle.contains("መጂወ") ? "ርዕስ አልባ ፒዲኤፍ" : 'Untitled PDF'),
+          'url': p['url']?.toString() ?? '',
+        };
+      }
+      return {'title': (l10n.appTitle.contains("መጂወ") ? "የማይሰራ የፒዲኤፍ መረጃ" : 'Invalid PDF Data'), 'url': ''};
+    }).toList();
+
+    final List<dynamic> examsRaw = chapter['exams'] as List<dynamic>? ?? [];
+    final List<Map<String, dynamic>> exams = examsRaw.map((e) {
+      if (e is Map) {
+        return {
+          'title': e['title']?.toString() ?? (l10n.appTitle.contains("መጂወ") ? "ርዕስ አልባ ፈተና" : 'Untitled Exam'),
+          'questionCount': e['questionCount'] as int?,
+          'id': e['id']?.toString(),
+        };
+      }
+      return {'title': (l10n.appTitle.contains("መጂወ") ? "የማይሰራ የፈተና መረጃ" : 'Invalid Exam Data')};
+    }).toList();
 
     return DefaultTabController(
-      length: 4, // Number of tabs
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('${subjectTitle} - ${chapter['title']}'),
-          bottom: const TabBar(
-            isScrollable: false, // Set to true if you have many tabs
+          title: Text(chapter['title'] ?? (l10n.appTitle.contains("መጂወ") ? "ምዕራፍ ዝርዝሮች" : 'Chapter Details')),
+          bottom: TabBar(
+            isScrollable: false,
+            labelColor: theme.tabBarTheme.labelColor ?? theme.colorScheme.primary,
+            unselectedLabelColor: theme.tabBarTheme.unselectedLabelColor ?? theme.colorScheme.onSurface.withOpacity(0.7),
+            indicatorColor: theme.tabBarTheme.indicatorColor ?? theme.colorScheme.primary,
             tabs: [
-              Tab(text: 'Videos'),
-              Tab(text: 'Notes'),
-              Tab(text: 'PDF'),
-              Tab(text: 'Exams'),
+              Tab(icon: const Icon(Icons.videocam_outlined), text: l10n.appTitle.contains("መጂወ") ? "ቪዲዮዎች" : 'Videos'),
+              Tab(icon: const Icon(Icons.notes_outlined), text: l10n.appTitle.contains("መጂወ") ? "ማስታወሻዎች" : 'Notes'),
+              Tab(icon: const Icon(Icons.picture_as_pdf_outlined), text: l10n.appTitle.contains("መጂወ") ? "ፒዲኤፎች" : 'PDF'),
+              Tab(icon: const Icon(Icons.quiz_outlined), text: l10n.appTitle.contains("መጂወ") ? "ፈተናዎች" : 'Exams'),
             ],
           ),
         ),
         body: TabBarView(
           children: [
-            // Videos Tab Content
-            _buildVideoList(videos),
-
-            // Notes Tab Content
-            _buildNotesView(notesContent),
-
-            // PDF Tab Content
-            _buildPdfList(pdfs),
-
-            // Exams Tab Content
-            _buildExamList(exams),
+            _buildVideoList(context, videos, l10n, theme),
+            _buildNotesView(context, notesContent, l10n, theme),
+            _buildPdfList(context, pdfs, l10n, theme),
+            _buildExamList(context, exams, l10n, theme),
           ],
         ),
       ),
     );
   }
 
-  // Placeholder widget builders for tab content
-  Widget _buildVideoList(List<Map<String, String>> videos) {
-    if (videos.isEmpty) return const Center(child: Text('No videos available yet.'));
+  Widget _buildVideoList(BuildContext context, List<Map<String, String>> videos, AppLocalizations l10n, ThemeData theme) {
+    if (videos.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.video_library_outlined, size: 60, color: theme.iconTheme.color?.withOpacity(0.5)),
+            const SizedBox(height: 16),
+            Text(l10n.appTitle.contains("መጂወ") ? "ለዚህ ምዕራፍ ምንም ቪዲዮዎች የሉም።" : 'No videos available for this chapter yet.', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7))),
+          ],
+        ),
+      );
+    }
     return ListView.builder(
+      padding: const EdgeInsets.all(8.0),
       itemCount: videos.length,
       itemBuilder: (ctx, index) {
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        final video = videos[index];
+        return Card( // Uses CardTheme
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: ListTile(
-            leading: const Icon(Icons.play_circle_fill_rounded, color: Colors.red, size: 36),
-            title: Text(videos[index]['title']!),
-            subtitle: Text(videos[index]['description'] ?? ''),
-            onTap: () { /* TODO: Implement video player or navigation */ },
+            leading: Icon(Icons.play_circle_fill_rounded, color: theme.colorScheme.primary, size: 40),
+            title: Text(video['title']!, style: theme.textTheme.titleSmall),
+            subtitle: video['description']!.isNotEmpty ? Text(video['description']!, style: theme.textTheme.bodySmall) : null,
+            onTap: () {
+              if (video['url'] != null && video['url']!.isNotEmpty) {
+                 _launchUrl(context, video['url']!);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text(l10n.appTitle.contains("መጂወ") ? "ለ '${video['title']}' የቪዲዮ ማጫወቻ ገና አልተተገበረም።" : 'Video player for "${video['title']}" not implemented yet.'),
+                      backgroundColor: theme.colorScheme.secondaryContainer,
+                      behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
           ),
         );
       },
     );
   }
 
-  Widget _buildNotesView(String notes) {
+  Widget _buildNotesView(BuildContext context, String notesContent, AppLocalizations l10n, ThemeData theme) {
+    if (notesContent == (l10n.appTitle.contains("መጂወ") ? "ለዚህ ምዕራፍ ምንም ማስታወሻዎች የሉም።" : 'No notes available for this chapter yet.')) {
+       return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.text_snippet_outlined, size: 60, color: theme.iconTheme.color?.withOpacity(0.5)),
+            const SizedBox(height: 16),
+            Text(notesContent, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7))),
+          ],
+        ),
+      );
+    }
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Text(notes, style: const TextStyle(fontSize: 16, height: 1.5)),
+      child: Text(
+        notesContent,
+        style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
+      ),
     );
   }
 
-  Widget _buildPdfList(List<Map<String, String>> pdfs) {
-     if (pdfs.isEmpty) return const Center(child: Text('No PDFs available yet.'));
+  Widget _buildPdfList(BuildContext context, List<Map<String, String>> pdfs, AppLocalizations l10n, ThemeData theme) {
+    if (pdfs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.picture_as_pdf_outlined, size: 60, color: theme.iconTheme.color?.withOpacity(0.5)),
+            const SizedBox(height: 16),
+            Text(l10n.appTitle.contains("መጂወ") ? "ለዚህ ምዕራፍ ምንም ፒዲኤፎች የሉም።" : 'No PDFs available for this chapter yet.', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7))),
+          ],
+        ),
+      );
+    }
     return ListView.builder(
+      padding: const EdgeInsets.all(8.0),
       itemCount: pdfs.length,
       itemBuilder: (ctx, index) {
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        final pdf = pdfs[index];
+        return Card( // Uses CardTheme
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: ListTile(
-            leading: const Icon(Icons.picture_as_pdf, color: Colors.green, size: 36),
-            title: Text(pdfs[index]['title']!),
-            onTap: () { /* TODO: Implement PDF viewer or download */ },
+            leading: Icon(Icons.description_outlined, color: theme.colorScheme.error, size: 40), // Or secondary
+            title: Text(pdf['title']!, style: theme.textTheme.titleSmall),
+            trailing: Icon(Icons.arrow_forward_ios, size: 16, color: theme.iconTheme.color?.withOpacity(0.6)),
+            onTap: () {
+              if (pdf['url'] != null && pdf['url']!.isNotEmpty) {
+                _launchUrl(context, pdf['url']!);
+              } else {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text(l10n.appTitle.contains("መጂወ") ? "ለ '${pdf['title']}' የፒዲኤፍ ማያያዣ ጠፍቷል።" : 'PDF link for "${pdf['title']}" is missing.'),
+                      backgroundColor: theme.colorScheme.errorContainer,
+                      behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
           ),
         );
       },
     );
   }
 
-  Widget _buildExamList(List<Map<String, dynamic>> exams) {
-    if (exams.isEmpty) return const Center(child: Text('No exams available yet.'));
+  Widget _buildExamList(BuildContext context, List<Map<String, dynamic>> exams, AppLocalizations l10n, ThemeData theme) {
+    if (exams.isEmpty) {
+       return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.quiz_outlined, size: 60, color: theme.iconTheme.color?.withOpacity(0.5)),
+            const SizedBox(height: 16),
+            Text(l10n.appTitle.contains("መጂወ") ? "ለዚህ ምዕራፍ ምንም ፈተናዎች የሉም።" : 'No exams available for this chapter yet.', style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7))),
+          ],
+        ),
+      );
+    }
     return ListView.builder(
+      padding: const EdgeInsets.all(8.0),
       itemCount: exams.length,
       itemBuilder: (ctx, index) {
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        final exam = exams[index];
+        return Card( // Uses CardTheme
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           child: ListTile(
-            leading: const Icon(Icons.assignment, color: Colors.blue, size: 36),
-            title: Text(exams[index]['title']!),
-            subtitle: Text('Questions: ${exams[index]['questionCount'] ?? 'N/A'}'),
-            onTap: () { /* TODO: Implement exam taking screen */ },
+            leading: Icon(Icons.assignment_turned_in_outlined, color: theme.colorScheme.secondary, size: 40), // Or success color
+            title: Text(exam['title']!, style: theme.textTheme.titleSmall),
+            subtitle: exam['questionCount'] != null ? Text(l10n.appTitle.contains("መጂወ") ? 'ጥያቄዎች: ${exam['questionCount']}' : 'Questions: ${exam['questionCount']}', style: theme.textTheme.bodySmall) : null,
+            trailing: Icon(Icons.arrow_forward_ios, size: 16, color: theme.iconTheme.color?.withOpacity(0.6)),
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(l10n.appTitle.contains("መጂወ") ? "ለ '${exam['title']}' የፈተና ገጽ ገና አልተተገበረም።" : 'Exam screen for "${exam['title']}" not implemented yet.'),
+                    backgroundColor: theme.colorScheme.secondaryContainer,
+                    behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
           ),
         );
       },

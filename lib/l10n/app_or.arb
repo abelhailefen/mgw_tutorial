@@ -1,5 +1,5 @@
 {
-  "@@locale": "tg",
+  "@@locale": "or",
   "appTitle": "መጂወ አስጠኚ",
   "home": "መነሻ",
   "library": "ቤተ-መጽሐፍት",
@@ -128,5 +128,8 @@
     "guestUser": "እንግዳ ተጠቃሚ",
   "pleaseLoginOrRegister": "እባክዎ ይግቡ ወይም ይመዝገቡ",
   "registeredUser": "የተመዘገበ ተጠቃሚ",
-  "logoutSuccess": "በተሳካ ሁኔታ ወጥተዋል።"
+  "logoutSuccess": "በተሳካ ሁኔታ ወጥተዋል።",
+  "selectSemesterLabel": "ሴሚስተር ይምረጡ", 
+  "selectSemesterHint": "ሴሚስተር ይምረጡ", 
+  "pleaseSelectSemesterError": "እባክዎ ሴሚስተር ይምረጡ።"
 }

@@ -1,3 +1,4 @@
+//lib/widgets/home/notes_card.dart
 import 'package:flutter/material.dart';
 
 class NotesCard extends StatelessWidget {
@@ -5,7 +6,7 @@ class NotesCard extends StatelessWidget {
   final String description;
   final String imageUrl;
   final VoidCallback? onTap;
-  
+
   const NotesCard({
     super.key,
     required this.title,
@@ -16,14 +17,13 @@ class NotesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Card(
+      // Uses CardTheme from main.dart
       child: InkWell(
-        onTap: onTap ?? () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$title Tapped (Not Implemented)')),
-          );
-        },
-        borderRadius: BorderRadius.circular(12.0),
+        onTap: onTap ?? () { /* ... */ },
+        borderRadius: BorderRadius.circular(theme.cardTheme.shape is RoundedRectangleBorder ? (theme.cardTheme.shape as RoundedRectangleBorder).borderRadius.resolve(Directionality.of(context)).bottomLeft.x : 12.0), // Match card border radius
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -31,11 +31,7 @@ class NotesCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0D47A1), // Dark Blue
-                ),
+                style: theme.textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
               ClipRRect(
@@ -47,22 +43,17 @@ class NotesCard extends StatelessWidget {
                   fit: BoxFit.cover,
                    errorBuilder: (context, error, stackTrace) => Container(
                     height: 150,
-                    color: Colors.grey[300],
-                    child: const Center(child: Icon(Icons.broken_image, color: Colors.grey, size: 50)),
+                    color: theme.colorScheme.surfaceVariant,
+                    child: Center(child: Icon(Icons.broken_image, color: theme.colorScheme.onSurfaceVariant, size: 50)),
                   ),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
                 description,
-                style: TextStyle(color: Colors.grey[800], fontSize: 15),
+                style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 8),
-              // Placeholder for dots if this were a carousel
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.center,
-              //   children: List.generate(3, (index) => // ... dot indicator ... ),
-              // )
             ],
           ),
         ),

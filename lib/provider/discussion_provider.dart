@@ -1,216 +1,184 @@
 // lib/provider/discussion_provider.dart
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:mgw_tutorial/models/post.dart';
-import 'package:mgw_tutorial/models/comment.dart'; // Make sure Comment model is imported
+import 'package:mgw_tutorial/models/comment.dart';
+import 'package:mgw_tutorial/models/reply.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
+import 'package:mgw_tutorial/provider/post_provider.dart';
+import 'package:mgw_tutorial/provider/comment_provider.dart';
+import 'package:mgw_tutorial/provider/reply_provider.dart';
 
 class DiscussionProvider with ChangeNotifier {
-  List<Post> _posts = [];
-  bool _isLoadingPosts = false;
-  String? _postsError;
-  bool _isCreatingPost = false;
-  String? _createPostError;
+  final AuthProvider _authProvider;
+  late final PostProvider _postProvider;
+  late final CommentProvider _commentProvider;
+  late final ReplyProvider _replyProvider;
 
-  // State for comments of a single, currently viewed post
-  List<Comment> _currentPostComments = [];
-  bool _isLoadingComments = false;
-  String? _commentsError;
-  int? _currentlyViewedPostId; // To know which post's comments are loaded
+  static const String _apiBaseUrl = "https://mgw-backend.onrender.com/api";
 
-  List<Post> get posts => [..._posts];
-  bool get isLoadingPosts => _isLoadingPosts;
-  String? get postsError => _postsError;
-  bool get isCreatingPost => _isCreatingPost;
-  String? get createPostError => _createPostError;
+  // UI specific error states for submission forms
+  String? _submitPostError;
+  String? _submitCommentError;
+  String? _submitReplyError;
+  String? _updateItemError; // Generic for updates
+  String? _deleteItemError; // Generic for deletes
 
-  List<Comment> get currentPostComments => [..._currentPostComments];
-  bool get isLoadingComments => _isLoadingComments;
-  String? get commentsError => _commentsError;
-  int? get currentlyViewedPostId => _currentlyViewedPostId;
+  // UI specific loading states for submission/action
+  bool _isSubmittingPost = false;
+  bool _isSubmittingComment = false;
+  bool _isSubmittingReply = false;
+  bool _isUpdatingItem = false;
+  bool _isDeletingItem = false;
 
 
-  static const String _apiBaseUrl = "https://mgw-backend-1.onrender.com/api";
+  DiscussionProvider(this._authProvider) {
+    _postProvider = PostProvider(_apiBaseUrl, _authProvider);
+    _commentProvider = CommentProvider(_apiBaseUrl, _authProvider);
+    _replyProvider = ReplyProvider(_apiBaseUrl, _authProvider);
+
+    // Listen to changes in sub-providers to trigger notifyListeners in DiscussionProvider
+    // This ensures that consumers of DiscussionProvider update when sub-provider data changes.
+    _postProvider.addListener(_notifyDiscussionListeners);
+    _commentProvider.addListener(_notifyDiscussionListeners);
+    _replyProvider.addListener(_notifyDiscussionListeners);
+  }
+
+  void _notifyDiscussionListeners() {
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _postProvider.removeListener(_notifyDiscussionListeners);
+    _commentProvider.removeListener(_notifyDiscussionListeners);
+    _replyProvider.removeListener(_notifyDiscussionListeners);
+    _postProvider.dispose();
+    _commentProvider.dispose();
+    _replyProvider.dispose();
+    super.dispose();
+  }
+
+  // --- Getters for Data (delegating to sub-providers) ---
+  List<Post> get posts => _postProvider.posts;
+  bool get isLoadingPosts => _postProvider.isLoading;
+  String? get postsError => _postProvider.error;
+
+  List<Comment> commentsForPost(int postId) => _commentProvider.commentsForPost(postId);
+  bool isLoadingCommentsForPost(int postId) => _commentProvider.isLoadingForPost(postId);
+  String? commentErrorForPost(int postId) => _commentProvider.errorForPost(postId);
+  
+  List<Reply> repliesForComment(int commentId) => _replyProvider.repliesForComment(commentId);
+  bool isLoadingRepliesForComment(int commentId) => _replyProvider.isLoadingForComment(commentId);
+  String? replyErrorForComment(int commentId) => _replyProvider.errorForComment(commentId);
+  bool allRepliesLoadedForComment(int commentId) => _replyProvider.allRepliesLoadedForComment(commentId);
+
+
+  // --- Getters for UI-specific states ---
+  String? get submitPostError => _submitPostError;
+  String? get submitCommentError => _submitCommentError;
+  String? get submitReplyError => _submitReplyError;
+  String? get updateItemError => _updateItemError;
+  String? get deleteItemError => _deleteItemError;
+
+  bool get isSubmittingPost => _isSubmittingPost;
+  bool get isSubmittingComment => _isSubmittingComment;
+  bool get isSubmittingReply => _isSubmittingReply;
+  bool get isUpdatingItem => _isUpdatingItem;
+  bool get isDeletingItem => _isDeletingItem;
 
   // --- Post Methods ---
-  Future<void> fetchPosts() async {
-    // ... (existing fetchPosts logic - no change)
-    _isLoadingPosts = true;
-    _postsError = null;
+  Future<void> fetchPosts() async => await _postProvider.fetchPosts();
+
+  Future<bool> createPost({required String title, required String description}) async {
+    _isSubmittingPost = true;
+    _submitPostError = null;
     notifyListeners();
-    final url = Uri.parse('$_apiBaseUrl/posts');
-    try {
-      final response = await http.get(url, headers: {"Accept": "application/json"});
-      if (response.statusCode == 200) {
-        final List<dynamic> extractedData = json.decode(response.body);
-        _posts = extractedData.map((postData) => Post.fromJson(postData as Map<String, dynamic>)).toList();
-        _posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      } else {
-        _postsError = "Failed to load posts. Status: ${response.statusCode}, Body: ${response.body}";
-      }
-    } catch (e) {
-      _postsError = "Error fetching posts: ${e.toString()}";
-    } finally {
-      _isLoadingPosts = false;
-      notifyListeners();
-    }
+    final result = await _postProvider.createPost(title: title, description: description);
+    _isSubmittingPost = false;
+    if (!result['success']) _submitPostError = result['message'];
+    notifyListeners();
+    return result['success'];
+  }
+  // ... (Update/Delete Post methods delegating and managing UI state)
+  Future<bool> updatePost({required int postId, required String title, required String description}) async {
+    _isUpdatingItem = true; _updateItemError = null; notifyListeners();
+    final result = await _postProvider.updatePost(postId: postId, title: title, description: description);
+    _isUpdatingItem = false;
+    if (!result['success']) _updateItemError = result['message'];
+    notifyListeners();
+    return result['success'];
   }
 
-  Future<bool> createPost({
-    required String title,
-    required String description,
-    required AuthProvider authProvider,
-  }) async {
-    // ... (existing createPost logic - no change other than error var if needed)
-    if (authProvider.currentUser == null) { /* ... */ return false; }
-    final int? userId = authProvider.currentUser!.id;
-    if (userId == null) { /* ... */ return false; }
-
-    _isCreatingPost = true;
-    _createPostError = null;
+  Future<bool> deletePost(int postId) async {
+    _isDeletingItem = true; _deleteItemError = null; notifyListeners();
+    final result = await _postProvider.deletePost(postId);
+    _isDeletingItem = false;
+    if (!result['success']) _deleteItemError = result['message'];
     notifyListeners();
-    final url = Uri.parse('$_apiBaseUrl/posts');
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "X-User-ID": userId.toString(),
-        },
-        body: json.encode({'title': title, 'description': description, 'userId': userId}),
-      );
-      if (response.statusCode == 201) {
-        await fetchPosts(); // Refreshes the main post list
-        _isCreatingPost = false;
-        return true;
-      } else {
-        try {
-            final errorData = json.decode(response.body);
-            _createPostError = errorData['message'] ?? "Failed to create post. Status: ${response.statusCode}";
-        } catch (e) { _createPostError = "Failed to create post. Status: ${response.statusCode}, Body: ${response.body}"; }
-        _isCreatingPost = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _createPostError = "An error occurred while creating post: ${e.toString()}";
-      _isCreatingPost = false;
-      notifyListeners();
-      return false;
-    }
+    return result['success'];
   }
+
 
   // --- Comment Methods ---
-  Future<void> fetchCommentsForPost(int postId) async {
-    _isLoadingComments = true;
-    _commentsError = null;
-    _currentlyViewedPostId = postId;
-    // Clear previous comments if fetching for a new post, or append if implementing pagination
-    _currentPostComments = [];
+  Future<void> fetchCommentsForPost(int postId, {bool forceRefresh = false}) async => await _commentProvider.fetchCommentsForPost(postId, forceRefresh: forceRefresh);
+
+  Future<bool> createTopLevelComment({required int postId, required String commentText}) async {
+    _isSubmittingComment = true;
+    _submitCommentError = null;
     notifyListeners();
-
-    // Assuming the API supports fetching comments by postId
-    final url = Uri.parse('$_apiBaseUrl/comments?postId=$postId');
-    // If your API is simply /api/comments and you filter client-side (not recommended for many comments):
-    // final url = Uri.parse('$_apiBaseUrl/comments');
-
-    try {
-      print("Fetching comments for post $postId from: $url");
-      final response = await http.get(url, headers: {"Accept": "application/json"});
-      print("Comments Response Status: ${response.statusCode}");
-
-      if (response.statusCode == 200) {
-        final List<dynamic> extractedData = json.decode(response.body);
-        // If API returns all comments and you need to filter:
-        // _currentPostComments = extractedData
-        //     .map((commentData) => Comment.fromJson(commentData as Map<String, dynamic>))
-        //     .where((comment) => comment.postId == postId) // Client-side filter
-        //     .toList();
-        
-        // If API returns comments already filtered by postId (preferred):
-        _currentPostComments = extractedData
-            .map((commentData) => Comment.fromJson(commentData as Map<String, dynamic>))
-            .toList();
-
-        _currentPostComments.sort((a, b) => a.createdAt.compareTo(b.createdAt)); // Oldest first
-      } else {
-        _commentsError = "Failed to load comments. Status: ${response.statusCode}, Body: ${response.body}";
-        print(_commentsError);
-      }
-    } catch (e) {
-      _commentsError = "Error fetching comments: ${e.toString()}";
-      print(_commentsError);
-    } finally {
-      _isLoadingComments = false;
-      notifyListeners();
-    }
+    final result = await _commentProvider.createComment(postId: postId, commentText: commentText);
+    _isSubmittingComment = false;
+    if (!result['success']) _submitCommentError = result['message'];
+    notifyListeners();
+    return result['success'];
+  }
+   Future<bool> updateComment({required int commentId, required int postId, required String newCommentText}) async {
+    _isUpdatingItem = true; _updateItemError = null; notifyListeners();
+    final result = await _commentProvider.updateComment(commentId: commentId, postId: postId, newCommentText: newCommentText);
+    _isUpdatingItem = false;
+    if (!result['success']) _updateItemError = result['message'];
+    notifyListeners();
+    return result['success'];
   }
 
-  Future<bool> createComment({
-    required int postId,
-    required String commentText,
-    required AuthProvider authProvider,
-  }) async {
-    if (authProvider.currentUser == null) {
-      _commentsError = "User not authenticated to comment."; // Use _commentsError or a new specific error state
-      notifyListeners();
-      return false;
-    }
-    final int? userId = authProvider.currentUser!.id;
-    if (userId == null) {
-      _commentsError = "User ID is missing. Cannot create comment.";
-      notifyListeners();
-      return false;
-    }
+  Future<bool> deleteComment({required int commentId, required int postId}) async {
+    _isDeletingItem = true; _deleteItemError = null; notifyListeners();
+    final result = await _commentProvider.deleteComment(commentId: commentId, postId: postId);
+    _isDeletingItem = false;
+    if (!result['success']) _deleteItemError = result['message'];
+    notifyListeners();
+    return result['success'];
+  }
 
-    // Consider a specific loading state for creating a comment if needed
-    // _isCreatingComment = true; notifyListeners();
 
-    final url = Uri.parse('$_apiBaseUrl/comments');
-    try {
-      final requestBody = {
-        'comment': commentText,
-        'userId': userId,
-        'postId': postId,
-      };
-      print("[DiscussionProvider] Create Comment Request Body: ${json.encode(requestBody)}");
+  // --- Reply Methods ---
+  Future<void> fetchRepliesForComment(int commentId, {bool forceRefresh = false}) async => await _replyProvider.fetchRepliesForComment(commentId, forceRefresh: forceRefresh);
+  
+  Future<bool> createReply({required int parentCommentId, required String content}) async {
+    _isSubmittingReply = true;
+    _submitReplyError = null;
+    notifyListeners();
+    final result = await _replyProvider.createReply(parentCommentId: parentCommentId, content: content);
+    _isSubmittingReply = false;
+    if (!result['success']) _submitReplyError = result['message'];
+    notifyListeners();
+    return result['success'];
+  }
+  Future<bool> updateReply({required int parentCommentId, required int replyId, required String newContent}) async {
+    _isUpdatingItem = true; _updateItemError = null; notifyListeners();
+    final result = await _replyProvider.updateReply(parentCommentId: parentCommentId, replyId: replyId, newContent: newContent);
+    _isUpdatingItem = false;
+    if (!result['success']) _updateItemError = result['message'];
+    notifyListeners();
+    return result['success'];
+  }
 
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "X-User-ID": userId.toString(), // For mock auth
-        },
-        body: json.encode(requestBody),
-      );
-
-      print("Create Comment Response Status: ${response.statusCode}");
-      print("Create Comment Response Body: ${response.body}");
-
-      if (response.statusCode == 201) { // HTTP 201 Created
-        // Refetch comments for the current post to show the new one
-        await fetchCommentsForPost(postId);
-        // _isCreatingComment = false; notifyListeners();
-        return true;
-      } else {
-        try {
-            final errorData = json.decode(response.body);
-            _commentsError = errorData['message'] ?? "Failed to create comment. Status: ${response.statusCode}";
-        } catch (e) {
-            _commentsError = "Failed to create comment. Status: ${response.statusCode}, Body: ${response.body}";
-        }
-        // _isCreatingComment = false;
-        notifyListeners(); // For the error
-        return false;
-      }
-    } catch (e) {
-      _commentsError = "An error occurred while creating comment: ${e.toString()}";
-      // _isCreatingComment = false;
-      notifyListeners(); // For the error
-      return false;
-    }
+  Future<bool> deleteReply({required int parentCommentId, required int replyId}) async {
+    _isDeletingItem = true; _deleteItemError = null; notifyListeners();
+    final result = await _replyProvider.deleteReply(parentCommentId: parentCommentId, replyId: replyId);
+    _isDeletingItem = false;
+    if (!result['success']) _deleteItemError = result['message'];
+    notifyListeners();
+    return result['success'];
   }
 }

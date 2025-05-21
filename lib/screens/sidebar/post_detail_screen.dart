@@ -1,11 +1,16 @@
 // lib/screens/sidebar/post_detail_screen.dart
 import 'package:flutter/material.dart';
-import 'package:mgw_tutorial/models/comment.dart';
-import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/models/post.dart';
+import 'package:mgw_tutorial/models/comment.dart';
+import 'package:mgw_tutorial/models/reply.dart';
+import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:mgw_tutorial/widgets/discussion/post_content_view.dart';
+import 'package:mgw_tutorial/widgets/discussion/comment_item_view.dart';
+import 'package:mgw_tutorial/widgets/discussion/comment_input_field.dart';
+import 'package:mgw_tutorial/widgets/discussion/edit_input_field.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class PostDetailScreen extends StatefulWidget {
   static const routeName = '/post-detail';
@@ -18,64 +23,319 @@ class PostDetailScreen extends StatefulWidget {
 }
 
 class _PostDetailScreenState extends State<PostDetailScreen> {
-  final _commentController = TextEditingController();
-  final _commentFormKey = GlobalKey<FormState>();
-  bool _isSubmittingComment = false;
+  final _topLevelCommentController = TextEditingController();
+  final _topLevelCommentFormKey = GlobalKey<FormState>();
+  int? _replyingToCommentId;
+  final _replyController = TextEditingController();
+  final _replyFormKey = GlobalKey<FormState>();
+  int? _editingCommentId;
+  int? _editingReplyId;
+  int? _editingReplyParentCommentId;
+  final _editTextController = TextEditingController();
+  final _editFormKey = GlobalKey<FormState>();
+  final _editPostTitleController = TextEditingController();
+  final _editPostDescriptionController = TextEditingController();
+  final _editPostFormKey = GlobalKey<FormState>();
+  late Post _currentPost;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
-      // Fetch comments only if they are for a different post or not loaded yet
-      if (discussionProvider.currentlyViewedPostId != widget.post.id || discussionProvider.currentPostComments.isEmpty) {
-        discussionProvider.fetchCommentsForPost(widget.post.id);
+    _currentPost = widget.post;
+    _fetchData();
+  }
+
+  Future<void> _fetchData({bool forceRefresh = false}) async {
+    if (!mounted) return;
+    final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
+    if (forceRefresh) {
+      await discussionProvider.fetchPosts();
+      final updatedPostFromList = discussionProvider.posts.firstWhere(
+            (p) => p.id == widget.post.id,
+            orElse: () => _currentPost);
+      if (mounted) {
+        setState(() { _currentPost = updatedPostFromList; });
       }
-    });
+    }
+    await discussionProvider.fetchCommentsForPost(_currentPost.id, forceRefresh: forceRefresh);
+    if (mounted) {
+      final comments = discussionProvider.commentsForPost(_currentPost.id);
+      for (var comment in comments) {
+        if (forceRefresh || !discussionProvider.allRepliesLoadedForComment(comment.id)) {
+           discussionProvider.fetchRepliesForComment(comment.id, forceRefresh: forceRefresh);
+        }
+      }
+    }
   }
 
   @override
   void dispose() {
-    _commentController.dispose();
+    _topLevelCommentController.dispose();
+    _replyController.dispose();
+    _editTextController.dispose();
+    _editPostTitleController.dispose();
+    _editPostDescriptionController.dispose();
     super.dispose();
   }
 
-  Future<void> _submitComment() async {
-    if (!_commentFormKey.currentState!.validate()) {
-      return;
-    }
-    if (!mounted) return;
-
-    setState(() {
-      _isSubmittingComment = true;
-    });
-
+  void _showEditPostDialog() {
     final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    _editPostTitleController.text = _currentPost.title;
+    _editPostDescriptionController.text = _currentPost.description;
 
-    final success = await discussionProvider.createComment(
-      postId: widget.post.id,
-      commentText: _commentController.text.trim(),
-      authProvider: authProvider,
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter setDialogState) {
+          return AlertDialog(
+            backgroundColor: theme.dialogBackgroundColor,
+            title: Text(l10n.appTitle.contains("መጂወ") ? 'ልጥፍ አርትዕ' : 'Edit Post', style: theme.textTheme.titleLarge),
+            contentPadding: const EdgeInsets.all(20),
+            content: Form(
+              key: _editPostFormKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: _editPostTitleController,
+                    decoration: InputDecoration(labelText: l10n.appTitle.contains("መጂወ") ? 'ርዕስ' : 'Title'),
+                    validator: (value) => (value == null || value.trim().isEmpty) ? (l10n.appTitle.contains("መጂወ") ? 'ርዕስ ባዶ መሆን አይችልም' : 'Title cannot be empty') : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _editPostDescriptionController,
+                    decoration: InputDecoration(labelText: l10n.appTitle.contains("መጂወ") ? 'መግለጫ' : 'Description', alignLabelWithHint: true),
+                    maxLines: 5, minLines: 3,
+                    validator: (value) => (value == null || value.trim().isEmpty) ? (l10n.appTitle.contains("መጂወ") ? 'መግለጫ ባዶ መሆን አይችልም' : 'Description cannot be empty') : null,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(child: Text(l10n.appTitle.contains("መጂወ") ? 'ሰርዝ' : 'Cancel', style: TextStyle(color: theme.colorScheme.primary)), onPressed: () => Navigator.of(ctx).pop()),
+              ElevatedButton(
+                child: discussionProvider.isUpdatingItem
+                    ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(theme.colorScheme.onPrimary)))
+                    : Text(l10n.appTitle.contains("መጂወ") ? 'አስቀምጥ' : 'Save'),
+                onPressed: discussionProvider.isUpdatingItem ? null : () async {
+                  if (_editPostFormKey.currentState!.validate()) {
+                    final success = await discussionProvider.updatePost(
+                      postId: _currentPost.id,
+                      title: _editPostTitleController.text.trim(),
+                      description: _editPostDescriptionController.text.trim(),
+                    );
+                    if (!mounted) return;
+                    Navigator.of(ctx).pop();
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? 'ልጥፍ ተዘምኗል!' : 'Post updated!'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
+                      await _fetchData(forceRefresh: true);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(discussionProvider.updateItemError ?? (l10n.appTitle.contains("መጂወ") ? 'ልጥፍ ማዘመን አልተሳካም።' : 'Failed to update post.')), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+          );
+        }
+      ),
+    );
+  }
+
+  Future<void> _handleDeletePost() async {
+    final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final bool? confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.dialogBackgroundColor,
+        title: Text(l10n.appTitle.contains("መጂወ") ? 'ልጥፍ ሰርዝ' : 'Delete Post', style: theme.textTheme.titleLarge),
+        content: Text(l10n.appTitle.contains("መጂወ") ? 'ይህን ልጥፍ እና ሁሉንም አስተያየቶቹን መሰረዝ እርግጠኛ ነዎት? ይህ እርምጃ መመለስ አይቻልም።' : 'Are you sure you want to delete this post and all its comments? This action cannot be undone.', style: theme.textTheme.bodyLarge),
+        actions: <Widget>[
+          TextButton(child: Text(l10n.appTitle.contains("መጂወ") ? 'ሰርዝ' : 'Cancel', style: TextStyle(color: theme.colorScheme.primary)), onPressed: () => Navigator.of(ctx).pop(false)),
+          TextButton(
+            child: Text(l10n.appTitle.contains("መጂወ") ? 'ሰርዝ' : 'Delete', style: TextStyle(color: theme.colorScheme.error)),
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
+        ],
+      ),
     );
 
+    if (confirmDelete == true) {
+      final success = await discussionProvider.deletePost(_currentPost.id);
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? 'ልጥፍ በተሳካ ሁኔታ ተሰርዟል!' : 'Post deleted successfully!'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
+          Navigator.of(context).pop();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(discussionProvider.deleteItemError ?? (l10n.appTitle.contains("መጂወ") ? 'ልጥፍ መሰረዝ አልተሳካም።' : 'Failed to delete post.')), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _submitTopLevelComment() async {
+    if (!_topLevelCommentFormKey.currentState!.validate()) return;
+    final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final success = await discussionProvider.createTopLevelComment(
+      postId: _currentPost.id,
+      commentText: _topLevelCommentController.text.trim(),
+    );
     if (mounted) {
-      setState(() {
-        _isSubmittingComment = false;
-      });
       if (success) {
-        _commentController.clear(); // Clear the input field
-        FocusScope.of(context).unfocus(); // Dismiss keyboard
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Comment posted successfully!')), // TODO: l10n
-        );
+        _topLevelCommentController.clear();
+        FocusScope.of(context).unfocus();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? 'አስተያየት ተለጥፏል!' : 'Comment posted!'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(discussionProvider.commentsError ?? 'Failed to post comment.'), // TODO: l10n
-            backgroundColor: Colors.red,
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(discussionProvider.submitCommentError ?? (l10n.appTitle.contains("መጂወ") ? 'አስተያየት መለጠፍ አልተሳካም።' : 'Failed to post comment.')), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating));
+      }
+    }
+  }
+
+  void _handleToggleReplyField(int commentId) {
+    _cancelEdit();
+    setState(() {
+      if (_replyingToCommentId == commentId) {
+        _replyingToCommentId = null;
+      } else {
+        _replyingToCommentId = commentId;
+        _replyController.clear();
+      }
+    });
+  }
+
+  Future<void> _submitReply(int parentCommentId) async {
+    if (!_replyFormKey.currentState!.validate()) return;
+    final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final success = await discussionProvider.createReply(
+      parentCommentId: parentCommentId,
+      content: _replyController.text.trim(),
+    );
+    if (mounted) {
+      if (success) {
+        _replyController.clear();
+        setState(() { _replyingToCommentId = null; });
+        FocusScope.of(context).unfocus();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? 'ምላሽ ተለጥፏል!' : 'Reply posted!'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(discussionProvider.submitReplyError ?? (l10n.appTitle.contains("መጂወ") ? 'ምላሽ መለጠፍ አልተሳካም።' : 'Failed to post reply.')), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating));
+      }
+    }
+  }
+
+  void _startEditComment(Comment comment) {
+    setState(() {
+      _editingCommentId = comment.id;
+      _editingReplyId = null;
+      _editingReplyParentCommentId = null;
+      _editTextController.text = comment.comment;
+      _replyingToCommentId = null;
+    });
+  }
+
+  void _startEditReply(Reply reply, int parentCommentId) {
+    setState(() {
+      _editingReplyId = reply.id;
+      _editingReplyParentCommentId = parentCommentId;
+      _editingCommentId = null;
+      _editTextController.text = reply.content;
+      _replyingToCommentId = null;
+    });
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _editingCommentId = null;
+      _editingReplyId = null;
+      _editingReplyParentCommentId = null;
+      _editTextController.clear();
+    });
+  }
+
+  Future<void> _submitEdit() async {
+    if (!_editFormKey.currentState!.validate()) return;
+    final dp = Provider.of<DiscussionProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    bool success = false;
+
+    if (_editingCommentId != null) {
+      success = await dp.updateComment(
+        commentId: _editingCommentId!,
+        postId: _currentPost.id,
+        newCommentText: _editTextController.text.trim(),
+      );
+    } else if (_editingReplyId != null && _editingReplyParentCommentId != null) {
+      success = await dp.updateReply(
+        parentCommentId: _editingReplyParentCommentId!,
+        replyId: _editingReplyId!,
+        newContent: _editTextController.text.trim(),
+      );
+    }
+
+    if (mounted) {
+      if (success) {
+        _cancelEdit();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.appTitle.contains("መጂወ") ? 'ማዘመን ተሳክቷል!' : 'Update successful!'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(dp.updateItemError ?? (l10n.appTitle.contains("መጂወ") ? 'ማዘመን አልተሳካም።' : 'Update failed.')), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating));
+      }
+    }
+  }
+
+  Future<void> _handleDeleteComment(int commentId) async {
+    await _confirmDeleteDialog("comment", commentId);
+  }
+
+  Future<void> _handleDeleteReply(int replyId, int parentCommentId) async {
+    await _confirmDeleteDialog("reply", replyId, parentId: parentCommentId);
+  }
+
+  Future<void> _confirmDeleteDialog(String type, int id, {int? parentId}) async {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final String itemTypeDisplay = type == "comment" ? (l10n.appTitle.contains("መጂወ") ? "አስተያየት" : "Comment") : (l10n.appTitle.contains("መጂወ") ? "ምላሽ" : "Reply");
+    final bool? confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.dialogBackgroundColor,
+        title: Text('${l10n.appTitle.contains("መጂወ") ? "ሰርዝ " : "Delete "}$itemTypeDisplay', style: theme.textTheme.titleLarge),
+        content: Text(l10n.appTitle.contains("መጂወ") ? "ይህን $itemTypeDisplay መሰረዝ እርግጠኛ ነዎት? ይህ እርምጃ መመለስ አይቻልም።" : 'Are you sure you want to delete this $type? This action cannot be undone.', style: theme.textTheme.bodyLarge),
+        actions: <Widget>[
+          TextButton(child: Text(l10n.appTitle.contains("መጂወ") ? 'ሰርዝ' : 'Cancel', style: TextStyle(color: theme.colorScheme.primary)), onPressed: () => Navigator.of(ctx).pop(false)),
+          TextButton(
+            child: Text(l10n.appTitle.contains("መጂወ") ? 'ሰርዝ' : 'Delete', style: TextStyle(color: theme.colorScheme.error)),
+            onPressed: () => Navigator.of(ctx).pop(true),
           ),
-        );
+        ],
+      ),
+    );
+
+    if (confirmDelete == true) {
+      final dp = Provider.of<DiscussionProvider>(context, listen: false);
+      bool success = false;
+      if (type == "comment") {
+        success = await dp.deleteComment(commentId: id, postId: _currentPost.id);
+      } else if (type == "reply" && parentId != null) {
+        success = await dp.deleteReply(parentCommentId: parentId, replyId: id);
+      }
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$itemTypeDisplay ${l10n.appTitle.contains("መጂወ") ? "በተሳካ ሁኔታ ተሰርዟል!" : "deleted successfully!"}'), backgroundColor: theme.colorScheme.primaryContainer, behavior: SnackBarBehavior.floating));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(dp.deleteItemError ?? '${l10n.appTitle.contains("መጂወ") ? "$itemTypeDisplay መሰረዝ አልተሳካም።" : "Failed to delete $type."}'), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating));
+        }
       }
     }
   }
@@ -83,155 +343,87 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final discussionProvider = Provider.of<DiscussionProvider>(context);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false); // To check if user can comment
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    final comments = discussionProvider.commentsForPost(_currentPost.id);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.post.title, overflow: TextOverflow.ellipsis),
+        title: Text(_currentPost.title, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18)),
       ),
       body: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child: RefreshIndicator(
+              onRefresh: () => _fetchData(forceRefresh: true),
+              color: theme.colorScheme.primary,
+              backgroundColor: theme.colorScheme.surface,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
                 children: [
-                  Text(
-                    widget.post.title,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                  PostContentView(
+                    post: _currentPost,
+                    authProvider: authProvider,
+                    onEditPost: _showEditPostDialog,
+                    onDeletePost: _handleDeletePost,
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text(
-                        'By: ${widget.post.author.name}', // TODO: l10n
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+                    child: Text(
+                      '${l10n.appTitle.contains("መጂወ") ? "አስተያየቶች" : "Comments"} (${comments.length})',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (discussionProvider.isLoadingCommentsForPost(_currentPost.id) && comments.isEmpty)
+                    const Center(child: Padding(padding: EdgeInsets.all(16.0),child: CircularProgressIndicator())),
+                  if (discussionProvider.commentErrorForPost(_currentPost.id) != null && comments.isEmpty)
+                    Center(child: Padding(padding: const EdgeInsets.all(16.0), child: Text(discussionProvider.commentErrorForPost(_currentPost.id)! , style: TextStyle(color: theme.colorScheme.error)) )),
+                  if (comments.isEmpty && !discussionProvider.isLoadingCommentsForPost(_currentPost.id) && discussionProvider.commentErrorForPost(_currentPost.id) == null)
+                     Center(child: Padding(padding: const EdgeInsets.symmetric(vertical: 20.0), child: Text(l10n.appTitle.contains("መጂወ") ? 'እስካሁን ምንም አስተያየቶች የሉም። የመጀመሪያው ይሁኑ!' : 'No comments yet. Be the first!'))),
+
+                  ...comments.map((comment) => CommentItemView(
+                        key: ValueKey(comment.id),
+                        comment: comment,
+                        discussionProvider: discussionProvider,
+                        authProvider: authProvider,
+                        onToggleReplyField: _handleToggleReplyField,
+                        isReplyFieldOpen: _replyingToCommentId == comment.id && _editingCommentId == null && _editingReplyId == null,
+                        onSubmitReply: _submitReply,
+                        replyController: _replyController,
+                        replyFormKey: _replyFormKey,
+                        onStartEditComment: _startEditComment,
+                        onDeleteComment: _handleDeleteComment,
+                        onStartEditReply: _startEditReply,
+                        onDeleteReply: _handleDeleteReply,
+                      )).toList(),
+
+                  if (_editingCommentId != null || _editingReplyId != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: EditInputField(
+                          controller: _editTextController,
+                          formKey: _editFormKey,
+                          isEditingComment: _editingCommentId != null,
+                          discussionProvider: discussionProvider,
+                          onCancel: _cancelEdit,
+                          onSubmit: _submitEdit,
                       ),
-                      const Spacer(),
-                      Text(
-                        DateFormat.yMMMd().add_jm().format(widget.post.createdAt.toLocal()),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24),
-                  Text(
-                    widget.post.description,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.5),
-                  ),
-                  const Divider(height: 32, thickness: 1),
-                  Text(
-                    'Comments', // TODO: l10n
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildCommentsSection(discussionProvider),
+                    ),
+                  const SizedBox(height: 70),
                 ],
               ),
             ),
           ),
-          if (authProvider.currentUser != null) // Only show comment box if logged in
-            _buildCommentInputField(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCommentsSection(DiscussionProvider discussionProvider) {
-    if (discussionProvider.isLoadingComments) {
-      return const Center(child: Padding(padding: EdgeInsets.all(16.0), child: CircularProgressIndicator()));
-    }
-    if (discussionProvider.commentsError != null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16.0),
-        child: Text('Error loading comments: ${discussionProvider.commentsError}', style: TextStyle(color: Colors.red[700])),
-      );
-    }
-    if (discussionProvider.currentPostComments.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16.0),
-        child: Text('No comments yet. Be the first to comment!', style: Theme.of(context).textTheme.bodyMedium), // TODO: l10n
-      );
-    }
-
-    return ListView.builder(
-      shrinkWrap: true, // Important within SingleChildScrollView
-      physics: const NeverScrollableScrollPhysics(), // Disable scrolling for this ListView
-      itemCount: discussionProvider.currentPostComments.length,
-      itemBuilder: (ctx, index) {
-        final comment = discussionProvider.currentPostComments[index];
-        return Card(
-          elevation: 1,
-          margin: const EdgeInsets.symmetric(vertical: 6.0),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: ListTile(
-            title: Text(comment.author.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(comment.comment),
-            trailing: Text(
-              DateFormat.yMd().add_jm().format(comment.createdAt.toLocal()),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
+          if (authProvider.currentUser != null && _editingCommentId == null && _editingReplyId == null)
+            CommentInputField(
+              controller: _topLevelCommentController,
+              formKey: _topLevelCommentFormKey,
+              discussionProvider: discussionProvider,
+              onSubmit: _submitTopLevelComment,
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildCommentInputField() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor, // Or canvasColor
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, -1), // changes position of shadow
-          ),
         ],
-      ),
-      child: Form(
-        key: _commentFormKey,
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: TextFormField(
-                controller: _commentController,
-                decoration: InputDecoration(
-                  hintText: 'Write a comment...', // TODO: l10n
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(25.0),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(context).scaffoldBackgroundColor, // Slightly different background
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Comment cannot be empty.'; // TODO: l10n
-                  }
-                  return null;
-                },
-                textInputAction: TextInputAction.send,
-                onFieldSubmitted: (_) => _submitComment(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            _isSubmittingComment
-                ? const SizedBox(width: 40, height: 40, child: Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: CircularProgressIndicator(strokeWidth: 2.5),
-                ))
-                : IconButton(
-                    icon: Icon(Icons.send, color: Theme.of(context).primaryColor),
-                    onPressed: _submitComment,
-                    tooltip: 'Post Comment', // TODO: l10n
-                  ),
-          ],
-        ),
       ),
     );
   }

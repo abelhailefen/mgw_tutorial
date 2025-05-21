@@ -1,3 +1,4 @@
+//lib/widgets/home/semesters_card.dart
 import 'package:flutter/material.dart';
 
 class SemestersCard extends StatelessWidget {
@@ -20,14 +21,13 @@ class SemestersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Card(
+      // Uses CardTheme from main.dart
       child: InkWell(
-        onTap: onTap ?? () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$title Tapped (Not Implemented)')),
-          );
-        },
-        borderRadius: BorderRadius.circular(12.0),
+        onTap: onTap ?? () { /* ... */ },
+        borderRadius: BorderRadius.circular(theme.cardTheme.shape is RoundedRectangleBorder ? (theme.cardTheme.shape as RoundedRectangleBorder).borderRadius.resolve(Directionality.of(context)).bottomLeft.x : 12.0), // Match card border radius
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -35,24 +35,20 @@ class SemestersCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0D47A1), // Dark Blue
-                ),
+                style: theme.textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8.0),
                 child: Image.network(
-                  imageUrl,
+                  imageUrl, // This is the URL received from HomeScreen
                   height: 150,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 150,
-                    color: Colors.grey[300],
-                    child: const Center(child: Icon(Icons.broken_image, color: Colors.grey, size: 50)),
+                    color: theme.colorScheme.surfaceVariant,
+                    child: Center(child: Icon(Icons.broken_image, color: theme.colorScheme.onSurfaceVariant, size: 50)),
                   ),
                 ),
               ),
@@ -66,7 +62,7 @@ class SemestersCard extends StatelessWidget {
                       children: subjectsLeft
                           .map((subject) => Padding(
                                 padding: const EdgeInsets.only(bottom: 4.0),
-                                child: Text('• $subject', style: TextStyle(color: Colors.grey[800])),
+                                child: Text('• $subject', style: theme.textTheme.bodyMedium),
                               ))
                           .toList(),
                     ),
@@ -78,7 +74,7 @@ class SemestersCard extends StatelessWidget {
                       children: subjectsRight
                           .map((subject) => Padding(
                                 padding: const EdgeInsets.only(bottom: 4.0),
-                                child: Text('• $subject', style: TextStyle(color: Colors.grey[800])),
+                                child: Text('• $subject', style: theme.textTheme.bodyMedium),
                               ))
                           .toList(),
                     ),
@@ -89,9 +85,9 @@ class SemestersCard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: Chip(
-                  label: Text('$price ETB', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  backgroundColor: Colors.blue[700],
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                  label: Text('$price ETB', style: theme.chipTheme.labelStyle),
+                  backgroundColor: theme.chipTheme.backgroundColor,
+                  padding: theme.chipTheme.padding,
                 ),
               ),
             ],

@@ -13,6 +13,7 @@ class AuthScreenHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         Text(
@@ -21,7 +22,7 @@ class AuthScreenHeader extends StatelessWidget {
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
-            color: Colors.blue[800],
+            color: theme.colorScheme.primary, // Use theme color
           ),
         ),
         const SizedBox(height: 8),
@@ -30,7 +31,7 @@ class AuthScreenHeader extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey[700],
+            color: theme.colorScheme.onSurface.withOpacity(0.7), // Use theme color
           ),
         ),
       ],

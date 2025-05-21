@@ -12,10 +12,6 @@ class AuthCardWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 4.0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-      ),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: child,

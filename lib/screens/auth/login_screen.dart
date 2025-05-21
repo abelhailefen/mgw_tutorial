@@ -1,12 +1,11 @@
 // lib/screens/auth/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:mgw_tutorial/screens/main_screen.dart';
-import 'package:mgw_tutorial/screens/auth/signup_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/locale_provider.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:mgw_tutorial/screens/registration/registration_screen.dart'; // Adjust the import based on your file structure
+import 'package:mgw_tutorial/screens/registration/registration_screen.dart';
 // Widgets
 import 'package:mgw_tutorial/widgets/auth/auth_screen_header.dart';
 import 'package:mgw_tutorial/widgets/auth/auth_card_wrapper.dart';
@@ -14,9 +13,8 @@ import 'package:mgw_tutorial/widgets/auth/auth_form_title.dart';
 import 'package:mgw_tutorial/widgets/auth/auth_navigation_link.dart';
 import 'package:mgw_tutorial/widgets/phone_form_field.dart';
 import 'package:mgw_tutorial/widgets/password_form_field.dart';
-
 // Import DeviceInfoService
-import 'package:mgw_tutorial/services/device_info.dart'; // Ensure this path is correct
+import 'package:mgw_tutorial/services/device_info.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,30 +28,25 @@ class _LoginScreenState extends State<LoginScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  final List<String> _supportedLanguageCodes = ['en', 'am', 'om']; // 'om' for Afaan Oromo
+  final List<String> _supportedLanguageCodes = ['en', 'am', 'or'];
   bool _isPasswordVisible = false;
 
-  // Instantiate DeviceInfoService and state variable for device info string
   final DeviceInfoService _deviceInfoService = DeviceInfoService();
-  String _deviceInfoString = 'Fetching device info...'; // Initial placeholder
+  String _deviceInfoString = 'Fetching device info...';
 
   @override
   void initState() {
     super.initState();
-    _getDeviceInfo(); // Fetch device info when the screen initializes
+    _getDeviceInfo();
   }
 
   Future<void> _getDeviceInfo() async {
+    if (!mounted) return;
+
     final deviceData = await _deviceInfoService.getDeviceData();
     String brand = deviceData['brand'] ?? deviceData['name'] ?? 'UnknownBrand';
     String model = deviceData['model'] ?? deviceData['localizedModel'] ?? 'UnknownModel';
     String os = deviceData['systemName'] ?? deviceData['platform'] ?? 'UnknownOS';
-    
-    // Assuming _deviceInfoService.detectDeviceType needs context,
-    // ensure it's called where context is available or pass it if needed.
-    // If `detectDeviceType` is static and context-independent:
-    // String deviceType = DeviceInfoService.detectDeviceTypeStatic(); 
-    // Or, if it needs context:
     String deviceType = _deviceInfoService.detectDeviceType(context);
 
 
@@ -81,46 +74,60 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     final l10n = AppLocalizations.of(context)!;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    authProvider.clearError(); // Clear previous errors
+    final theme = Theme.of(context);
+    authProvider.clearError();
 
     if (_formKey.currentState!.validate()) {
       String rawPhoneInput = _phoneController.text.trim();
       String loginPhoneNumber;
 
       if (rawPhoneInput.isEmpty) {
-        if(mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.phoneNumberValidationErrorRequired)),
+            SnackBar(
+                content: Text(l10n.phoneNumberValidationErrorRequired),
+                backgroundColor: theme.colorScheme.errorContainer,
+                behavior: SnackBarBehavior.floating,
+            ),
           );
         }
         return;
       }
 
-      // Normalize phone number (adjust if your API expects a different format for login)
+      // Phone number normalization logic (remains the same)
       if (rawPhoneInput.startsWith('+251') && rawPhoneInput.length == 13) {
-        loginPhoneNumber = '+251${rawPhoneInput.substring(4)}'; // Convert +2519... to 09...
+        loginPhoneNumber = rawPhoneInput;
       } else if (rawPhoneInput.length == 9 && !rawPhoneInput.startsWith('0')) {
-        loginPhoneNumber = '0$rawPhoneInput'; // Convert 9... to 09...
+        loginPhoneNumber = '+251$rawPhoneInput';
       } else if (rawPhoneInput.startsWith('0') && rawPhoneInput.length == 10) {
-        loginPhoneNumber = rawPhoneInput; // Already 09...
+        loginPhoneNumber = '+251${rawPhoneInput.substring(1)}';
       } else {
-        if(mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.phoneNumberValidationErrorInvalid)),
+            SnackBar(
+                content: Text(l10n.phoneNumberValidationErrorInvalid),
+                backgroundColor: theme.colorScheme.errorContainer,
+                behavior: SnackBarBehavior.floating,
+            ),
           );
         }
         return;
       }
+
 
       final String password = _passwordController.text;
 
-      // Ensure device info has been fetched
       if (_deviceInfoString == 'Fetching device info...' || _deviceInfoString.isEmpty) {
-        await _getDeviceInfo(); // Try to fetch it again if not ready
+        await _getDeviceInfo();
         if (_deviceInfoString == 'Fetching device info...' || _deviceInfoString.isEmpty) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Device information not available. Please wait and try again.")),
+               SnackBar(
+                   // TODO: Localize this specific message if needed
+                   content: const Text("Device information not available. Please wait and try again."),
+                   backgroundColor: theme.colorScheme.errorContainer,
+                   behavior: SnackBarBehavior.floating,
+               ),
             );
           }
           return;
@@ -132,27 +139,46 @@ class _LoginScreenState extends State<LoginScreen> {
       bool success = await authProvider.login(
         phoneNumber: loginPhoneNumber,
         password: password,
-        deviceInfo: _deviceInfoString, // Pass the fetched device info
+        deviceInfo: _deviceInfoString,
       );
 
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.loginSuccessMessage)),
+            SnackBar(
+                content: Text(l10n.loginSuccessMessage),
+                backgroundColor: theme.colorScheme.primaryContainer, // Use a success-indicating color
+                behavior: SnackBarBehavior.floating,
+            ),
           );
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const MainScreen()),
           );
         } else {
+          // Display the user-friendly message from AuthProvider
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(authProvider.apiError?.message ?? l10n.signInFailedErrorGeneral),
-              backgroundColor: Colors.redAccent,
+              backgroundColor: theme.colorScheme.errorContainer,
+              behavior: SnackBarBehavior.floating,
             ),
           );
         }
       }
+    }
+  }
+
+  String _getLanguageDisplayName(String langCode, AppLocalizations l10n) {
+    switch (langCode) {
+      case 'en':
+        return l10n.english;
+      case 'am':
+        return l10n.amharic;
+      case 'or':
+        return l10n.afaanOromo;
+      default:
+        return langCode.toUpperCase();
     }
   }
 
@@ -161,15 +187,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final l10n = AppLocalizations.of(context)!;
     final authProvider = Provider.of<AuthProvider>(context);
     final localeProvider = Provider.of<LocaleProvider>(context);
+    final theme = Theme.of(context);
 
-    final Map<String, String> languageDisplayNames = {
-      'en': l10n.english,
-      'am': l10n.amharic,
-      'om': l10n.afaanOromo,
-    };
     String currentLanguageCode = localeProvider.locale?.languageCode ?? 'en';
     if (!_supportedLanguageCodes.contains(currentLanguageCode)) {
-      currentLanguageCode = _supportedLanguageCodes.first;
+      currentLanguageCode = _supportedLanguageCodes.isNotEmpty ? _supportedLanguageCodes.first : 'en';
     }
 
     return Scaffold(
@@ -184,16 +206,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 0),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).canvasColor, // Use theme color
+                    color: theme.cardTheme.color,
                     borderRadius: BorderRadius.circular(8.0),
-                    border: Border.all(color: Colors.grey[400] ?? Colors.grey),
+                    border: Border.all(color: theme.colorScheme.outline),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: currentLanguageCode,
-                      icon: Icon(Icons.arrow_drop_down, color: Theme.of(context).primaryColor),
+                      icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.primary),
                       elevation: 2,
-                      style: TextStyle(color: Theme.of(context).primaryColor, fontSize: 14),
+                      style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 14),
+                      dropdownColor: theme.cardTheme.color,
                       onChanged: (String? newLanguageCode) {
                         if (newLanguageCode != null) {
                           localeProvider.setLocale(Locale(newLanguageCode));
@@ -203,7 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           .map<DropdownMenuItem<String>>((String langCode) {
                         return DropdownMenuItem<String>(
                           value: langCode,
-                          child: Text(languageDisplayNames[langCode] ?? langCode.toUpperCase()),
+                          child: Text(_getLanguageDisplayName(langCode, l10n)),
                         );
                       }).toList(),
                     ),
@@ -240,12 +263,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? const Center(child: CircularProgressIndicator())
                           : ElevatedButton(
                               onPressed: _handleLogin,
-                              style: ElevatedButton.styleFrom( // Consistent with theme or custom
-                                // backgroundColor: Colors.blue[700], // Example
-                                // foregroundColor: Colors.white, // Example
-                                padding: const EdgeInsets.symmetric(vertical: 12), // from your main.dart theme
-                                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold) // from your main.dart theme
-                              ),
                               child: Text(l10n.signInButton),
                             ),
                     ],
@@ -257,19 +274,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 leadingText: l10n.dontHaveAccount,
                 linkText: l10n.signUpLinkText,
                 onLinkPressed: () {
-                   // TEMPORARY: Revert this to SignUpScreen when done testing account creation
-                  // print("Sign Up link pressed, navigating to MainScreen (TEMPORARY for testing).");
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(builder: (context) => const MainScreen()),
-                  // );
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const RegistrationScreen()), // Original
+                    MaterialPageRoute(builder: (context) => const RegistrationScreen()),
                   );
                 },
               ),
-              const SizedBox(height: 20), // Extra padding at the bottom
+              const SizedBox(height: 20),
             ],
           ),
         ),
