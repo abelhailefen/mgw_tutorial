@@ -120,7 +120,15 @@ class DiscussionProvider with ChangeNotifier {
 
 
   // --- Comment Methods ---
-  Future<void> fetchCommentsForPost(int postId, {bool forceRefresh = false}) async => await _commentProvider.fetchCommentsForPost(postId, forceRefresh: forceRefresh);
+  Future<void> fetchCommentsForPost(int postId, {bool forceRefresh = false}) async {
+      await _commentProvider.fetchCommentsForPost(postId, forceRefresh: forceRefresh);
+      // After fetching comments, iterate and fetch their replies if not already loaded or forced
+      if (forceRefresh || _commentProvider.commentsForPost(postId).any((c) => !_replyProvider.allRepliesLoadedForComment(c.id))) {
+          for (var comment in _commentProvider.commentsForPost(postId)) {
+              await _replyProvider.fetchRepliesForComment(comment.id, forceRefresh: forceRefresh);
+          }
+      }
+  }
 
   Future<bool> createTopLevelComment({required int postId, required String commentText}) async {
     _isSubmittingComment = true;
@@ -154,11 +162,15 @@ class DiscussionProvider with ChangeNotifier {
   // --- Reply Methods ---
   Future<void> fetchRepliesForComment(int commentId, {bool forceRefresh = false}) async => await _replyProvider.fetchRepliesForComment(commentId, forceRefresh: forceRefresh);
   
-  Future<bool> createReply({required int parentCommentId, required String content}) async {
+  Future<bool> createReply({required int parentCommentId, required String content, int? parentReplyId}) async {
     _isSubmittingReply = true;
     _submitReplyError = null;
     notifyListeners();
-    final result = await _replyProvider.createReply(parentCommentId: parentCommentId, content: content);
+    final result = await _replyProvider.createReply(
+        parentCommentId: parentCommentId, 
+        content: content,
+        parentReplyId: parentReplyId,
+    );
     _isSubmittingReply = false;
     if (!result['success']) _submitReplyError = result['message'];
     notifyListeners();

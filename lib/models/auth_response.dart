@@ -1,5 +1,5 @@
 // lib/models/auth_response.dart
-import 'package:mgw_tutorial/models/user.dart'; // Ensure this path is correct
+import 'package:mgw_tutorial/models/user.dart'; 
 
 class AuthResponse {
   final User user;

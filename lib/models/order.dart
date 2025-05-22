@@ -34,7 +34,7 @@ class Order {
   final String type; // e.g., "semester_enrollment", "courses"
   final String status;
   final List<OrderSelectionItem> selections; // Represents "categories" in API
-  final List<dynamic> courses; // If you also need to pass a list of simple course IDs/names
+  final List<dynamic> courses; 
   final String? screenshot; // Path to screenshot from API response
   final DateTime? createdAt;
   final DateTime? updatedAt;

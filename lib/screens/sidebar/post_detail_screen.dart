@@ -4,14 +4,17 @@ import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/models/post.dart';
 import 'package:mgw_tutorial/models/comment.dart';
 import 'package:mgw_tutorial/models/reply.dart';
+import 'package:mgw_tutorial/models/author.dart'; // <-- Import Author model
 import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
 import 'package:mgw_tutorial/widgets/discussion/post_content_view.dart';
 import 'package:mgw_tutorial/widgets/discussion/comment_item_view.dart';
-import 'package:mgw_tutorial/widgets/discussion/comment_input_field.dart';
 import 'package:mgw_tutorial/widgets/discussion/edit_input_field.dart';
+import 'package:mgw_tutorial/widgets/discussion/shared_discussion_input_field.dart'; 
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mgw_tutorial/widgets/discussion/reply_item_view.dart' show InputMode; 
 import 'package:intl/intl.dart';
+
 
 class PostDetailScreen extends StatefulWidget {
   static const routeName = '/post-detail';
@@ -24,16 +27,17 @@ class PostDetailScreen extends StatefulWidget {
 }
 
 class _PostDetailScreenState extends State<PostDetailScreen> {
-  final _topLevelCommentController = TextEditingController();
-  final _topLevelCommentFormKey = GlobalKey<FormState>();
+  final _sharedInputController = TextEditingController();
+  final _sharedInputFormKey = GlobalKey<FormState>();
+  final FocusNode _sharedInputFocusNode = FocusNode();
 
-  int? _replyingToCommentId;
-  final _replyController = TextEditingController();
-  final _replyFormKey = GlobalKey<FormState>();
+  InputMode _currentInputMode = InputMode.commentingPost;
+  int? _currentTargetCommentId; 
+  int? _currentTargetReplyId;   
+  String? _currentTargetAuthorName; 
 
   int? _editingCommentId;
   int? _editingReplyId;
-  int? _editingReplyParentCommentId;
   final _editTextController = TextEditingController();
   final _editFormKey = GlobalKey<FormState>();
 
@@ -58,8 +62,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       await discussionProvider.fetchPosts(); 
       final updatedPostFromList = discussionProvider.posts.firstWhere(
             (p) => p.id == widget.post.id,
-            orElse: () => _currentPost);
+            orElse: () => _currentPost); 
       if (mounted) {
+          if (_currentPost.id != updatedPostFromList.id && !discussionProvider.posts.any((p) => p.id == _currentPost.id)) {
+             print("Post appears to have been deleted. Navigating back.");
+             return; 
+          }
         setState(() {
           _currentPost = updatedPostFromList;
         });
@@ -67,21 +75,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
     
     await discussionProvider.fetchCommentsForPost(_currentPost.id, forceRefresh: forceRefresh);
-    
-    if (mounted) {
-      final comments = discussionProvider.commentsForPost(_currentPost.id);
-      for (var comment in comments) {
-        if (forceRefresh || !discussionProvider.allRepliesLoadedForComment(comment.id)) {
-           await discussionProvider.fetchRepliesForComment(comment.id, forceRefresh: forceRefresh);
-        }
-      }
-    }
   }
 
   @override
   void dispose() {
-    _topLevelCommentController.dispose();
-    _replyController.dispose();
+    _sharedInputController.dispose();
+    _sharedInputFocusNode.dispose();
     _editTextController.dispose();
     _editPostTitleController.dispose();
     _editPostDescriptionController.dispose();
@@ -124,7 +123,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (BuildContext context, StateSetter setDialogState) {
-          final authProviderLoading = Provider.of<DiscussionProvider>(context, listen: true).isUpdatingItem; // Listen to specific loading state
+          final isLoadingUpdate = context.watch<DiscussionProvider>().isUpdatingItem;
 
           return AlertDialog(
             backgroundColor: theme.dialogBackgroundColor,
@@ -155,13 +154,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             actions: [
               TextButton(
                 child: Text(l10n.cancelButton, style: TextStyle(color: theme.colorScheme.primary)),
-                onPressed: authProviderLoading ? null : () => Navigator.of(ctx).pop()
+                onPressed: isLoadingUpdate ? null : () => Navigator.of(ctx).pop()
               ),
               ElevatedButton(
-                child: authProviderLoading
+                child: isLoadingUpdate
                     ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(theme.colorScheme.onPrimary)))
                     : Text(l10n.saveButton),
-                onPressed: authProviderLoading ? null : () async {
+                onPressed: isLoadingUpdate ? null : () async {
                   if (_editPostFormKey.currentState!.validate()) {
                     final success = await discussionProvider.updatePost(
                       postId: _currentPost.id,
@@ -221,76 +220,99 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
   }
 
-  Future<void> _submitTopLevelComment() async {
-    if (!_topLevelCommentFormKey.currentState!.validate()) return;
-    final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
-    final l10n = AppLocalizations.of(context)!;
-    final success = await discussionProvider.createTopLevelComment(
-      postId: _currentPost.id,
-      commentText: _topLevelCommentController.text.trim(),
-    );
-    if (mounted) {
-      if (success) {
-        _topLevelCommentController.clear();
-        FocusScope.of(context).unfocus();
-        _showSuccessSnackBar(l10n.commentPostedSuccess);
-        await _fetchData(forceRefresh: true);
+  void _handleStartReplyFlow({
+    required InputMode mode,
+    required int targetCommentId, 
+    int? targetReplyId,          
+    String? targetAuthorName,
+  }) {
+    _cancelEdit(); 
+    setState(() {
+      _currentInputMode = mode;
+      _currentTargetCommentId = targetCommentId;
+      _currentTargetReplyId = targetReplyId;
+      _currentTargetAuthorName = targetAuthorName;
+
+      if (targetAuthorName != null && targetAuthorName.isNotEmpty) {
+        _sharedInputController.text = '@$targetAuthorName ';
+        _sharedInputController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _sharedInputController.text.length),
+        );
       } else {
-        _showErrorSnackBar(discussionProvider.submitCommentError ?? l10n.commentPostFailed);
+        _sharedInputController.clear();
       }
-    }
+    });
+    FocusScope.of(context).requestFocus(_sharedInputFocusNode);
   }
 
-  void _handleToggleReplyField(int commentId) {
-    _cancelEdit();
+  void _resetInputModeToCommentingPost() {
     setState(() {
-      if (_replyingToCommentId == commentId) {
-        _replyingToCommentId = null;
-      } else {
-        _replyingToCommentId = commentId;
-        _replyController.clear();
-      }
+      _currentInputMode = InputMode.commentingPost;
+      _currentTargetCommentId = null;
+      _currentTargetReplyId = null;
+      _currentTargetAuthorName = null;
+      _sharedInputController.clear();
     });
   }
 
-  Future<void> _submitReply(int parentCommentId) async {
-    if (!_replyFormKey.currentState!.validate()) return;
+  Future<void> _submitSharedInput() async {
+    if (!_sharedInputFormKey.currentState!.validate()) return;
+
     final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
-    final success = await discussionProvider.createReply(
-      parentCommentId: parentCommentId,
-      content: _replyController.text.trim(),
-    );
+    bool success = false;
+    String content = _sharedInputController.text.trim();
+
+    switch (_currentInputMode) {
+      case InputMode.commentingPost:
+        success = await discussionProvider.createTopLevelComment(
+          postId: _currentPost.id,
+          commentText: content,
+        );
+        if (success) _showSuccessSnackBar(l10n.commentPostedSuccess);
+        if (!success) _showErrorSnackBar(discussionProvider.submitCommentError ?? l10n.commentPostFailed);
+        break;
+      case InputMode.replyingToComment:
+      case InputMode.replyingToReply: 
+        if (_currentTargetCommentId != null) {
+          success = await discussionProvider.createReply(
+            parentCommentId: _currentTargetCommentId!,
+            content: content,
+            parentReplyId: _currentTargetReplyId, 
+          );
+          if (success) _showSuccessSnackBar(l10n.replyPostedSuccess);
+          if (!success) _showErrorSnackBar(discussionProvider.submitReplyError ?? l10n.replyPostFailed);
+        }
+        break;
+      default:
+        return;
+    }
+
     if (mounted) {
       if (success) {
-        _replyController.clear();
-        setState(() { _replyingToCommentId = null; });
+        _resetInputModeToCommentingPost();
         FocusScope.of(context).unfocus();
-        _showSuccessSnackBar(l10n.replyPostedSuccess);
         await _fetchData(forceRefresh: true);
-      } else {
-        _showErrorSnackBar(discussionProvider.submitReplyError ?? l10n.replyPostFailed);
       }
     }
   }
 
+
   void _startEditComment(Comment comment) {
+    _resetInputModeToCommentingPost(); 
     setState(() {
       _editingCommentId = comment.id;
       _editingReplyId = null;
-      _editingReplyParentCommentId = null;
       _editTextController.text = comment.comment;
-      _replyingToCommentId = null;
     });
   }
 
-  void _startEditReply(Reply reply, int parentCommentId) {
+  void _startEditReply(Reply reply) {
+    _resetInputModeToCommentingPost(); 
     setState(() {
       _editingReplyId = reply.id;
-      _editingReplyParentCommentId = parentCommentId;
       _editingCommentId = null;
       _editTextController.text = reply.content;
-      _replyingToCommentId = null;
     });
   }
 
@@ -298,7 +320,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     setState(() {
       _editingCommentId = null;
       _editingReplyId = null;
-      _editingReplyParentCommentId = null;
       _editTextController.clear();
     });
   }
@@ -315,12 +336,44 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         postId: _currentPost.id,
         newCommentText: _editTextController.text.trim(),
       );
-    } else if (_editingReplyId != null && _editingReplyParentCommentId != null) {
-      success = await dp.updateReply(
-        parentCommentId: _editingReplyParentCommentId!,
-        replyId: _editingReplyId!,
-        newContent: _editTextController.text.trim(),
-      );
+    } else if (_editingReplyId != null) {
+      Reply? replyToEdit;
+      Comment? parentCommentOfReply;
+
+      final comments = dp.commentsForPost(_currentPost.id);
+      for (var comment in comments) {
+        var directReply = comment.replies.firstWhere((r) => r.id == _editingReplyId, orElse: () => Reply(id: -2, content: '', userId: -1, commentId: -1, createdAt: DateTime.now(), updatedAt: DateTime.now(), author: Author(id: -2, name: 'NotFound')));
+        if (directReply.id == _editingReplyId) {
+          replyToEdit = directReply;
+          parentCommentOfReply = comment;
+          break;
+        }
+        
+        Reply? findNested(List<Reply> children) {
+          for (var child in children) {
+            if (child.id == _editingReplyId) return child;
+            var grandChild = findNested(child.childReplies);
+            if (grandChild != null) return grandChild; 
+          }
+          return null;
+        }
+        Reply? nestedReply = findNested(comment.replies); 
+         if (nestedReply != null) { 
+          replyToEdit = nestedReply;
+          parentCommentOfReply = comment;
+          break;
+        }
+      }
+
+      if (replyToEdit != null && parentCommentOfReply != null) {
+         success = await dp.updateReply(
+            parentCommentId: parentCommentOfReply.id, 
+            replyId: _editingReplyId!,
+            newContent: _editTextController.text.trim(),
+          );
+      } else {
+        _showErrorSnackBar("Could not find reply to edit."); 
+      }
     }
 
     if (mounted) {
@@ -335,24 +388,25 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Future<void> _handleDeleteComment(int commentId) async {
-    await _confirmDeleteDialog("comment", commentId);
+    final l10n = AppLocalizations.of(context)!;
+    await _confirmDeleteDialog(l10n.commentItemDisplay, commentId);
   }
 
-  Future<void> _handleDeleteReply(int replyId, int parentCommentId) async {
-    await _confirmDeleteDialog("reply", replyId, parentId: parentCommentId);
+  Future<void> _handleDeleteReply(int replyId, int parentCommentId) {
+    final l10n = AppLocalizations.of(context)!;
+    return _confirmDeleteDialog(l10n.replyItemDisplay, replyId, originalCommentId: parentCommentId);
   }
 
-  Future<void> _confirmDeleteDialog(String typeKey, int id, {int? parentId}) async {
+  Future<void> _confirmDeleteDialog(String itemTypeDisplay, int id, {int? originalCommentId}) async {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    String itemTypeDisplay = typeKey == "comment" ? l10n.commentItemDisplay : l10n.replyItemDisplay;
 
     final bool? confirmDelete = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: theme.dialogBackgroundColor,
-        title: Text('${l10n.deleteButton} $itemTypeDisplay', style: theme.textTheme.titleLarge), // Using deleteButton for title prefix
+        title: Text('${l10n.deleteButton} $itemTypeDisplay', style: theme.textTheme.titleLarge),
         content: Text(l10n.deleteItemConfirmation(itemTypeDisplay), style: theme.textTheme.bodyMedium),
         actions: <Widget>[
           TextButton(child: Text(l10n.cancelButton, style: TextStyle(color: theme.colorScheme.primary)), onPressed: () => Navigator.of(ctx).pop(false)),
@@ -367,10 +421,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (confirmDelete == true) {
       final dp = Provider.of<DiscussionProvider>(context, listen: false);
       bool success = false;
-      if (typeKey == "comment") {
+      if (itemTypeDisplay == l10n.commentItemDisplay) {
         success = await dp.deleteComment(commentId: id, postId: _currentPost.id);
-      } else if (typeKey == "reply" && parentId != null) {
-        success = await dp.deleteReply(parentCommentId: parentId, replyId: id);
+      } else if (itemTypeDisplay == l10n.replyItemDisplay && originalCommentId != null) {
+        success = await dp.deleteReply(parentCommentId: originalCommentId, replyId: id);
       }
 
       if (mounted) {
@@ -384,6 +438,30 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
   }
 
+  String _getInputHintText(AppLocalizations l10n) {
+    switch (_currentInputMode) {
+      case InputMode.commentingPost:
+        return l10n.writeCommentHint;
+      case InputMode.replyingToComment:
+      case InputMode.replyingToReply:
+        return l10n.writeReplyHint;
+      default:
+        return l10n.writeCommentHint;
+    }
+  }
+   String _getSubmitTooltip(AppLocalizations l10n) {
+    switch (_currentInputMode) {
+      case InputMode.commentingPost:
+        return l10n.postCommentTooltip;
+      case InputMode.replyingToComment:
+      case InputMode.replyingToReply:
+        return l10n.appTitle.contains("መጂወ") ? "መልስ ለጥፍ" : "Post Reply"; 
+      default:
+        return l10n.postCommentTooltip;
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final discussionProvider = Provider.of<DiscussionProvider>(context);
@@ -392,6 +470,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final theme = Theme.of(context);
 
     final comments = discussionProvider.commentsForPost(_currentPost.id);
+
+    // Calculate total number of discussion items (post + comments + all replies)
+    // This is a rough count for the progress indicator
+    int totalItems = 1; // For the post itself
+    for (var comment in comments) {
+      totalItems++; // For the comment
+      totalItems += comment.replyCount; // Add count of all its replies (nested included from API count)
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -414,7 +500,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
                     child: Text(
-                      '${l10n.commentsSectionHeader} (${comments.length})',
+                      '${l10n.commentsSectionHeader} (${comments.length})', 
                       style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -426,49 +512,47 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                      Center(child: Padding(padding: const EdgeInsets.symmetric(vertical: 20.0), child: Text(l10n.noCommentsYet))),
 
                   ...comments.map((comment) => CommentItemView(
-                        key: ValueKey(comment.id.toString() + comment.updatedAt.toIso8601String()),
+                        key: ValueKey('comment-${comment.id}-${comment.updatedAt}'), 
                         comment: comment,
                         discussionProvider: discussionProvider,
                         authProvider: authProvider,
-                        onToggleReplyField: _handleToggleReplyField,
-                        isReplyFieldOpen: _replyingToCommentId == comment.id && _editingCommentId == null && _editingReplyId == null,
-                        onSubmitReply: _submitReply,
-                        replyController: _replyController,
-                        replyFormKey: _replyFormKey,
+                        onStartReplyFlow: _handleStartReplyFlow,
                         onStartEditComment: _startEditComment,
                         onDeleteComment: _handleDeleteComment,
-                        onStartEditReply: _startEditReply,
+                        onStartEditReply: _startEditReply, 
                         onDeleteReply: _handleDeleteReply,
                       )).toList(),
 
                   if (_editingCommentId != null || _editingReplyId != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 16.0),
+                      padding: const EdgeInsets.only(top: 16.0, bottom: 16.0), 
                       child: EditInputField(
                           controller: _editTextController,
                           formKey: _editFormKey,
                           isEditingComment: _editingCommentId != null,
-                          discussionProvider: discussionProvider,
+                          discussionProvider: discussionProvider, 
                           onCancel: _cancelEdit,
                           onSubmit: _submitEdit,
                       ),
                     ),
-                  const SizedBox(height: 80),
+                  const SizedBox(height: 16), 
                 ],
               ),
             ),
           ),
-          if (authProvider.currentUser != null && _editingCommentId == null && _editingReplyId == null)
-            CommentInputField(
-              controller: _topLevelCommentController,
-              formKey: _topLevelCommentFormKey,
-              discussionProvider: discussionProvider,
-              onSubmit: _submitTopLevelComment,
-              l10n: l10n, // Pass l10n
+          if (authProvider.currentUser != null && !(_editingCommentId != null || _editingReplyId != null))
+            SharedDiscussionInputField(
+              controller: _sharedInputController,
+              formKey: _sharedInputFormKey,
+              hintText: _getInputHintText(l10n),
+              submitButtonTooltip: _getSubmitTooltip(l10n),
+              isLoading: discussionProvider.isSubmittingComment || discussionProvider.isSubmittingReply,
+              onSubmit: _submitSharedInput,
+              l10n: l10n,
+              focusNode: _sharedInputFocusNode,
             ),
         ],
       ),
     );
   }
 }
-

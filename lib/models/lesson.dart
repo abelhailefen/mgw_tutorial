@@ -5,7 +5,7 @@ enum AttachmentType { youtube, vimeo, file, url, unknown }
 
 class Lesson {
   final int id;
-  final String title; // Potential culprit if API sends null
+  final String title; 
   final int sectionId;
   final String? summary;
   final int? order;
@@ -18,8 +18,8 @@ class Lesson {
 
   final String? lessonTypeString;
   final String? duration;
-  final DateTime createdAt; // Potential culprit if API sends null
-  final DateTime updatedAt; // Potential culprit if API sends null
+  final DateTime createdAt; 
+  final DateTime updatedAt; 
 
   Lesson({
     required this.id,
@@ -69,7 +69,7 @@ class Lesson {
       if (value is String) {
         return value;
       }
-      // If you expect it to sometimes be a number and want to convert:
+      
       // if (value is num) { return value.toString(); }
       if (value != null) { // It's not null but also not a string
           print("Warning: Field '$key' in Lesson JSON was not a String (type: ${value.runtimeType}). Using its toString() or default. JSON: $jsonMap");

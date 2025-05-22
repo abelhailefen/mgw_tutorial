@@ -10,7 +10,7 @@ class Course {
     if (json is Map<String, dynamic>) return Course(name: json['name'] as String? ?? 'Unnamed Course');
     return Course(name: 'Invalid Course Data');
   }
-  Map<String, dynamic> toJson() => {'name': name}; // For completeness
+  Map<String, dynamic> toJson() => {'name': name}; 
   @override
   String toString() => name;
 }
@@ -72,15 +72,15 @@ class Semester {
         print("Semester ID: $id, firstImageUrl getter - Raw imagePath: $imagePath");
       }
 
-      if (imagePath.startsWith('http')) { // Already a full URL
+      if (imagePath.startsWith('http')) { 
         if (kDebugMode) {
           print("Semester ID: $id, firstImageUrl getter - Returning full URL: $imagePath");
         }
         return imagePath;
       }
 
-      // Define your base URL here. Make sure it's correct.
-      const String imageBaseUrl = "https://mgw-backend.onrender.com"; // Ensure this is correct
+    
+      const String imageBaseUrl = "https://mgw-backend.onrender.com"; 
 
       if (imagePath.startsWith('/')) { // Path like /uploads/image.jpg
         final fullUrl = "$imageBaseUrl$imagePath";

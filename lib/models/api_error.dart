@@ -1,5 +1,5 @@
 // lib/models/api_error.dart
-import 'package:mgw_tutorial/models/field_error.dart'; // We'll import FieldError here
+import 'package:mgw_tutorial/models/field_error.dart'; 
 import 'package:mgw_tutorial/models/field_error.dart';
 class ApiError {
   final String message;

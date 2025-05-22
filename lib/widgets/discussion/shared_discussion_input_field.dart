@@ -1,22 +1,29 @@
-// lib/widgets/discussion/comment_input_field.dart
+// lib/widgets/discussion/shared_discussion_input_field.dart
 import 'package:flutter/material.dart';
-import 'package:mgw_tutorial/provider/discussion_provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // Import AppLocalizations
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
-class CommentInputField extends StatelessWidget {
+class SharedDiscussionInputField extends StatelessWidget {
   final TextEditingController controller;
   final GlobalKey<FormState> formKey;
-  final DiscussionProvider discussionProvider;
+  final String hintText;
+  final String submitButtonTooltip;
+  final bool isLoading;
   final VoidCallback onSubmit;
-  final AppLocalizations l10n; // <<< ADDED l10n parameter
+  final FormFieldValidator<String>? validator;
+  final AppLocalizations l10n;
+  final FocusNode? focusNode;
 
-  const CommentInputField({
+  const SharedDiscussionInputField({
     super.key,
     required this.controller,
     required this.formKey,
-    required this.discussionProvider,
+    required this.hintText,
+    required this.submitButtonTooltip,
+    required this.isLoading,
     required this.onSubmit,
-    required this.l10n, // <<< ADDED l10n to constructor
+    this.validator,
+    required this.l10n,
+    this.focusNode,
   });
 
   @override
@@ -34,16 +41,19 @@ class CommentInputField extends StatelessWidget {
             offset: const Offset(0, -1),
           )
         ],
+        border: Border(top: BorderSide(color: theme.dividerColor, width: 0.5)),
       ),
       child: Form(
         key: formKey,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center, 
           children: <Widget>[
             Expanded(
               child: TextFormField(
                 controller: controller,
+                focusNode: focusNode,
                 decoration: InputDecoration(
-                  hintText: l10n.writeCommentHint, // <<< USE l10n
+                  hintText: hintText,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(25.0),
                     borderSide: BorderSide.none,
@@ -51,14 +61,17 @@ class CommentInputField extends StatelessWidget {
                   filled: true,
                   fillColor: theme.inputDecorationTheme.fillColor?.withOpacity(0.8) ?? theme.scaffoldBackgroundColor,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                  isDense: true,
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? l10n.commentValidationEmpty : null, // <<< USE l10n
+                validator: validator ?? (v) => (v == null || v.trim().isEmpty) ? l10n.editFieldValidationEmpty : null,
                 textInputAction: TextInputAction.send,
                 onFieldSubmitted: (_) => onSubmit(),
+                maxLines: 3, 
+                minLines: 1,
               ),
             ),
             const SizedBox(width: 8),
-            discussionProvider.isSubmittingComment
+            isLoading
                 ? const SizedBox(
                     width: 40,
                     height: 40,
@@ -70,7 +83,7 @@ class CommentInputField extends StatelessWidget {
                 : IconButton(
                     icon: Icon(Icons.send, color: theme.colorScheme.primary),
                     onPressed: onSubmit,
-                    tooltip: l10n.postCommentTooltip, // <<< USE l10n
+                    tooltip: submitButtonTooltip,
                   ),
           ],
         ),

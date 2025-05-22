@@ -22,7 +22,7 @@ class Department {
     );
   }
 
-  // Optional: For debugging or if you need to compare objects
+  // For debugging or if comparing objects is need 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

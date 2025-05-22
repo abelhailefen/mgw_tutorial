@@ -20,13 +20,10 @@ class ApiCourseProvider with ChangeNotifier {
   static const String _unexpectedErrorMessage = "An unexpected error occurred while fetching courses. Please try again later.";
   static const String _failedToLoadCoursesMessage = "Failed to load courses. Please try again.";
 
-  static const String _apiBaseUrl = "https://mgw-backend.onrender.com/api"; // Example
+  static const String _apiBaseUrl = "https://mgw-backend.onrender.com/api";
 
   Future<void> fetchCourses({bool forceRefresh = false}) async {
-    // If not forcing refresh, and data exists (and not currently loading), return.
-    // This is more relevant when fetching from an API.
     if (!forceRefresh && _courses.isNotEmpty && !_isLoading) {
-      // print("Courses already loaded and not forcing refresh. Skipping API call.");
       return;
     }
 
@@ -35,98 +32,101 @@ class ApiCourseProvider with ChangeNotifier {
       _error = null;
     }
     if (forceRefresh) {
-      _courses = []; // Clear existing courses if forcing refresh
+      _courses = [];
     }
     notifyListeners();
 
-    // --- THIS SECTION WOULD BE FOR A REAL API CALL ---
-    // final url = Uri.parse('$_apiBaseUrl/course');
-    // print("Fetching courses from: $url (Force Refresh: $forceRefresh)");
-    // try {
-    //   final response = await http.get(url, headers: {
-    //     "Accept": "application/json",
-    //   }).timeout(const Duration(seconds: 20));
-    //   print("Courses API Response Status: ${response.statusCode}");
-
-    //   if (response.statusCode == 200) {
-    //     final List<dynamic> extractedData = json.decode(response.body);
-    //     if (extractedData is List) {
-    //       _courses = extractedData
-    //           .map((courseJson) => ApiCourse.fromJson(courseJson as Map<String, dynamic>))
-    //           .toList();
-    //       _error = null;
-    //     } else {
-    //       _error = "Failed to load courses: API response was not a list.";
-    //       _courses = [];
-    //     }
-    //   } else {
-    //     _handleHttpErrorResponse(response, _failedToLoadCoursesMessage);
-    //   }
-    // } on TimeoutException catch (e) {
-    //   print("TimeoutException fetching courses: $e");
-    //   _error = _timeoutErrorMessage;
-    //   _courses = [];
-    // } on SocketException catch (e) {
-    //   print("SocketException fetching courses: $e");
-    //   _error = _networkErrorMessage;
-    //   _courses = [];
-    // } on http.ClientException catch (e) {
-    //   print("ClientException fetching courses: $e");
-    //   _error = _networkErrorMessage;
-    //   _courses = [];
-    // } catch (e) {
-    //   print("Generic Exception during fetchCourses: $e");
-    //   _error = _unexpectedErrorMessage;
-    //   _courses = [];
-    // } finally {
-    //   _isLoading = false;
-    //   notifyListeners();
-    // }
-    // --- END OF REAL API CALL SECTION ---
-
-    // --- For Development with Hardcoded/Delayed Data (if API is not ready) ---
-    // This part simulates a fetch if the API section above is commented out.
-    // If LibraryContentView directly uses hardcoded data, this provider's fetch might not be called.
-    // However, if you intend for LibraryContentView to use this provider eventually,
-    // this structure is useful.
-    print("ApiCourseProvider: Simulating fetch (Force Refresh: $forceRefresh). API call is commented out.");
+    final url = Uri.parse('$_apiBaseUrl/course');
+    print("Fetching courses from: $url (Force Refresh: $forceRefresh)");
     try {
-        await Future.delayed(const Duration(milliseconds: 300)); // Simulate delay
-        // If you were to populate _courses here from a hardcoded list:
-        // if (_courses.isEmpty || forceRefresh) {
-        //   _courses = [ /* your hardcoded ApiCourse objects for testing */ ];
-        // }
-        // Since LibraryContentView has its own hardcoded data, we just simulate success/failure here.
-        // To test error state with hardcoded:
-        // if (forceRefresh) throw SocketException("Simulated network error on refresh");
-        _error = null; // Simulate success
-    } catch (e) {
-        if (e is SocketException) {
-            _error = _networkErrorMessage;
-        } else if (e is TimeoutException) {
-            _error = _timeoutErrorMessage;
-        } else {
-            _error = _unexpectedErrorMessage;
+      final response = await http.get(url, headers: {
+        "Accept": "application/json",
+      }).timeout(const Duration(seconds: 30));
+      print("Courses API Response Status: ${response.statusCode}");
+      
+
+      if (response.statusCode == 200) {
+        final dynamic decodedBody = json.decode(response.body);
+
+        if (decodedBody is List) { 
+          final List<dynamic> extractedData = decodedBody;
+          _courses = extractedData
+              .map((courseJson) {
+                try {
+                  return ApiCourse.fromJson(courseJson as Map<String, dynamic>);
+                } catch (e) {
+                  print("Error parsing individual course JSON (from list): $e");
+                  print("Problematic course JSON (from list): $courseJson");
+                  return null;
+                }
+              })
+              .whereType<ApiCourse>()
+              .toList();
+          _error = null;
+        } else if (decodedBody is Map<String, dynamic> && decodedBody.containsKey('courses') && decodedBody['courses'] is List) {
+          // This handles the case where it might be an object with a 'courses' key
+          final List<dynamic> extractedData = decodedBody['courses'];
+          _courses = extractedData
+              .map((courseJson) {
+                try {
+                  return ApiCourse.fromJson(courseJson as Map<String, dynamic>);
+                } catch (e) {
+                  print("Error parsing individual course JSON (from map): $e");
+                  print("Problematic course JSON (from map): $courseJson");
+                  return null;
+                }
+              })
+              .whereType<ApiCourse>()
+              .toList();
+          _error = null;
         }
-        _courses = [];
-        print("ApiCourseProvider simulated error: $e");
+        else {
+          _error = "Failed to load courses: API response format is not a recognized list or object with a 'courses' key.";
+          _courses = [];
+        }
+      } else {
+        _handleHttpErrorResponse(response, _failedToLoadCoursesMessage);
+      }
+    } on TimeoutException catch (e) {
+      print("TimeoutException fetching courses: $e");
+      _error = _timeoutErrorMessage;
+      _courses = [];
+    } on SocketException catch (e) {
+      print("SocketException fetching courses: $e");
+      _error = _networkErrorMessage;
+      _courses = [];
+    } on http.ClientException catch (e) {
+      print("ClientException fetching courses: $e");
+      _error = _networkErrorMessage;
+      _courses = [];
+    } catch (e, s) {
+      print("Generic Exception during fetchCourses: $e");
+      print("Stacktrace: $s");
+      if (e is FormatException && e.source is List && e.message.contains("is not a subtype of type 'Map<String, dynamic>'")) {
+         _error = "Failed to parse courses: API returned a list, but items inside were not valid course objects. $e";
+      } else {
+        _error = _unexpectedErrorMessage;
+      }
+      _courses = [];
     } finally {
-        _isLoading = false;
-        notifyListeners();
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   void _handleHttpErrorResponse(http.Response response, String defaultUserMessage) {
-    // This would be used if the real API call section was active
     try {
       final errorBody = json.decode(response.body);
       if (errorBody is Map && errorBody.containsKey('message') && errorBody['message'] != null && errorBody['message'].toString().isNotEmpty) {
         _error = errorBody['message'].toString();
-      } else {
+      } else if (errorBody is Map && errorBody.containsKey('error') && errorBody['error'] != null && errorBody['error'].toString().isNotEmpty){
+         _error = errorBody['error'].toString();
+      }
+      else {
         _error = "$defaultUserMessage (Status: ${response.statusCode})";
       }
     } catch (e) {
-      _error = "$defaultUserMessage (Status: ${response.statusCode}). Response not parsable.";
+      _error = "$defaultUserMessage (Status: ${response.statusCode}). Response not parsable. Body: ${response.body.substring(0, (response.body.length > 200 ? 200 : response.body.length))}";
     }
     _courses = [];
   }

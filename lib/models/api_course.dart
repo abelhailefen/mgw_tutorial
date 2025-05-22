@@ -23,16 +23,16 @@ class ApiCourse {
   final List<String> outcomes;
   final String? language;
   final int? categoryId;
-  final String? section; // API shows "10", might be string or int
+  final String? section; 
   final List<String> requirements;
   final String price;
   final bool? discountFlag;
   final String? discountedPrice;
-  final String? thumbnail; // e.g., "uploads/uee.jpg"
+  final String? thumbnail; 
   final String? videoUrl;
   final bool? isTopCourse;
   final String status;
-  final bool? isVideoCourse; // API has "video": "false" (string)
+  final bool? isVideoCourse; 
   final bool? isFreeCourse;
   final bool? multiInstructor;
   final String? creator;
@@ -40,8 +40,8 @@ class ApiCourse {
   final DateTime updatedAt;
   final CourseCategoryInfo? category;
 
-  // Base URL for thumbnails - This should ideally be configurable
-  static const String thumbnailBaseUrl = "https://courseservice.zsecreteducation.com/";
+  
+  static const String thumbnailBaseUrl = "https://mgw-backend.onrender.com";
 
 
   ApiCourse({
@@ -73,7 +73,7 @@ class ApiCourse {
   String? get fullThumbnailUrl {
     if (thumbnail != null && thumbnail!.isNotEmpty) {
       if (thumbnail!.toLowerCase().startsWith('http')) {
-        return thumbnail; // It's already a full URL
+        return thumbnail; 
       }
       return thumbnailBaseUrl + thumbnail!;
     }
@@ -113,7 +113,7 @@ class ApiCourse {
       outcomes: parseStringList(json['outcomes']),
       language: json['language'] as String?,
       categoryId: json['category_id'] as int?,
-      section: json['section']?.toString(), // API sends "10" (string)
+      section: json['section']?.toString(), 
       requirements: parseStringList(json['requirements']),
       price: json['price'] as String? ?? "0.00",
       discountFlag: json['discount_flag'] as bool?,
@@ -122,7 +122,7 @@ class ApiCourse {
       videoUrl: json['video_url'] as String?,
       isTopCourse: json['is_top_course'] as bool?,
       status: json['status'] as String? ?? 'unknown',
-      isVideoCourse: parseBoolFromString(json['video']), // API sends "false" as string
+      isVideoCourse: parseBoolFromString(json['video']), 
       isFreeCourse: json['is_free_course'] as bool?,
       multiInstructor: json['multi_instructor'] as bool?,
       creator: json['creator'] as String?,

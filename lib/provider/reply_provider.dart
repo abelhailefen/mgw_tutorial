@@ -9,22 +9,74 @@ class ReplyProvider with ChangeNotifier {
   Map<int, List<Reply>> _repliesByCommentId = {};
   Map<int, bool> _isLoadingForCommentId = {};
   Map<int, String?> _errorForCommentId = {};
-  Map<int, bool> _allRepliesLoadedForCommentId = {}; // To track if all replies have been fetched
+  Map<int, bool> _allRepliesLoadedForCommentId = {};
 
   List<Reply> repliesForComment(int commentId) => _repliesByCommentId[commentId] ?? [];
   bool isLoadingForComment(int commentId) => _isLoadingForCommentId[commentId] ?? false;
   String? errorForComment(int commentId) => _errorForCommentId[commentId];
   bool allRepliesLoadedForComment(int commentId) => _allRepliesLoadedForCommentId[commentId] ?? false;
 
-  final String _apiBaseUrl; // This will be "https://mgw-backend.onrender.com/api"
+  final String _apiBaseUrl;
   final AuthProvider _authProvider;
 
   ReplyProvider(this._apiBaseUrl, this._authProvider);
 
-  // Fetches replies for a specific comment.
-  // The API endpoint /post-comments/{commentId}/replies likely gets ALL replies for that comment.
+  List<Reply> _buildReplyTree(List<Reply> flatReplies) {
+    Map<int, Reply> map = {};
+    List<Reply> roots = [];
+
+    // First pass: create a map of all replies by their ID and initialize childReplies
+    for (var reply in flatReplies) {
+      map[reply.id] = reply.copyWith(childReplies: []); // Ensure childReplies is mutable
+    }
+
+    // Second pass: build the tree
+    for (var reply in flatReplies) {
+      var currentReplyNode = map[reply.id]!;
+      if (reply.parentReplyId == null) { // This is a direct reply to the comment
+        roots.add(currentReplyNode);
+      } else {
+        var parentNode = map[reply.parentReplyId];
+        if (parentNode != null) {
+          // Create a new list for childReplies if it's immutable, or add to existing
+          List<Reply> updatedChildReplies = List<Reply>.from(parentNode.childReplies)..add(currentReplyNode);
+          map[reply.parentReplyId!] = parentNode.copyWith(childReplies: updatedChildReplies);
+          
+           // Update roots if the parent was a root and got updated
+          int rootIndex = roots.indexWhere((r) => r.id == reply.parentReplyId);
+          if (rootIndex != -1) {
+            roots[rootIndex] = map[reply.parentReplyId]!;
+          }
+
+        } else {
+          // Parent reply not found (orphan), treat as a root for now or handle error
+          // This might happen if parent reply was deleted or data is inconsistent
+          print("Warning: Parent reply with ID ${reply.parentReplyId} not found for reply ${reply.id}. Treating as root.");
+          roots.add(currentReplyNode);
+        }
+      }
+    }
+    // Sort root replies and their children by creation date
+    for (var root in roots) {
+      _sortRepliesRecursively(root);
+    }
+    roots.sort((a,b) => a.createdAt.compareTo(b.createdAt));
+    return roots;
+  }
+
+  void _sortRepliesRecursively(Reply replyNode) {
+    // Ensure childReplies is not null before trying to sort.
+    // The copyWith should initialize it, but defensive check.
+    if (replyNode.childReplies.isNotEmpty) {
+        replyNode.childReplies.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        for (var child in replyNode.childReplies) {
+          _sortRepliesRecursively(child);
+        }
+    }
+  }
+
+
   Future<void> fetchRepliesForComment(int commentId, {bool forceRefresh = false}) async {
-    // If already loaded and not forcing refresh, and all replies are marked as loaded, return.
     if (!forceRefresh &&
         _repliesByCommentId.containsKey(commentId) &&
         !(_isLoadingForCommentId[commentId] ?? false) &&
@@ -34,12 +86,11 @@ class ReplyProvider with ChangeNotifier {
 
     _isLoadingForCommentId[commentId] = true;
     _errorForCommentId[commentId] = null;
-    if (forceRefresh) { // If forcing refresh, reset loaded status
+    if (forceRefresh) {
       _allRepliesLoadedForCommentId[commentId] = false;
     }
     notifyListeners();
 
-    // UPDATED URL for fetching replies for a comment
     final url = Uri.parse('$_apiBaseUrl/post-comments/$commentId/replies');
     print("Fetching replies for comment $commentId from: $url");
 
@@ -47,23 +98,20 @@ class ReplyProvider with ChangeNotifier {
       final response = await http.get(url, headers: {"Accept": "application/json"});
       print("Fetch replies response for comment $commentId: ${response.statusCode}, Body: ${response.body.substring(0, (response.body.length > 200 ? 200 : response.body.length))}");
 
-
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        _repliesByCommentId[commentId] = data.map((rJson) {
+        final List<Reply> flatReplies = data.map((rJson) {
           try {
             return Reply.fromJson(rJson as Map<String, dynamic>);
           } catch (e) {
             print("Error parsing reply JSON for comment $commentId: $e, JSON: $rJson");
-            // Return a dummy/error reply or rethrow, depending on desired behavior
-            // For now, let's skip problematic replies
             return null;
           }
-        }).whereType<Reply>().toList(); // Filter out nulls if any parsing failed
+        }).whereType<Reply>().toList();
 
-        _repliesByCommentId[commentId]?.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        _repliesByCommentId[commentId] = _buildReplyTree(flatReplies);
         _errorForCommentId[commentId] = null;
-        _allRepliesLoadedForCommentId[commentId] = true; // Mark all replies as loaded for this comment
+        _allRepliesLoadedForCommentId[commentId] = true;
       } else {
         _errorForCommentId[commentId] = "Failed to load replies for comment $commentId. Status: ${response.statusCode}, Body: ${response.body}";
       }
@@ -76,15 +124,27 @@ class ReplyProvider with ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> createReply({required int parentCommentId, required String content}) async {
+  // Create reply now accepts an optional parentReplyId
+  Future<Map<String, dynamic>> createReply({
+    required int parentCommentId,
+    required String content,
+    int? parentReplyId, // For replying to another reply
+  }) async {
     if (_authProvider.currentUser?.id == null) {
       return {'success': false, 'message': "User not authenticated."};
     }
     final int userId = _authProvider.currentUser!.id!;
 
-    // UPDATED URL for creating a reply to a specific comment
     final url = Uri.parse('$_apiBaseUrl/post-comments/$parentCommentId/replies');
-    print("Creating reply to comment $parentCommentId at: $url with content: $content by user: $userId");
+    print("Creating reply to comment $parentCommentId (parentReplyId: $parentReplyId) at: $url with content: $content by user: $userId");
+    
+    final Map<String, dynamic> body = {
+      'content': content,
+      'userId': userId,
+    };
+    if (parentReplyId != null) {
+      body['parentReplyId'] = parentReplyId;
+    }
 
     try {
       final response = await http.post(
@@ -92,28 +152,17 @@ class ReplyProvider with ChangeNotifier {
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
-          "X-User-ID": userId.toString() // Assuming your backend uses this header for user identification
+          "X-User-ID": userId.toString()
         },
-        body: json.encode({
-          'content': content,
-          'userId': userId,
-          // 'postCommentId': parentCommentId, // The backend might infer parentCommentId from the URL
-        }),
+        body: json.encode(body),
       );
 
       print("Create reply response: ${response.statusCode}, Body: ${response.body}");
 
       if (response.statusCode == 201) {
-        final newReplyJson = json.decode(response.body) as Map<String, dynamic>;
-        final newReply = Reply.fromJson(newReplyJson);
-
-        // Add to the local list
-        _repliesByCommentId.putIfAbsent(parentCommentId, () => []);
-        _repliesByCommentId[parentCommentId]!.add(newReply);
-        _repliesByCommentId[parentCommentId]?.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-
+        await fetchRepliesForComment(parentCommentId, forceRefresh: true); 
         notifyListeners();
-        return {'success': true, 'message': "Reply created.", 'reply': newReply};
+        return {'success': true, 'message': "Reply created."}; 
       } else {
         return {'success': false, 'message': "Failed to create reply. Status: ${response.statusCode}, Body: ${response.body}"};
       }
@@ -123,15 +172,13 @@ class ReplyProvider with ChangeNotifier {
     }
   }
 
+
   Future<Map<String, dynamic>> updateReply({required int parentCommentId, required int replyId, required String newContent}) async {
     if (_authProvider.currentUser?.id == null) {
       return {'success': false, 'message': "User not authenticated."};
     }
     final int userId = _authProvider.currentUser!.id!;
-
-    // UPDATED URL for updating a specific reply
-    // The API path implies the parentCommentId is part of the route to identify the reply.
-    final url = Uri.parse('$_apiBaseUrl/comments/$parentCommentId/replies/$replyId');
+    final url = Uri.parse('$_apiBaseUrl/comment-replies/$replyId');
     print("Updating reply $replyId (parent $parentCommentId) at: $url with new content: $newContent");
 
     try {
@@ -142,32 +189,13 @@ class ReplyProvider with ChangeNotifier {
           "Accept": "application/json",
           "X-User-ID": userId.toString()
         },
-        body: json.encode({
-          'content': newContent,
-          // 'userId': userId, // Backend might only need content and validate user via X-User-ID
-        }),
+        body: json.encode({'content': newContent}),
       );
       print("Update reply response: ${response.statusCode}, Body: ${response.body}");
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        if (_repliesByCommentId.containsKey(parentCommentId)) {
-          final index = _repliesByCommentId[parentCommentId]!.indexWhere((r) => r.id == replyId);
-          if (index != -1) {
-            // If the backend returns the updated reply, parse it. Otherwise, update locally.
-            try {
-              if (response.body.isNotEmpty) { // Check if response body is not empty before decoding
-                  final updatedReplyData = json.decode(response.body);
-                  _repliesByCommentId[parentCommentId]![index] = Reply.fromJson(updatedReplyData as Map<String, dynamic>);
-              } else { // If 204 No Content or empty body
-                   _repliesByCommentId[parentCommentId]![index] = _repliesByCommentId[parentCommentId]![index].copyWith(content: newContent, updatedAt: DateTime.now());
-              }
-            } catch (e) {
-                 print("Error parsing updated reply or body was empty: $e. Updating locally.");
-                 _repliesByCommentId[parentCommentId]![index] = _repliesByCommentId[parentCommentId]![index].copyWith(content: newContent, updatedAt: DateTime.now());
-            }
-            notifyListeners();
-          }
-        }
+         await fetchRepliesForComment(parentCommentId, forceRefresh: true); 
+        notifyListeners();
         return {'success': true, 'message': "Reply updated."};
       } else {
         return {'success': false, 'message': "Failed to update reply. Status: ${response.statusCode}, Body: ${response.body}"};
@@ -183,23 +211,18 @@ class ReplyProvider with ChangeNotifier {
       return {'success': false, 'message': "User not authenticated."};
     }
     final int userId = _authProvider.currentUser!.id!;
-
-    // UPDATED URL for deleting a specific reply
-    final url = Uri.parse('$_apiBaseUrl/comments/$parentCommentId/replies/$replyId');
+    final url = Uri.parse('$_apiBaseUrl/comment-replies/$replyId');
     print("Deleting reply $replyId (parent $parentCommentId) at: $url");
 
     try {
       final response = await http.delete(
         url,
-        headers: {
-          "Accept": "application/json",
-          "X-User-ID": userId.toString()
-        },
+        headers: {"Accept": "application/json", "X-User-ID": userId.toString()},
       );
       print("Delete reply response: ${response.statusCode}, Body: ${response.body}");
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        _repliesByCommentId[parentCommentId]?.removeWhere((r) => r.id == replyId);
+        await fetchRepliesForComment(parentCommentId, forceRefresh: true); 
         notifyListeners();
         return {'success': true, 'message': "Reply deleted."};
       } else {

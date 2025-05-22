@@ -20,7 +20,7 @@ class CommentPostInfo {
 
 class Comment {
   final int id;
-  final String comment; // This Dart field name can remain 'comment'
+  final String comment; 
   final int userId;
   final int postId;
   final DateTime createdAt;
@@ -76,8 +76,7 @@ class Comment {
 
     return Comment(
       id: json['id'] as int,
-      // THE FIX IS HERE: Read from 'content' key from JSON
-      comment: _safeGetString(json, 'content', 'Comment'), // <--- MODIFIED
+      comment: _safeGetString(json, 'content', 'Comment'), 
       userId: json['userId'] as int,
       postId: json['postId'] as int,
       createdAt: DateTime.parse(_safeGetString(json, 'createdAt', 'Comment')),
@@ -130,7 +129,7 @@ class Comment {
   }
 
   Map<String, dynamic> toJsonForUpdate() {
-    // Similarly, if backend expects 'content' for update, change key here.
+    
      return {
       'comment': comment,
     };
