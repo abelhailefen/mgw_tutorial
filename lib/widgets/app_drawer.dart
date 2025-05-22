@@ -1,38 +1,38 @@
 // lib/widgets/app_drawer.dart
 import 'package:flutter/material.dart';
-import 'package:mgw_tutorial/screens/auth/login_screen.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart'; // <<< FOR Provider.of
+import 'package:url_launcher/url_launcher.dart'; // <<< FOR launchUrl, LaunchMode
+import 'package:share_plus/share_plus.dart'; // <<< FOR Share
+import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // <<< FOR AppLocalizations
+
+// Import Providers
 import 'package:mgw_tutorial/provider/locale_provider.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
-// import 'package:mgw_tutorial/provider/theme_provider.dart'; // ThemeProvider not directly used for items here
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
-
-// Import screen routes for navigation
-import 'package:mgw_tutorial/screens/sidebar/about_us_screen.dart';
-import 'package:mgw_tutorial/screens/sidebar/settings_screen.dart';
-import 'package:mgw_tutorial/screens/sidebar/discussion_group_screen.dart';
-// import 'package:mgw_tutorial/screens/enrollment/order_screen.dart'; // No longer directly navigated from drawer item
-import 'package:mgw_tutorial/screens/sidebar/testimonials_screen.dart';
-
-// Import Providers to call their fetch methods
 import 'package:mgw_tutorial/provider/semester_provider.dart';
 import 'package:mgw_tutorial/provider/api_course_provider.dart';
 import 'package:mgw_tutorial/provider/testimonial_provider.dart';
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
 import 'package:mgw_tutorial/provider/department_provider.dart';
 
+// Import Screens
+import 'package:mgw_tutorial/screens/auth/login_screen.dart';
+import 'package:mgw_tutorial/screens/sidebar/about_us_screen.dart';
+import 'package:mgw_tutorial/screens/sidebar/settings_screen.dart';
+import 'package:mgw_tutorial/screens/sidebar/discussion_group_screen.dart';
+import 'package:mgw_tutorial/screens/sidebar/testimonials_screen.dart';
+import 'package:mgw_tutorial/screens/sidebar/my_courses_screen.dart'; // <<< IMPORTED MyCoursesScreen
+
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
-  final String _telegramChannelUrl = "https://t.me/YourTelegramChannelNameOrLink"; // Replace with actual
-  // final String _appShareLink = "https://play.google.com/store/apps/details?id=your.app.id"; // Replace if you have a play store link
-  final String _appShareMessage = "Check out MGW Tutorial, a great app for learning! "; // TODO: Localize if needed
-  final String _contactEmail = "support@mgwtutorial.com"; // Replace with actual
-  final String _contactPhoneNumber = "+251900000000"; // Replace with actual
-  final String _websiteUrl = "https://www.zsecreteducation.com"; // Replace with actual
+  // Moved these inside the class or make them static if truly global constants
+  // For simplicity, keeping them as instance members for now.
+  final String _telegramChannelUrl = "https://t.me/YourTelegramChannelNameOrLink";
+  final String _appShareMessage = "Check out MGW Tutorial, a great app for learning! ";
+  final String _contactEmail = "support@mgwtutorial.com";
+  final String _contactPhoneNumber = "+251900000000";
+  final String _websiteUrl = "https://www.zsecreteducation.com";
 
 
   Future<void> _launchUrl(BuildContext context, String urlString, {bool isMail = false, bool isTel = false}) async {
@@ -65,7 +65,7 @@ class AppDrawer extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final box = context.findRenderObject() as RenderBox?;
     await Share.share(
-      _appShareMessage,
+      _appShareMessage, // Use instance member
       subject: l10n.shareAppSubject,
       sharePositionOrigin: box != null ? box.localToGlobal(Offset.zero) & box.size : null,
     );
@@ -86,20 +86,20 @@ class AppDrawer extends StatelessWidget {
               ListTile(
                 leading: Icon(Icons.email_outlined, color: theme.listTileTheme.iconColor),
                 title: Text(l10n.contactViaEmail, style: TextStyle(color: theme.listTileTheme.textColor)),
-                subtitle: Text(_contactEmail, style: TextStyle(color: theme.listTileTheme.textColor?.withOpacity(0.7))),
+                subtitle: Text(_contactEmail, style: TextStyle(color: theme.listTileTheme.textColor?.withOpacity(0.7))), // Use instance member
                 onTap: () {
                   Navigator.of(bCtx).pop();
-                  _launchUrl(context, _contactEmail, isMail: true);
+                  _launchUrl(context, _contactEmail, isMail: true); // Use instance member
                 },
               ),
-              if (_contactPhoneNumber.isNotEmpty)
+              if (_contactPhoneNumber.isNotEmpty) // Use instance member
                 ListTile(
                   leading: Icon(Icons.phone_outlined, color: theme.listTileTheme.iconColor),
                   title: Text(l10n.callUs, style: TextStyle(color: theme.listTileTheme.textColor)),
-                  subtitle: Text(_contactPhoneNumber, style: TextStyle(color: theme.listTileTheme.textColor?.withOpacity(0.7))),
+                  subtitle: Text(_contactPhoneNumber, style: TextStyle(color: theme.listTileTheme.textColor?.withOpacity(0.7))), // Use instance member
                   onTap: () {
                     Navigator.of(bCtx).pop();
-                    _launchUrl(context, _contactPhoneNumber, isTel: true);
+                    _launchUrl(context, _contactPhoneNumber, isTel: true); // Use instance member
                   },
                 ),
               ListTile(
@@ -107,7 +107,7 @@ class AppDrawer extends StatelessWidget {
                 title: Text(l10n.visitOurWebsite, style: TextStyle(color: theme.listTileTheme.textColor)),
                 onTap: () {
                    Navigator.of(bCtx).pop();
-                   _launchUrl(context, _websiteUrl);
+                   _launchUrl(context, _websiteUrl); // Use instance member
                 },
               ),
             ],
@@ -141,7 +141,7 @@ class AppDrawer extends StatelessWidget {
       semesterProvider.fetchSemesters(forceRefresh: true),
       apiCourseProvider.fetchCourses(forceRefresh: true),
       testimonialProvider.fetchTestimonials(forceRefresh: true),
-      discussionProvider.fetchPosts(), // Fetches posts, comments, and replies via its internal logic
+      discussionProvider.fetchPosts(),
       departmentProvider.fetchDepartments(),
     ];
 
@@ -176,12 +176,12 @@ class AppDrawer extends StatelessWidget {
   }
 
   void _navigateTo(BuildContext context, String routeName, {Object? arguments}) {
-    Navigator.of(context).pop(); // Close drawer first
+    Navigator.of(context).pop();
     Navigator.of(context).pushNamed(routeName, arguments: arguments);
   }
 
   void _showNotImplemented(BuildContext context, String featureName) {
-    Navigator.of(context).pop(); // Close drawer first
+    Navigator.of(context).pop();
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -194,11 +194,15 @@ class AppDrawer extends StatelessWidget {
   }
 
   void _handleLogout(BuildContext context, AuthProvider authProvider) async {
-    Navigator.of(context).pop(); // Close drawer first
+    Navigator.of(context).pop();
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     await authProvider.logout();
     if (context.mounted) {
+      Provider.of<SemesterProvider>(context, listen: false).clearSemesters();
+      Provider.of<ApiCourseProvider>(context, listen: false).clearError();
+      Provider.of<TestimonialProvider>(context, listen: false).clearTestimonials();
+
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (Route<dynamic> route) => false,
@@ -222,7 +226,7 @@ class AppDrawer extends StatelessWidget {
 
     String userName = l10n.guestUser;
     String userDetail = l10n.pleaseLoginOrRegister;
-    String? userImageUrl; // Placeholder for user profile image URL
+    String? userImageUrl;
 
     Color headerBackgroundColor = theme.colorScheme.primaryContainer;
     Color headerTextColor = theme.colorScheme.onPrimaryContainer;
@@ -231,9 +235,8 @@ class AppDrawer extends StatelessWidget {
 
     if (authProvider.currentUser != null) {
       userName = ('${authProvider.currentUser!.firstName} ${authProvider.currentUser!.lastName}').trim();
-      if (userName.isEmpty) userName = authProvider.currentUser!.phone; // Fallback to phone if name is empty
+      if (userName.isEmpty) userName = authProvider.currentUser!.phone;
       userDetail = authProvider.currentUser!.phone;
-      // userImageUrl = authProvider.currentUser!.profileImageUrl; // If you add profile image URL to User model
     }
 
     return Drawer(
@@ -269,16 +272,25 @@ class AppDrawer extends StatelessWidget {
               _buildDrawerSubItem(context: context, theme: theme, text: l10n.english, onTap: () { localeProvider.setLocale(const Locale('en')); Navigator.of(context).pop(); }),
               _buildDrawerSubItem(context: context, theme: theme, text: l10n.amharic, onTap: () { localeProvider.setLocale(const Locale('am')); Navigator.of(context).pop(); }),
               _buildDrawerSubItem(context: context, theme: theme, text: l10n.afaanOromo, onTap: () { localeProvider.setLocale(const Locale('or')); Navigator.of(context).pop(); }),
-              _buildDrawerSubItem(context: context, theme: theme, text: l10n.tigrigna, onTap: () { localeProvider.setLocale(const Locale('ti')); Navigator.of(context).pop(); }), // UPDATED: Add Tigrigna
+              _buildDrawerSubItem(context: context, theme: theme, text: l10n.tigrigna, onTap: () { localeProvider.setLocale(const Locale('ti')); Navigator.of(context).pop(); }),
             ],
           ),
           Divider(color: theme.dividerColor),
-          // "Enroll for Courses" item removed
-          _buildDrawerItem(
-            theme: theme, icon: Icons.my_library_books_outlined,
-            text: l10n.mycourses,
-            onTap: () => _showNotImplemented(context, l10n.mycourses),
-          ),
+          if (authProvider.currentUser != null)
+            _buildDrawerItem(
+              theme: theme, icon: Icons.my_library_books_outlined,
+              text: l10n.mycourses,
+              onTap: () => _navigateTo(context, MyCoursesScreen.routeName),
+            )
+          else
+             _buildDrawerItem(
+              theme: theme, icon: Icons.app_registration,
+              text: l10n.registerforcourses,
+              onTap: () {
+                 Navigator.of(context).pop();
+                 _showNotImplemented(context, l10n.registerforcourses); // Changed to use the common method
+              },
+            ),
           _buildDrawerItem(
             theme: theme, icon: Icons.assignment_turned_in_outlined, text: l10n.weeklyexam,
             onTap: () => _showNotImplemented(context, l10n.weeklyexam),
@@ -291,7 +303,7 @@ class AppDrawer extends StatelessWidget {
           _buildDrawerItem(
             theme: theme, icon: Icons.telegram, text: l10n.joinourtelegram,
             onTap: () {
-              Navigator.of(context).pop(); // Close drawer first
+              Navigator.of(context).pop();
               _launchUrl(context, _telegramChannelUrl);
             },
           ),
@@ -351,7 +363,7 @@ class AppDrawer extends StatelessWidget {
     required GestureTapCallback onTap,
   }) {
     return ListTile(
-      contentPadding: const EdgeInsets.only(left: 56.0, right: 16.0), // Indent sub-items
+      contentPadding: const EdgeInsets.only(left: 56.0, right: 16.0),
       title: Text(text, style: TextStyle(color: theme.listTileTheme.textColor, fontSize: 14)),
       onTap: onTap,
       dense: true,

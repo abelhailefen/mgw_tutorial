@@ -1,29 +1,40 @@
 // lib/provider/lesson_provider.dart
 import 'dart:convert';
-import 'dart:async'; // For TimeoutException
-import 'dart:io';    // For SocketException
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:mgw_tutorial/models/lesson.dart';
+import 'package:mgw_tutorial/services/video_download_service.dart'; // <<< IMPORT
+import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt; // For parseVideoId
 
 class LessonProvider with ChangeNotifier {
   Map<int, List<Lesson>> _lessonsBySectionId = {};
   Map<int, bool> _isLoadingForSectionId = {};
   Map<int, String?> _errorForSectionId = {};
 
+  // --- Download Service and State ---
+  final VideoDownloadService _downloadService = VideoDownloadService();
+  // No need to store progress/status notifiers here if service manages them globally
+  // and widgets listen directly to the service's notifiers.
+
   List<Lesson> lessonsForSection(int sectionId) => _lessonsBySectionId[sectionId] ?? [];
   bool isLoadingForSection(int sectionId) => _isLoadingForSectionId[sectionId] ?? false;
   String? errorForSection(int sectionId) => _errorForSectionId[sectionId];
 
-  // User-friendly error messages
+  // Expose service's notifiers
+  ValueNotifier<double> getDownloadProgressNotifier(String videoId) => _downloadService.getDownloadProgress(videoId);
+  ValueNotifier<DownloadStatus> getDownloadStatusNotifier(String videoId) => _downloadService.getDownloadStatus(videoId);
+
+
   static const String _networkErrorMessage = "Sorry, there seems to be a network error. Please check your connection and try again.";
   static const String _timeoutErrorMessage = "The request timed out. Please check your connection or try again later.";
   static const String _unexpectedErrorMessage = "An unexpected error occurred while fetching lessons. Please try again later.";
   static const String _failedToLoadLessonsMessage = "Failed to load lessons for this chapter. Please try again.";
-
   static const String _apiBaseUrl = "https://lessonservice.amtprinting19.com/api";
 
   Future<void> fetchLessonsForSection(int sectionId, {bool forceRefresh = false}) async {
+    // ... (existing fetchLessonsForSection logic remains the same) ...
     if (!forceRefresh && _lessonsBySectionId.containsKey(sectionId) && !(_isLoadingForSectionId[sectionId] ?? false)) {
       return;
     }
@@ -53,12 +64,24 @@ class LessonProvider with ChangeNotifier {
               .toList();
           _lessonsBySectionId[sectionId]?.sort((a, b) => (a.order ?? 0).compareTo(b.order ?? 0));
           _errorForSectionId[sectionId] = null;
+
+          // After fetching lessons, update download statuses for videos
+          for (var lesson in _lessonsBySectionId[sectionId]!) {
+            if (lesson.lessonType == LessonType.video && lesson.videoUrl != null) {
+              final videoId = yt.YoutubeExplode.parseVideoId(lesson.videoUrl!);
+              if (videoId != null) {
+                final isDownloaded = await _downloadService.isVideoDownloaded(videoId, lesson.title);
+                _downloadService.getDownloadStatus(videoId).value = isDownloaded ? DownloadStatus.downloaded : DownloadStatus.notDownloaded;
+              }
+            }
+          }
+
         } else {
           _errorForSectionId[sectionId] = 'Failed to load lessons: Unexpected API response format.';
           _lessonsBySectionId[sectionId] = [];
         }
       } else {
-         _handleHttpErrorResponse(response, sectionId, _failedToLoadLessonsMessage);
+        _handleHttpErrorResponse(response, sectionId, _failedToLoadLessonsMessage);
       }
     } on TimeoutException catch (e) {
       print("TimeoutException fetching lessons for section $sectionId: $e");
@@ -83,22 +106,64 @@ class LessonProvider with ChangeNotifier {
     }
   }
 
+
+  // --- Download Methods ---
+  Future<void> startDownload(Lesson lesson) async {
+    if (lesson.lessonType != LessonType.video || lesson.videoUrl == null) return;
+    final videoId = yt.YoutubeExplode.parseVideoId(lesson.videoUrl!);
+    if (videoId == null) {
+      print("Cannot download, invalid YouTube videoId for: ${lesson.videoUrl}");
+      return;
+    }
+
+    // No need to manage notifiers here, service does it.
+    // The UI will listen to service's notifiers via provider's getters.
+
+    print("LessonProvider: Requesting download for ${lesson.title} ($videoId)");
+    await _downloadService.downloadYoutubeVideo(
+      lesson.videoUrl!,
+      lesson.title,
+      // Callbacks directly update the service's global notifiers,
+      // so no need for onProgress or onStatusChange here unless you want
+      // to trigger additional provider-level notifications or logic.
+      // The widget listening to the service's notifier will rebuild.
+    );
+    // Optionally, you might want to call notifyListeners() here if the download
+    // completion needs to trigger a broader UI update not covered by ValueListenableBuilder.
+    // However, if the button UI changes based on DownloadStatus Notifier, that's often enough.
+  }
+
+  Future<String?> getDownloadedFilePath(Lesson lesson) async {
+     if (lesson.lessonType != LessonType.video || lesson.videoUrl == null) return null;
+     final videoId = yt.YoutubeExplode.parseVideoId(lesson.videoUrl!);
+     if (videoId == null) return null;
+     return await _downloadService.getFilePath(videoId, lesson.title);
+  }
+
+
   void _handleHttpErrorResponse(http.Response response, int sectionId, String defaultUserMessage) {
+    // ... (existing method)
     try {
       final errorBody = json.decode(response.body);
       if (errorBody is Map && errorBody.containsKey('message') && errorBody['message'] != null && errorBody['message'].toString().isNotEmpty) {
         _errorForSectionId[sectionId] = errorBody['message'].toString();
       } else {
-         _errorForSectionId[sectionId] = "$defaultUserMessage (Status: ${response.statusCode})";
+        _errorForSectionId[sectionId] = "$defaultUserMessage (Status: ${response.statusCode})";
       }
     } catch (e) {
-       _errorForSectionId[sectionId] = "$defaultUserMessage (Status: ${response.statusCode}). Response not parsable.";
+      _errorForSectionId[sectionId] = "$defaultUserMessage (Status: ${response.statusCode}). Response not parsable.";
     }
     _lessonsBySectionId[sectionId] = [];
   }
 
   void clearErrorForSection(int sectionId) {
-    _errorForSectionId[sectionId] = null;
-    // notifyListeners();
+    // ... (existing method)
+     _errorForSectionId[sectionId] = null;
+  }
+
+  @override
+  void dispose() {
+    _downloadService.dispose(); // Clean up YoutubeExplode instance
+    super.dispose();
   }
 }

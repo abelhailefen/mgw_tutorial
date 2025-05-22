@@ -33,6 +33,7 @@ import 'package:mgw_tutorial/screens/library/course_sections_screen.dart';
 import 'package:mgw_tutorial/screens/library/lesson_list_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/testimonials_screen.dart';
 import 'package:mgw_tutorial/screens/enrollment/order_screen.dart';
+import 'package:mgw_tutorial/screens/sidebar/my_courses_screen.dart'; // <<< ADD THIS IMPORT
 
 // Models
 import 'package:mgw_tutorial/models/post.dart';
@@ -43,17 +44,16 @@ import 'package:mgw_tutorial/models/semester.dart';
 // Localization
 import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // Generated file
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:mgw_tutorial/l10n/ti_material_localizations.dart'; // IMPORT YOUR CUSTOM TI DELEGATE
+import 'package:mgw_tutorial/l10n/ti_material_localizations.dart';
 
-void main() async { // Make main async
-  WidgetsFlutterBinding.ensureInitialized(); // Ensure bindings are initialized
+// ... rest of your main.dart code ...
 
-  // Initialize date formatting for supported locales
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('en', null);
   await initializeDateFormatting('am', null);
   await initializeDateFormatting('ti', null);
   await initializeDateFormatting('or', null);
-  // Add more locales if needed
 
   runApp(
     MultiProvider(
@@ -85,10 +85,10 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   TextTheme _getTextThemeForLocale(TextTheme base, Color primaryTextColor, Color secondaryTextColor, Locale? currentLocale) {
-    String fontFamily = 'Poppins'; // Default font
+    String fontFamily = 'Poppins';
     if (currentLocale != null) {
       if (['am', 'ti', 'or'].contains(currentLocale.languageCode)) {
-        fontFamily = 'NotoSansEthiopic'; // Use Ge'ez font for these languages
+        fontFamily = 'NotoSansEthiopic';
       }
     }
 
@@ -118,7 +118,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final localeProvider = Provider.of<LocaleProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final currentLocale = localeProvider.locale; // Get current locale
+    final currentLocale = localeProvider.locale;
 
     const lightColorScheme = ColorScheme(
       brightness: Brightness.light,
@@ -279,11 +279,11 @@ class MyApp extends StatelessWidget {
           selectedColor: lightColorScheme.primary,
           secondaryLabelStyle: finalTypographyLight.bodySmall?.copyWith(color: lightColorScheme.onSecondary),
         ),
-        popupMenuTheme: PopupMenuThemeData( // Added for Light Theme
+        popupMenuTheme: PopupMenuThemeData(
           color: AppColors.surfaceLight,
           textStyle: finalTypographyLight.bodyMedium
         ),
-        dialogBackgroundColor: AppColors.surfaceLight, // Added for Light Theme
+        dialogBackgroundColor: AppColors.surfaceLight,
       ),
       darkTheme: ThemeData.from(colorScheme: darkColorScheme, textTheme: finalTypographyDark).copyWith(
          scaffoldBackgroundColor: darkColorScheme.background,
@@ -374,7 +374,7 @@ class MyApp extends StatelessWidget {
       locale: localeProvider.locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
-        TiMaterialLocalizationsDelegate(), // <-- ADDED YOUR CUSTOM TI DELEGATE
+        TiMaterialLocalizationsDelegate(),
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
@@ -389,13 +389,12 @@ class MyApp extends StatelessWidget {
         DiscussionGroupScreen.routeName: (ctx) => const DiscussionGroupScreen(),
         CreatePostScreen.routeName: (ctx) => const CreatePostScreen(),
         TestimonialsScreen.routeName: (ctx) => const TestimonialsScreen(),
+        MyCoursesScreen.routeName: (ctx) => const MyCoursesScreen(), // <<< ROUTE IS CORRECTLY DEFINED
         OrderScreen.routeName: (ctx) {
           final args = ModalRoute.of(ctx)?.settings.arguments;
           if (args is Semester) {
             return OrderScreen(semesterToEnroll: args);
           }
-          // It's good practice to return a generic error screen or navigate back
-          // if arguments are incorrect, rather than potentially crashing.
           return Scaffold(appBar: AppBar(title: const Text("Error")), body: const Center(child: Text("Error: Semester data not provided.")));
         },
         PostDetailScreen.routeName: (ctx) {
