@@ -1,157 +1,197 @@
 // lib/provider/testimonial_provider.dart
 import 'dart:convert';
+import 'dart:async'; // For TimeoutException
+import 'dart:io'; // For SocketException
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:mgw_tutorial/models/testimonial.dart';
 
 class TestimonialProvider with ChangeNotifier {
-  List<Testimonial> _testimonials = [];
+  List<Testimonial> _testimonials = []; // This will now hold all testimonials
   bool _isLoading = false;
   String? _error;
 
-  List<Testimonial> get testimonials => [..._testimonials];
+  List<Testimonial> get testimonials => [..._testimonials]; // UI consumes this directly
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // API Base URL for testimonials
   static const String _apiBaseUrl = "https://mgw-backend.onrender.com/api";
+  static const String _networkErrorMessage = "Network error. Check connection.";
+  static const String _timeoutErrorMessage = "Request timed out.";
+  static const String _unexpectedErrorMessage = "An unexpected error occurred.";
+  static const String _failedToLoadMessage = "Failed to load testimonials.";
 
-  Future<void> fetchTestimonials({bool forceRefresh = false, String? statusFilter = "approved"}) async {
-    if (!forceRefresh && _testimonials.isNotEmpty && !_isLoading) {
-      // Optional: Add logic here if you want to avoid refetching if a specific filter was already applied
-      // For now, it refetches if forceRefresh is true or list is empty/error.
+  Future<void> fetchTestimonials({bool forceRefresh = false}) async { // Removed statusFilter/clientSideFilter
+    print("[Provider] fetchTestimonials CALLED - forceRefresh: $forceRefresh, current isLoading: $_isLoading");
+
+    if (_isLoading && !forceRefresh) {
+      print("[Provider] fetchTestimonials SKIPPED - already loading and not forcing.");
+      return;
     }
 
     _isLoading = true;
     _error = null;
+    if (forceRefresh) {
+      print("[Provider] fetchTestimonials - Force refreshing, clearing existing testimonials data.");
+      _testimonials = [];
+    }
     notifyListeners();
 
+    // Always fetch ALL testimonials
     String apiUrl = '$_apiBaseUrl/testimonials';
-    if (statusFilter != null && statusFilter.isNotEmpty) {
-        apiUrl += '?status=$statusFilter'; // Example: /api/testimonials?status=approved
-    }
-
+    print("[Provider] fetchTestimonials - Fetching ALL from API via: $apiUrl");
     final url = Uri.parse(apiUrl);
-    print("Fetching testimonials from: $url");
 
     try {
       final response = await http.get(url, headers: {
         "Accept": "application/json",
-      });
+      }).timeout(const Duration(seconds: 20));
 
-      print("Testimonials API Response Status: ${response.statusCode}");
-      // print("Testimonials API Response Body: ${response.body}"); // For debugging
+      print("[Provider] fetchTestimonials - API Response Status: ${response.statusCode}");
+      final responseBodySnippet = response.body.length > 300 ? response.body.substring(0, 300) : response.body;
+      print("[Provider] fetchTestimonials - API Response Body (Snippet): $responseBodySnippet...");
 
       if (response.statusCode == 200) {
         final dynamic decodedData = json.decode(response.body);
         if (decodedData is List) {
           _testimonials = decodedData
               .map((testimonialJson) {
-                  try {
-                    return Testimonial.fromJson(testimonialJson as Map<String, dynamic>);
-                  } catch (e) {
-                    print("Error parsing testimonial: $e. JSON: $testimonialJson");
-                    return null; // Skip problematic items
-                  }
+                try {
+                  return Testimonial.fromJson(testimonialJson as Map<String, dynamic>);
+                } catch (e) {
+                  print("[Provider] fetchTestimonials - ERROR parsing single testimonial: $e. JSON: $testimonialJson");
+                  return null;
+                }
               })
-              .whereType<Testimonial>() // Filter out nulls from parsing errors
+              .whereType<Testimonial>()
               .toList();
-          // Sort by creation date, newest first
-          _testimonials.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          _testimonials.sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Sort by date
           _error = null;
+          print("[Provider] fetchTestimonials - Successfully parsed ${_testimonials.length} total testimonials from API.");
         } else {
-          print("Testimonials API response was not a list as expected. Data: $decodedData");
-          _error = 'Failed to load testimonials: Unexpected API response format.';
+          _error = '$_failedToLoadMessage: API response was not a list as expected.';
           _testimonials = [];
+          print("[Provider] fetchTestimonials - $_error Data: $decodedData");
         }
       } else {
-        String errorMessage = 'Failed to load testimonials. Status Code: ${response.statusCode}';
+        String errorMessage = '$_failedToLoadMessage. Status: ${response.statusCode}';
         try {
           final errorData = json.decode(response.body);
-          if (errorData != null && errorData['message'] != null) {
-            errorMessage = errorData['message'];
-          } else if (response.body.isNotEmpty) {
-            errorMessage += "\nAPI Response: ${response.body}";
+          if (errorData is Map && errorData.containsKey('message') && errorData['message'] != null) {
+            errorMessage = errorData['message'].toString();
           }
-        } catch (e) {
-          errorMessage += "\nRaw API Response: ${response.body}";
-        }
+        } catch (e) {/* ignore */}
         _error = errorMessage;
-        print("Error fetching testimonials: $_error");
+        _testimonials = [];
+        print("[Provider] fetchTestimonials - HTTP Error: $_error. Full Response: ${response.body}");
       }
-    } catch (e) {
-      _error = 'An unexpected error occurred while fetching testimonials: ${e.toString()}';
-      print("Exception during fetchTestimonials: $_error");
+    } on TimeoutException catch (e, s) {
+      _error = _timeoutErrorMessage;
+      _testimonials = [];
+      print("[Provider] fetchTestimonials - TimeoutException: $e\n$s");
+    } on SocketException catch (e, s) {
+      _error = _networkErrorMessage;
+      _testimonials = [];
+      print("[Provider] fetchTestimonials - SocketException: $e\n$s");
+    } on FormatException catch (e, s) {
+        _error = "$_failedToLoadMessage: Could not parse server response.";
+        _testimonials = [];
+        print("[Provider] fetchTestimonials - FormatException (JSON parsing): $e\n$s");
+    } catch (e, s) {
+      _error = _unexpectedErrorMessage;
+      _testimonials = [];
+      print("[Provider] fetchTestimonials - Generic Exception: $e\n$s");
     } finally {
       _isLoading = false;
-      notifyListeners();
+      print("[Provider] fetchTestimonials - FINISHED. isLoading: $_isLoading, error: $_error, testimonials count: ${_testimonials.length}");
+      notifyListeners(); // Notify after all operations
     }
   }
 
-  // Method to allow creating a testimonial (if your app supports this)
-  // This is a placeholder and needs to match your backend's requirements for POST
   Future<bool> createTestimonial({
     required String title,
     required String description,
-    required int userId, // Assuming the logged-in user's ID
-    List<String>? imagePaths, // For local image file paths if uploading
+    required int userId,
+    List<String>? imagePaths,
   }) async {
+    print("[Provider] createTestimonial CALLED");
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     final url = Uri.parse('$_apiBaseUrl/testimonials');
-    // Note: Image uploading typically requires a multipart request.
-    // This example shows a simple JSON POST. Adapt if you need image uploads.
+    print("[Provider] createTestimonial - Posting to: $url");
     try {
       final response = await http.post(
         url,
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
-          // Add Authorization header if required
-          // "Authorization": "Bearer YOUR_TOKEN",
-          "X-User-ID": userId.toString(), // If your backend uses this for user ID
+          "X-User-ID": userId.toString(),
         },
         body: json.encode({
           'title': title,
           'description': description,
           'userId': userId,
-          'status': 'pending', // New testimonials likely start as pending
-          'images': imagePaths ?? [], // Send empty list if no images, or handle null
+          'status': 'pending',
+          'images': imagePaths ?? [],
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
 
-      _isLoading = false;
+      print("[Provider] createTestimonial - API Response Status: ${response.statusCode}");
+      print("[Provider] createTestimonial - API Response Body: ${response.body}");
+
       if (response.statusCode == 201) {
-        // Optionally, fetch the new testimonial or add it locally if response contains it
-        fetchTestimonials(forceRefresh: true, statusFilter: null); // Refresh list (or just approved)
-        notifyListeners();
+        // After successful creation, refresh ALL testimonials from API.
+        // The fetchTestimonials method will handle loading states and notify.
+        await fetchTestimonials(forceRefresh: true);
         return true;
       } else {
-        _error = "Failed to create testimonial: ${response.statusCode} ${response.body}";
+        try {
+            final errorData = json.decode(response.body);
+            _error = (errorData is Map && errorData['message'] != null) ? errorData['message'].toString() : "$_failedToLoadMessage (Create): ${response.statusCode}";
+        } catch(e) {
+            _error = "$_failedToLoadMessage (Create): ${response.statusCode}, Body: ${response.body.substring(0, response.body.length > 100 ? 100 : response.body.length)}";
+        }
+        _isLoading = false; // Manually set isLoading if fetchTestimonials is not called or fails
         notifyListeners();
         return false;
       }
-    } catch (e) {
+    } on TimeoutException catch (e) {
+      _error = _timeoutErrorMessage;
       _isLoading = false;
-      _error = "Error creating testimonial: ${e.toString()}";
       notifyListeners();
+      print("[Provider] createTestimonial - Timeout: $e");
+      return false;
+    } on SocketException catch (e) {
+      _error = _networkErrorMessage;
+      _isLoading = false;
+      notifyListeners();
+      print("[Provider] createTestimonial - SocketException: $e");
+      return false;
+    }
+    catch (e) {
+      _isLoading = false;
+      _error = "$_unexpectedErrorMessage (Create): ${e.toString()}";
+      notifyListeners();
+      print("[Provider] createTestimonial - Generic Error: $e");
       return false;
     }
   }
-
 
   void clearError() {
     if (_error != null) {
       _error = null;
       notifyListeners();
+      print("[Provider] clearError called.");
     }
   }
 
   void clearTestimonials() {
     _testimonials = [];
     _error = null;
+    _isLoading = false;
     notifyListeners();
+    print("[Provider] clearTestimonials called.");
   }
 }

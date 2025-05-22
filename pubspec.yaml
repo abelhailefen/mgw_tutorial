@@ -1,11 +1,11 @@
 name: mgw_tutorial
 description: "A new Flutter project."
-publish_to: 'none' 
+publish_to: 'none' # Remove this line if you intend to publish to pub.dev
 
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0' # Updated to common practice, use your actual Flutter SDK constraint if different
+  sdk: '>=3.0.0 <4.0.0' # Ensure this matches your Flutter SDK constraints
 
 dependencies:
   flutter:
@@ -14,58 +14,57 @@ dependencies:
     sdk: flutter
 
   # UI & Core
-  cupertino_icons: ^1.0.8 # For iOS style icons
-  provider: ^6.1.2 # Check pub.dev for latest version
-  intl: ^0.19.0    # For date/number formatting and l10n generation, check latest
-  
+  cupertino_icons: ^1.0.8 # Check for latest version
+  provider: ^6.1.2 # Check for latest version
+  intl: ^0.19.0    # Check for latest version
+
   # Networking & Storage
-  http: ^1.2.1 # Check pub.dev for latest version
-  shared_preferences: ^2.2.3 # Check pub.dev for latest version
-  
+  http: ^1.2.1 # Check for latest version
+  shared_preferences: ^2.2.3 # Check for latest version
+
   # Device & System Interaction
-  image_picker: ^1.1.1 # Check pub.dev for latest version
-  device_info_plus: ^10.1.0 # Check pub.dev for latest version
-  url_launcher: ^6.2.6 # For opening URLs/Telegram, check latest
-  share_plus: ^7.0.0
-  http_parser: ^4.0.2 # Often a transitive dependency, but good to have if directly used (like for MediaType)
+  image_picker: ^1.1.1 # Check for latest version
+  device_info_plus: ^10.1.0 # Check for latest version
+  url_launcher: ^6.2.6 # Check for latest version
+  share_plus: ^7.0.0 # Check for latest version
+  http_parser: ^4.0.2 # Check for latest version
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0 # Check pub.dev for latest version (e.g., ^4.0.0)
+  flutter_lints: ^4.0.0 # Check for latest version (e.g., ^3.0.0 or ^4.0.0)
 
+# ==================================================
+# FLUTTER SECTION - Pay close attention to indentation (2 spaces)
+# ==================================================
 flutter:
   uses-material-design: true
   generate: true # This enables flutter gen-l10n
 
-  # To add assets to your application, add an assets section, like this:
-  
-  # fonts:
-  #   - family: Poppins # Example if you were using a custom Poppins font
-  #     fonts:
-  #       - asset: assets/fonts/Poppins-Regular.ttf
-  #       - asset: assets/fonts/Poppins-Bold.ttf
-  #         weight: 700
-  #       - asset: assets/fonts/Poppins-Italic.ttf
-  #         style: italic
-        # Make sure your Poppins font (if custom) is listed here
-        # If you are relying on the system's Poppins or a Google Fonts package, this section isn't needed for it.
+  # ------------------- ASSETS DECLARATION -------------------
+  # This tells Flutter to include the contents of the assets/fonts/ directory.
+  # If you have other assets (like images), add their directories here too.
+  # Example:
+  # assets:
+  #   - assets/images/
+  #   - assets/fonts/
+  assets:
+    - assets/fonts/ # This makes all files in assets/fonts/ available
 
+  # ------------------- FONTS DECLARATION --------------------
+  # This declares the NotoSansEthiopic font family and points to the
+  # NotoSansEthiopic-Regular.ttf file as its primary (and only, in this scenario) asset.
+  fonts:
+    - family: NotoSansEthiopic
+      fonts:
+        - asset: assets/fonts/NotoSansEthiopic-Regular.ttf
+          # You can optionally specify weight 400, but it's the default if it's the only one.
+          # weight: 400
+# ==================================================
+# END OF FLUTTER SECTION
+# ==================================================
 
-# This section is for flutter_gen, ensure correct indentation
-# If you are following the deprecation guide, it might look different
-# or you might remove synthetic_package if you handle l10n.yaml correctly.
-# For now, keeping what you had but fixing indentation.
+# flutter_gen configuration (if you use it for more than l10n).
+# For standard l10n, `generate: true` above and your l10n.yaml are primary.
 flutter_gen:
-  # synthetic-package: false # This line was indented incorrectly
-  # If you are using flutter_localizations and `flutter gen-l10n`,
-  # this flutter_gen section might not be strictly necessary for l10n
-  # if `generate: true` is set under `flutter:` and you have an l10n.yaml file.
-  # The deprecation warning points to changes in how this is handled.
-  # For simplicity, if you are using `flutter gen-l10n`, the `generate: true` above is key.
-  # Let's ensure this `flutter_gen` section is correctly formatted or potentially simplified/removed
-  # based on the deprecation guide (https://flutter.dev/to/flutter-gen-deprecation).
-  # For now, let's assume your primary l10n is via `flutter gen-l10n` triggered by `generate: true`.
-  # If you have a specific use for flutter_gen beyond standard localization, clarify.
-  # Keeping your synthetic-package setting but ensuring it's under flutter_gen:
   synthetic-package: false

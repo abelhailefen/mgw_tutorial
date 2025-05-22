@@ -17,7 +17,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final List<String> _supportedLanguageCodes = ['en', 'am', 'or'];
+  // UPDATED: Add 'ti' for Tigrigna
+  final List<String> _supportedLanguageCodes = ['en', 'am', 'or', 'ti'];
   bool _receivePushNotifications = true;
 
   String _getLanguageDisplayName(BuildContext context, String langCode) {
@@ -26,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case 'en': return l10n.english;
       case 'am': return l10n.amharic;
       case 'or': return l10n.afaanOromo;
+      case 'ti': return l10n.tigrigna; // UPDATED: Add case for Tigrigna
       default: return langCode.toUpperCase();
     }
   }
@@ -141,7 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: Icon(Icons.policy_outlined, color: theme.listTileTheme.iconColor),
             title: Text(l10n.privacyPolicyLink, style: TextStyle(color: theme.listTileTheme.textColor)),
             onTap: () {
-              // _launchUrl("https://www.yourwebsite.com/privacy-policy"); 
+              // _launchUrl("https://www.yourwebsite.com/privacy-policy");
               ScaffoldMessenger.of(context).showSnackBar( SnackBar(
                 content: Text(l10n.actionNotImplemented(l10n.viewPrivacyPolicyAction)),
                 backgroundColor: theme.colorScheme.secondaryContainer,

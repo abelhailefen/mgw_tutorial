@@ -29,7 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  final List<String> _supportedLanguageCodes = ['en', 'am', 'or'];
+  // UPDATED: Add 'ti' for Tigrigna
+  final List<String> _supportedLanguageCodes = ['en', 'am', 'or', 'ti'];
   bool _isPasswordVisible = false;
 
   final DeviceInfoService _deviceInfoService = DeviceInfoService();
@@ -229,6 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
       case 'en': return l10n.english;
       case 'am': return l10n.amharic;
       case 'or': return l10n.afaanOromo;
+      case 'ti': return l10n.tigrigna; // UPDATED: Add case for Tigrigna
       default: return langCode.toUpperCase();
     }
   }
