@@ -116,7 +116,6 @@
   "registrationSuccessMessage": "ምዝገባው ተሳክቷል! እባክዎ የአስተዳዳሪ ማረጋገጫ ይጠብቁ።",
   "registrationFailedDefaultMessage": "ምዝገባ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
   "selectDepartmentHint": "ዲፓርትመንት / የትምህርት መስክ ይምረጡ",
-  "yearLabel": "ዓመት / ክፍል",
   "yearValidationErrorEmpty": "እባክዎ ዓመት ያስገቡ።",
   "yearValidationErrorInvalid": "እባክዎ ትክክለኛ ዓመት ያስገቡ።",
     "departmentLabel": "ዲፓርትመንት",

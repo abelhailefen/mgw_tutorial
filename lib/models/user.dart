@@ -16,7 +16,7 @@ class User {
   final bool? enrolledAll;
   final String? device;
   final String? serviceType;
-  final List<int>? enrolledCourseIds; // <<< NEW FIELD
+  final List<int>? enrolledCourseIds; 
 
   User({
     this.id,
