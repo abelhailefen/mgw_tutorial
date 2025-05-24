@@ -6,8 +6,7 @@ import 'package:mgw_tutorial/models/reply.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
 import 'package:mgw_tutorial/widgets/discussion/reply_item_view.dart'; 
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 
 class CommentItemView extends StatefulWidget {
   final Comment comment;

@@ -1,7 +1,6 @@
 // lib/widgets/discussion/edit_input_field.dart
 import 'package:flutter/material.dart';
-import 'package:mgw_tutorial/provider/discussion_provider.dart';
-
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 class EditInputField extends StatelessWidget {
   final TextEditingController controller;
   final GlobalKey<FormState> formKey;

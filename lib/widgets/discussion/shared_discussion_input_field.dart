@@ -1,7 +1,6 @@
 // lib/widgets/discussion/shared_discussion_input_field.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 class SharedDiscussionInputField extends StatelessWidget {
   final TextEditingController controller;
   final GlobalKey<FormState> formKey;

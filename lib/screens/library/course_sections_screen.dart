@@ -5,8 +5,7 @@ import 'package:mgw_tutorial/models/api_course.dart';
 import 'package:mgw_tutorial/models/section.dart';
 import 'package:mgw_tutorial/provider/section_provider.dart';
 import 'package:mgw_tutorial/screens/library/lesson_list_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 
 class CourseSectionsScreen extends StatefulWidget {
   static const routeName = '/course-sections';

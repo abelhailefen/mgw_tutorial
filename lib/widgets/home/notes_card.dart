@@ -1,7 +1,6 @@
 //lib/widgets/home/notes_card.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 class NotesCard extends StatelessWidget {
   final String title;
   final String description;

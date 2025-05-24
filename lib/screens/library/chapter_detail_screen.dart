@@ -1,8 +1,7 @@
 // lib/screens/library/chapter_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // For localization
-
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 class ChapterDetailScreen extends StatelessWidget {
   static const routeName = '/chapter-detail';
 
