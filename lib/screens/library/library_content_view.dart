@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:mgw_tutorial/widgets/library/course_card.dart';
 import 'package:mgw_tutorial/screens/library/course_sections_screen.dart';
 import 'package:mgw_tutorial/models/api_course.dart';
-import 'package:mgw_tutorial/l10n/app_localizations.dart';import 'package:provider/provider.dart'; // Import Provider
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:provider/provider.dart'; // Import Provider
 import 'package:mgw_tutorial/provider/api_course_provider.dart'; // Import ApiCourseProvider
 
 

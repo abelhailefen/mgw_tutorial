@@ -51,6 +51,18 @@
       }
     }
   },
+  "couldNotOpenFileError": "ፋይል መክፈት አልተቻለም፡- ",
+  "couldNotFindDownloadedFileError": "የወረደውን ፋይል ማግኘት አልተቻለም።",
+  "videoIsDownloadingMessage": "ቪዲዮ በአሁኑ ጊዜ በመውረድ ላይ ነው። እባኮውን ይጠብቁ።",
+  "videoDownloadFailedMessage": "ቪዲዮ ማውረድ አልተሳካም። እንደገና ለመሞከር የማውረድ ቁልፍን ይንኩ።",
+  "videoDownloadCancelledMessage": "ቪዲዮ ማውረድ ተሰርዟል።",
+  "notImplementedMessage": "አልተተገበረም።",
+  "noTextContent": "ምንም የጽሑፍ ይዘት የለም።",
+  "closeButtonText": "ዝጋ",
+  "downloadVideoTooltip": "ቪዲዮ አውርድ",
+  "downloadedVideoTooltip": "ወርዷል። ለማጫወት ነካ ያድርጉ።",
+  "downloadFailedTooltip": "ማውረድ አልተሳካም። እንደገና ለመሞከር ነካ ያድርጉ",
+  "deleteDownloadedFileTooltip": "ዳውንሎድድ ፋይድ",
   "attachScreenshotButton": "ቅጽበታዊ ገጽ እይታን ያያይዙ",
   "screenshotAttachedButton": "ቅጽበታዊ ገጽ እይታ ተያይዟል!",
   "fileNamePrefix": "ፋይል",

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart'; // <<< FOR Provider.of
 import 'package:url_launcher/url_launcher.dart'; // <<< FOR launchUrl, LaunchMode
 import 'package:share_plus/share_plus.dart'; // <<< FOR Share
-import 'package:mgw_tutorial/l10n/app_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // <<< FOR AppLocalizations
+
 // Import Providers
 import 'package:mgw_tutorial/provider/locale_provider.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';

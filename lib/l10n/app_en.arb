@@ -51,6 +51,18 @@
       }
     }
   },
+  "couldNotOpenFileError": "Could not open file: ",
+  "couldNotFindDownloadedFileError": "Could not find the downloaded file.",
+  "videoIsDownloadingMessage": "Video is currently downloading. Please wait.",
+  "videoDownloadFailedMessage": "Video download failed. Tap download button to retry.",
+  "videoDownloadCancelledMessage": "Video download was cancelled.",
+  "notImplementedMessage": "Not implemented",
+  "noTextContent": "No text content.",
+  "closeButtonText": "Close",
+  "downloadVideoTooltip": "Download Video",
+  "downloadedVideoTooltip": "Downloaded. Tap to play.",
+  "downloadFailedTooltip": "Download Failed. Tap to retry.",
+  "deleteDownloadedFileTooltip": "Delete Downloaded File",
   "attachScreenshotButton": "Attach Screenshot",
   "screenshotAttachedButton": "Screenshot Attached!",
   "fileNamePrefix": "File",

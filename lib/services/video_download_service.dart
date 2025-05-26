@@ -1,52 +1,98 @@
 // lib/services/video_download_service.dart
+import 'dart:io'; // <--- ADD THIS IMPORT
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-// Removed permission_handler import as it's not used in the download logic itself
-// but should be handled by the UI before calling download.
-// import 'package:permission_handler/permission_handler.dart';
-import 'database_helper.dart'; // Import your DatabaseHelper
+import 'package:youtube_explode_dart/youtube_explode_dart.dart'; // Direct import without alias
+import 'package:permission_handler/permission_handler.dart';
+
+// Import DownloadStatus enum - Ensure this file exists at lib/utils/download_status.dart
+import 'package:mgw_tutorial/utils/download_status.dart';
 
 class VideoDownloadService {
   final YoutubeExplode _ytExplode = YoutubeExplode();
   final Dio _dio = Dio();
-  final DatabaseHelper _dbHelper = DatabaseHelper(); // Instance of DatabaseHelper
 
+  // Using CancelToken per download allows cancelling specific downloads
+  final Map<String, CancelToken> _cancelTokens = {};
+
+  // To store download progress (video_id: progress_value)
   final Map<String, ValueNotifier<double>> _downloadProgressNotifiers = {};
+  // To store download status (video_id: status_enum or bool)
   final Map<String, ValueNotifier<DownloadStatus>> _downloadStatusNotifiers = {};
-  // _isVideoOnlyDownload map is no longer needed here, DB will be source of truth.
 
+  // Helper to get progress notifier, initializes if needed
   ValueNotifier<double> getDownloadProgress(String videoId) {
-    _downloadProgressNotifiers.putIfAbsent(videoId, () => ValueNotifier(0.0));
-    return _downloadProgressNotifiers[videoId]!;
+    return _downloadProgressNotifiers.putIfAbsent(videoId, () => ValueNotifier(0.0));
   }
 
+  // Helper to get status notifier, initializes if needed, and triggers initial disk check
   ValueNotifier<DownloadStatus> getDownloadStatus(String videoId) {
-    _downloadStatusNotifiers.putIfAbsent(videoId, () => ValueNotifier(DownloadStatus.notDownloaded));
-    // Initialize status from DB if not already set by an active download
-    if (_downloadStatusNotifiers[videoId]?.value == DownloadStatus.notDownloaded) {
-      _dbHelper.isVideoDownloadedInDb(videoId).then((isDownloaded) {
-        if (isDownloaded && _downloadStatusNotifiers[videoId]?.value == DownloadStatus.notDownloaded) {
-           // Check again to avoid race condition if download started in between
-          _downloadStatusNotifiers[videoId]?.value = DownloadStatus.downloaded;
-          _downloadProgressNotifiers[videoId]?.value = 1.0; // Assume 100% if in DB
-        }
-      });
+    if (!_downloadStatusNotifiers.containsKey(videoId)) {
+      final notifier = ValueNotifier(DownloadStatus.notDownloaded);
+      _downloadStatusNotifiers[videoId] = notifier;
+      // The initial disk check needs the video title, which the provider has.
+      // It's better that the provider calls checkAndSetInitialDownloadStatus after fetching lessons.
+      // This getter just ensures the notifier object exists for the UI.
     }
     return _downloadStatusNotifiers[videoId]!;
   }
 
-  Future<bool> isVideoDownloadedAsVideoOnly(String videoId) async {
-    final downloadedVideo = await _dbHelper.getDownloadedVideo(videoId);
-    return downloadedVideo?.isVideoOnly ?? false;
+   // This method is called by the Provider after fetching lessons
+   // to set the initial status based on file existence.
+  Future<void> checkAndSetInitialDownloadStatus(String videoId, String videoTitle) async {
+       final isDownloaded = await isVideoDownloaded(videoId, videoTitle); // Checks file existence
+
+       // Get notifiers (ensuring they exist)
+       final statusNotifier = getDownloadStatus(videoId);
+       final progressNotifier = getDownloadProgress(videoId);
+
+       // Only update if the current status is not already downloading or cancelled
+       if (statusNotifier.value != DownloadStatus.downloading && statusNotifier.value != DownloadStatus.cancelled) {
+            if (isDownloaded) {
+              if (statusNotifier.value != DownloadStatus.downloaded) {
+                  print("Service: Initial status set to downloaded for $videoId (file found)");
+                  statusNotifier.value = DownloadStatus.downloaded;
+                  progressNotifier.value = 1.0; // Ensure progress is 100%
+              }
+            } else {
+              // If file doesn't exist, status should NOT be downloaded
+                if (statusNotifier.value == DownloadStatus.downloaded) {
+                   print("Service: Initial status reset to notDownloaded for $videoId (file not found)");
+                   statusNotifier.value = DownloadStatus.notDownloaded;
+                   progressNotifier.value = 0.0; // Reset progress
+                } else if (statusNotifier.value != DownloadStatus.notDownloaded && statusNotifier.value != DownloadStatus.failed){
+                     // Reset to notDownloaded if it was in some other temporary state unexpectedly
+                     statusNotifier.value = DownloadStatus.notDownloaded;
+                     progressNotifier.value = 0.0;
+                }
+            }
+       }
   }
+
+
+  Future<bool> _requestPermissions() async {
+    // For app-specific directory (getApplicationDocumentsDirectory), permissions
+    // are often not strictly needed on modern OS versions (Android 10+ / Scoped Storage)
+    // unless targeting older Android versions or storing in shared locations.
+    // Request storage permission on Android
+    if (Platform.isAndroid) {
+        // Consider checking and requesting MANAGE_EXTERNAL_STORAGE if targeting Android 11+
+        // and saving outside app-specific directories.
+        // For getApplicationDocumentsDirectory, this might not be strictly necessary.
+        final status = await Permission.storage.request();
+        return status.isGranted;
+    }
+    // On iOS, getApplicationDocumentsDirectory does not require extra permission requests
+     return true; // Assume permissions are handled by OS on other platforms
+  }
+
 
   Future<String?> getAppSpecificVideoDirectory() async {
     try {
+      // Using getApplicationDocumentsDirectory for files that shouldn't be user-visible easily
       final directory = await getApplicationDocumentsDirectory();
-      final videoDir = Directory('${directory.path}/videos');
+      final videoDir = Directory('${directory.path}/videos'); // Use Directory from dart:io
       if (!await videoDir.exists()) {
         await videoDir.create(recursive: true);
       }
@@ -57,235 +103,321 @@ class VideoDownloadService {
     }
   }
 
-  Future<String?> _generateFilePath(String videoId, String videoTitle, {bool isVideoOnly = false}) async {
-    final dirPath = await getAppSpecificVideoDirectory();
-    if (dirPath == null) return null;
-    String safeTitle = videoTitle.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');
-    if (safeTitle.isEmpty) safeTitle = videoId;
-    String extension = ".mp4"; // Keep .mp4 for both
-    String suffix = isVideoOnly ? "_video_only" : ""; // Filename suffix distinction
-    return '$dirPath/${safeTitle}_$videoId$suffix$extension';
-  }
+  // Helper to get the expected file path including the file extension
+  // This is used to *predict* the path where a file *might* be or *will* be saved.
+   Future<String?> _buildExpectedFilePath(String videoId, String videoTitle, String extension) async {
+       final dirPath = await getAppSpecificVideoDirectory();
+       if (dirPath == null) return null;
 
-  Future<File?> downloadYoutubeVideo(String videoUrl, String videoTitle, {
-    Function(String videoId, double progress)? onProgress,
-    // isVideoOnly in onStatusChange indicates the type of stream being ATTEMPTED or SUCCEEDED
-    Function(String videoId, DownloadStatus status, String? filePath, bool isVideoOnlyAttempt)? onStatusChange,
-  }) async {
-    final String? videoId = VideoId.parseVideoId(videoUrl);
+       // Sanitize title to create a valid filename (remove invalid characters, replace spaces)
+       String safeTitle = videoTitle.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(RegExp(r'\s+'), '_');
+        // Trim or limit length if titles are very long
+        if (safeTitle.length > 50) safeTitle = safeTitle.substring(0, 50);
 
-    if (videoId == null) {
-      print("Invalid YouTube URL, cannot extract Video ID: $videoUrl");
-      onStatusChange?.call(videoUrl, DownloadStatus.failed, null, false);
-      return null;
+       if (safeTitle.isEmpty) safeTitle = "video"; // Fallback if title becomes empty
+
+       // Use videoId to guarantee uniqueness and include the extension
+       return '$dirPath/${safeTitle}_$videoId.$extension';
+   }
+
+   // Method exposed to Provider to get the path of an *already downloaded* file.
+   // This needs to check common extensions if the exact saved extension isn't stored.
+   Future<String?> getDownloadedFilePath(String videoId, String videoTitle) async {
+        List<String> potentialExtensions = ['mp4', 'webm']; // Check common muxed extensions
+         final dirPath = await getAppSpecificVideoDirectory();
+         if (dirPath == null) return null;
+
+        String safeTitle = videoTitle.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(RegExp(r'\s+'), '_');
+        if (safeTitle.length > 50) safeTitle = safeTitle.substring(0, 50);
+        if (safeTitle.isEmpty) safeTitle = "video";
+
+       for (var ext in potentialExtensions) {
+           final filePath = '$dirPath/${safeTitle}_$videoId.$ext';
+           if (await File(filePath).exists()) { // Use File from dart:io
+               print("Found downloaded file for $videoId at $filePath");
+               return filePath; // Return the path of the first existing file found
+           }
+       }
+       print("No downloaded file found for $videoId with checked extensions in $dirPath");
+       return null; // No matching file found with any checked extension
+   }
+
+
+  Future<bool> downloadYoutubeVideo(String videoUrl, String videoTitle) async {
+    // Corrected: Call parseVideoId on VideoId class
+    final videoIdObj = VideoId.parseVideoId(videoUrl);
+    if (videoIdObj == null) {
+      print("Invalid YouTube URL: $videoUrl");
+      // We don't have a videoId string to track state with.
+      // Could use the lesson.id as a fallback key if needed, but requires refactoring.
+      // For now, just indicate failure.
+      return false;
     }
+     final videoId = videoIdObj; // videoIdObj is already a String
 
-    final progressNotifier = getDownloadProgress(videoId); // This will also trigger DB check for initial status
+    // Get notifiers (creates them if they don't exist)
+    final progressNotifier = getDownloadProgress(videoId);
     final statusNotifier = getDownloadStatus(videoId);
 
-    // Check if already downloaded via DB
-    final existingDownload = await _dbHelper.getDownloadedVideo(videoId);
-    if (existingDownload != null) {
-      if (await File(existingDownload.filePath).exists()) {
-        print("Video already downloaded (from DB): ${existingDownload.filePath} (videoOnly: ${existingDownload.isVideoOnly})");
-        statusNotifier.value = DownloadStatus.downloaded;
-        progressNotifier.value = 1.0;
-        onStatusChange?.call(videoId, DownloadStatus.downloaded, existingDownload.filePath, existingDownload.isVideoOnly);
-        return File(existingDownload.filePath);
-      } else {
-        // File path in DB but file doesn't exist on disk - corrupted state
-        print("DB record exists for $videoId but file not found at ${existingDownload.filePath}. Deleting DB record.");
-        await _dbHelper.deleteDownloadedVideo(videoId);
-        // Proceed to download
-      }
-    }
-    
-    // If an active download is in progress for this videoId, don't start another one.
-    // This check is a bit simplistic. A more robust solution might involve a download queue or managing a set of active download IDs.
-    if (statusNotifier.value == DownloadStatus.downloading) {
-        print("Download already in progress for $videoId.");
-        // onStatusChange?.call(videoId, DownloadStatus.downloading, null, false); // Or current attempt type
-        return null; // Or return a future that completes when the current download finishes.
-    }
+     // Check if already downloading or downloaded to prevent duplicate starts
+     if (statusNotifier.value == DownloadStatus.downloading) {
+         print("Download already in progress for $videoId");
+         return false; // Indicate download wasn't started (already running)
+     }
+     if (statusNotifier.value == DownloadStatus.downloaded) {
+         print("Video already downloaded: $videoId");
+          progressNotifier.value = 1.0; // Ensure progress is 100%
+         return true; // Indicate already downloaded
+     }
 
 
-    String? finalFilePath; // The path where the file will be saved
-    bool decidedIsVideoOnly = false;
+    // Request permissions (optional but good practice depending on storage location)
+    if (!await _requestPermissions()) {
+       print("Storage permission denied for $videoId");
+       statusNotifier.value = DownloadStatus.failed;
+       return false;
+     }
+
+
+    final cancelToken = CancelToken();
+    _cancelTokens[videoId] = cancelToken; // Store token
+
+    // Define filePath variable outside try block so it's accessible in catch
+    String? expectedFilePathDuringDownload; // Use a variable for the path being targeted
 
     try {
       statusNotifier.value = DownloadStatus.downloading;
-      // Initial onStatusChange, type of attempt is not yet known for sure for fallback
-      onStatusChange?.call(videoId, DownloadStatus.downloading, null, false);
       progressNotifier.value = 0.0;
+      print("Starting download for $videoId");
 
-      print("Attempting to get manifest for video ID: $videoId (from URL: $videoUrl)");
-      var manifest = await _ytExplode.videos.streamsClient.getManifest(videoId);
-      
-      StreamInfo? streamInfo;
-      String downloadTypeMessage = "muxed (video+audio)";
-
-      if (manifest.muxed.isNotEmpty) {
-        streamInfo = manifest.muxed.withHighestBitrate();
-        decidedIsVideoOnly = false;
-      } else if (manifest.videoOnly.isNotEmpty) {
-        print("No muxed streams found. Falling back to video-only stream for $videoId.");
-        streamInfo = manifest.videoOnly.withHighestBitrate();
-        decidedIsVideoOnly = true;
-        downloadTypeMessage = "video-only (no audio)";
-        // Update onStatusChange as we now know the attempt type
-        onStatusChange?.call(videoId, DownloadStatus.downloading, null, true);
-      } else {
-        print("No muxed or video-only streams found for $videoId.");
-        // streamInfo remains null
-      }
+      var manifest = await _ytExplode.videos.streamsClient.getManifest(videoIdObj); // Use VideoId object here
+      // Get the muxed stream with the highest video quality.
+      // You might want to offer quality selection to the user.
+      var streamInfo = manifest.muxed.withHighestBitrate(); // Or use .first for smallest bitrate if smaller size preferred
 
       if (streamInfo == null) {
-        print("No suitable stream (muxed or video-only) found for $videoId. Cannot download.");
+        print("No suitable muxed stream found for $videoId");
         statusNotifier.value = DownloadStatus.failed;
-        onStatusChange?.call(videoId, DownloadStatus.failed, "No downloadable stream found.", decidedIsVideoOnly);
-        return null;
+         _cancelTokens.remove(videoId); // Clean up token on failure
+        return false;
       }
 
-      finalFilePath = await _generateFilePath(videoId, videoTitle, isVideoOnly: decidedIsVideoOnly);
-      if (finalFilePath == null) {
-          statusNotifier.value = DownloadStatus.failed;
-          onStatusChange?.call(videoId, DownloadStatus.failed, "Failed to determine file path.", decidedIsVideoOnly);
-          return null;
-      }
+      // Get the target file path using the actual container extension from the stream
+       expectedFilePathDuringDownload = await _buildExpectedFilePath(videoId, videoTitle, streamInfo.container.name);
+        if (expectedFilePathDuringDownload == null) {
+           print("Could not determine file path with extension for $videoId");
+           statusNotifier.value = DownloadStatus.failed;
+            _cancelTokens.remove(videoId);
+           return false;
+        }
 
-      print('Downloading ($downloadTypeMessage): ${streamInfo.url} to $finalFilePath');
+      print('Downloading: ${streamInfo.url} to $expectedFilePathDuringDownload');
       print('File size: ${streamInfo.size}');
 
       await _dio.download(
         streamInfo.url.toString(),
-        finalFilePath, // Save to the determined path
+        expectedFilePathDuringDownload,
+        cancelToken: cancelToken, // Pass the cancel token
         onReceiveProgress: (received, total) {
           if (total != -1) {
             double currentProgress = received / total;
-            progressNotifier.value = currentProgress;
-            onProgress?.call(videoId, currentProgress);
+            // Safely update notifier value
+             if (_downloadProgressNotifiers.containsKey(videoId)) {
+                 _downloadProgressNotifiers[videoId]!.value = currentProgress;
+             }
           }
         },
-        deleteOnError: true, // Dio will delete the file if an error occurs during download
+        deleteOnError: true, // Delete partially downloaded file on error
       );
 
-      print("Download complete for $videoId ($downloadTypeMessage): $finalFilePath");
-      
-      // Save to Database
-      final downloadedVideoEntry = DownloadedVideo(
-          videoId: videoId,
-          title: videoTitle,
-          filePath: finalFilePath,
-          isVideoOnly: decidedIsVideoOnly,
-          downloadedAt: DateTime.now(),
-      );
-      await _dbHelper.insertOrUpdateDownloadedVideo(downloadedVideoEntry);
+      print("Download complete for $videoId: $expectedFilePathDuringDownload");
+      // Safely update status notifier value
+      if (_downloadStatusNotifiers.containsKey(videoId)) {
+         _downloadStatusNotifiers[videoId]!.value = DownloadStatus.downloaded;
+      }
+       // Ensure progress is 100% on success
+       if (_downloadProgressNotifiers.containsKey(videoId)) {
+          _downloadProgressNotifiers[videoId]!.value = 1.0;
+       }
 
-      statusNotifier.value = DownloadStatus.downloaded;
-      onStatusChange?.call(videoId, DownloadStatus.downloaded, finalFilePath, decidedIsVideoOnly);
-      return File(finalFilePath);
+      _cancelTokens.remove(videoId); // Remove token on success
+      return true;
 
-    } catch (e, s) {
-      print("====== VIDEO DOWNLOAD SERVICE ERROR ======");
-      print("Error occurred while trying to download video ID: $videoId (from URL: $videoUrl)");
-      print("File path target (might be null if error before filePath assignment): $finalFilePath");
-      print("Exception type: ${e.runtimeType}");
-      print("Exception details: $e");
-      print("Stack trace: $s");
-      print("========================================");
+    } on DioException catch (e) {
+       _cancelTokens.remove(videoId); // Always remove token after download attempt finishes
 
-      statusNotifier.value = DownloadStatus.failed;
-      onStatusChange?.call(videoId, DownloadStatus.failed, e.toString(), decidedIsVideoOnly); // Use decidedIsVideoOnly
+      if (CancelToken.isCancel(e)) {
+         print("Download cancelled for $videoId: ${e.message}");
+          if (_downloadStatusNotifiers.containsKey(videoId)) {
+              _downloadStatusNotifiers[videoId]!.value = DownloadStatus.cancelled;
+          }
+          if (_downloadProgressNotifiers.containsKey(videoId)) {
+             _downloadProgressNotifiers[videoId]!.value = 0.0; // Reset progress on cancellation
+          }
+         // Attempt to delete partial file on cancellation
+         if (expectedFilePathDuringDownload != null && File(expectedFilePathDuringDownload).existsSync()) {
+            try { await File(expectedFilePathDuringDownload).delete(); } catch (_) {
+                 print("Error deleting partial file $expectedFilePathDuringDownload after cancellation: $_");
+            }
+         }
+         return false; // Indicate cancellation
+      } else {
+         print("Dio Error downloading video $videoId: $e");
+         print(e.response?.statusCode);
+         print(e.response?.data);
 
-      // No need to manually delete file if dio's deleteOnError is true and error was from dio.
-      // However, if the error was before dio.download or after, we might need to clean up.
-      // Since deleteOnError is true, we assume dio handles its own partial files.
-      // If finalFilePath was determined and file exists (e.g. error after download but before DB write), then delete.
-      if (finalFilePath != null && await File(finalFilePath).exists()) {
-          try {
-              await File(finalFilePath).delete();
-              print("Cleaned up file $finalFilePath due to error after potential creation.");
-          } catch (deleteErr) {
-              print("Error cleaning up file $finalFilePath: $deleteErr");
+         if (_downloadStatusNotifiers.containsKey(videoId)) {
+            statusNotifier.value = DownloadStatus.failed; // Use the notifier variable
+         }
+         if (_downloadProgressNotifiers.containsKey(videoId)) {
+            progressNotifier.value = 0.0; // Use the notifier variable
+         }
+          // Attempt to delete partial file on error
+         if (expectedFilePathDuringDownload != null && File(expectedFilePathDuringDownload).existsSync()) {
+            try { await File(expectedFilePathDuringDownload).delete(); } catch (_) {
+                 print("Error deleting partial file $expectedFilePathDuringDownload after Dio error: $_");
+            }
+         }
+         return false; // Indicate failure
+      }
+
+    } catch (e,s) {
+      _cancelTokens.remove(videoId); // Always remove token
+
+      print("Generic Error downloading video $videoId: $e");
+      print(s); // Print stack trace
+
+       if (_downloadStatusNotifiers.containsKey(videoId)) {
+            statusNotifier.value = DownloadStatus.failed; // Use notifier variable
+       }
+        if (_downloadProgressNotifiers.containsKey(videoId)) {
+            progressNotifier.value = 0.0; // Use notifier variable
+       }
+        // Attempt to delete partial file on error
+       if (expectedFilePathDuringDownload != null && File(expectedFilePathDuringDownload).existsSync()) {
+          try { await File(expectedFilePathDuringDownload).delete(); } catch (_) {
+               print("Error deleting partial file $expectedFilePathDuringDownload after generic error: $_");
+          }
+       }
+      return false; // Indicate failure
+    }
+  }
+
+
+  // Method to delete a downloaded video file and reset its status
+  Future<bool> deleteDownloadedVideo(String videoId, String videoTitle) async {
+      // Cancel any ongoing download for this ID if it somehow wasn't already
+       if (_cancelTokens.containsKey(videoId) && !_cancelTokens[videoId]!.isCancelled) {
+           _cancelTokens[videoId]!.cancel("Deleted by user");
+           print("Cancelled download $videoId during deletion");
+       }
+       _cancelTokens.remove(videoId); // Remove token
+
+
+      // Need to find the file regardless of its exact extension (.mp4, .webm, etc.)
+      // A simple way is to try deleting common extensions associated with muxed streams.
+      // A more robust way requires storing the exact path when downloaded.
+      final dirPath = await getAppSpecificVideoDirectory();
+      if (dirPath == null) {
+         print("Could not get directory path to delete $videoId");
+         // Reset state even if delete fails due to missing directory
+         if (_downloadStatusNotifiers.containsKey(videoId)) {
+             _downloadStatusNotifiers[videoId]!.value = DownloadStatus.notDownloaded;
+         }
+          if (_downloadProgressNotifiers.containsKey(videoId)) {
+             _downloadProgressNotifiers[videoId]!.value = 0.0;
+         }
+         return false;
+      }
+
+      String safeTitle = videoTitle.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(RegExp(r'\s+'), '_');
+       if (safeTitle.length > 50) safeTitle = safeTitle.substring(0, 50);
+       if (safeTitle.isEmpty) safeTitle = "video";
+
+      bool deleted = false;
+      List<String> potentialExtensions = ['mp4', 'webm']; // Add other potential muxed extensions if needed
+
+      for (var ext in potentialExtensions) {
+          final filePath = '$dirPath/${safeTitle}_$videoId.$ext';
+          final file = File(filePath); // Use File from dart:io
+           if (await file.exists()) {
+               try {
+                 await file.delete();
+                 print("Deleted file: $filePath");
+                 deleted = true; // Mark as deleted if at least one file is removed
+               } catch (e) {
+                  print("Error deleting $filePath: $e");
+                  // Keep deleted = false if primary deletion fails
+               }
+           }
+      }
+
+
+      // Reset status and progress notifiers regardless of whether file was found/deleted
+      // This ensures the UI state is reset.
+      if (_downloadStatusNotifiers.containsKey(videoId)) {
+          _downloadStatusNotifiers[videoId]!.value = DownloadStatus.notDownloaded;
+      }
+       if (_downloadProgressNotifiers.containsKey(videoId)) {
+          _downloadProgressNotifiers[videoId]!.value = 0.0;
+      }
+
+
+      return deleted; // Return true if at least one file was successfully deleted
+  }
+
+
+  Future<bool> isVideoDownloaded(String videoId, String videoTitle) async {
+     final dirPath = await getAppSpecificVideoDirectory();
+     if (dirPath == null) return false;
+
+     String safeTitle = videoTitle.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(RegExp(r'\s+'), '_');
+     if (safeTitle.length > 50) safeTitle = safeTitle.substring(0, 50);
+     if (safeTitle.isEmpty) safeTitle = "video";
+
+      List<String> potentialExtensions = ['mp4', 'webm']; // Check common muxed extensions
+
+      for (var ext in potentialExtensions) {
+          final filePath = '$dirPath/${safeTitle}_$videoId.$ext';
+          if (await File(filePath).exists()) { // Use File from dart:io
+              print("File found for $videoId with extension .$ext at $filePath");
+              return true; // Found a matching file
           }
       }
-      return null;
-    } finally {
-      // Final status updates based on the outcome
-      if (statusNotifier.value == DownloadStatus.downloaded) {
-        progressNotifier.value = 1.0;
-      } else if (statusNotifier.value == DownloadStatus.failed) {
-         if (progressNotifier.value != 0.0) {
-            progressNotifier.value = 0.0;
-         }
-      } else if (statusNotifier.value == DownloadStatus.downloading) {
-        // This case means an error occurred that wasn't caught and set to failed,
-        // or the download was cancelled externally.
-        print("WARNING: Download status is still 'downloading' in finally block for $videoId. Setting to failed.");
-        statusNotifier.value = DownloadStatus.failed;
-        if (progressNotifier.value != 0.0) progressNotifier.value = 0.0;
-      }
-    }
-  }
-
-  Future<bool> isVideoDownloaded(String videoId) async {
-    // Primary check from DB
-    return _dbHelper.isVideoDownloadedInDb(videoId);
-  }
-
-  Future<String?> getActualDownloadedFilePath(String videoId) async {
-    final downloadedVideo = await _dbHelper.getDownloadedVideo(videoId);
-    return downloadedVideo?.filePath;
-  }
-
-  Future<void> deleteDownloadedVideo(String videoId, String videoTitle /* For filename generation if needed, or just use videoId */) async {
-    final downloadedVideo = await _dbHelper.getDownloadedVideo(videoId);
-    if (downloadedVideo != null) {
-      final file = File(downloadedVideo.filePath);
-      try {
-        if (await file.exists()) {
-          await file.delete();
-          print("File deleted: ${downloadedVideo.filePath}");
-        } else {
-          print("File not found for deletion, but DB record existed: ${downloadedVideo.filePath}");
-        }
-      } catch (e) {
-        print("Error deleting file ${downloadedVideo.filePath}: $e");
-        // Decide if you still want to delete DB record or not
-      }
-      await _dbHelper.deleteDownloadedVideo(videoId);
-    } else {
-        print("No DB record found to delete for videoId: $videoId");
-        // Fallback: try to delete files based on generated names if no DB record (cleanup old files)
-        String? muxedPath = await _generateFilePath(videoId, videoTitle, isVideoOnly: false);
-        if (muxedPath != null && await File(muxedPath).exists()) await File(muxedPath).delete();
-        String? videoOnlyPath = await _generateFilePath(videoId, videoTitle, isVideoOnly: true);
-        if (videoOnlyPath != null && await File(videoOnlyPath).exists()) await File(videoOnlyPath).delete();
-    }
-    // Update notifiers
-    getDownloadStatus(videoId).value = DownloadStatus.notDownloaded;
-    getDownloadProgress(videoId).value = 0.0;
-  }
-
-  Future<List<DownloadedVideo>> getAllDownloadedVideosFromDb() async {
-    return _dbHelper.getAllDownloadedVideos();
+      print("No file found for $videoId with checked extensions in $dirPath");
+      return false; // No matching file found with any checked extension
   }
 
   void dispose() {
-    // _ytExplode.close(); // YoutubeExplode has no close method anymore since v2.0.0
-    _downloadProgressNotifiers.forEach((_, notifier) => notifier.dispose());
-    _downloadStatusNotifiers.forEach((_, notifier) => notifier.dispose());
+    print("VideoDownloadService dispose called");
+    _ytExplode.close();
+     // Cancel any remaining downloads when the service is disposed
+    _cancelTokens.forEach((videoId, token) {
+       if (!token.isCancelled) {
+          token.cancel("Service disposing");
+          print("Cancelled download $videoId during dispose");
+       }
+    });
+    _cancelTokens.clear();
+
+    // Dispose all ValueNotifiers
+    _downloadProgressNotifiers.forEach((videoId, notifier) {
+        print("Disposing progress notifier for $videoId"); notifier.dispose();
+    });
+    _downloadStatusNotifiers.forEach((videoId, notifier) {
+        print("Disposing status notifier for $videoId"); notifier.dispose();
+    });
     _downloadProgressNotifiers.clear();
     _downloadStatusNotifiers.clear();
-    // Database itself is a singleton and doesn't need explicit closing here,
-    // but if you had a non-singleton DB connection, you'd close it.
+
   }
 }
 
-// enum DownloadStatus remains the same
-enum DownloadStatus {
-  notDownloaded,
-  downloading,
-  downloaded,
-  failed,
-}
+// Ensure DownloadStatus enum is defined in lib/utils/download_status.dart
+// enum DownloadStatus {
+//   notDownloaded,
+//   downloading,
+//   downloaded,
+//   failed,
+//   cancelled,
+// }

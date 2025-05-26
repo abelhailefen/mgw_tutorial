@@ -9,7 +9,8 @@ import 'package:mgw_tutorial/provider/order_provider.dart';
 import 'package:mgw_tutorial/models/user.dart';
 import 'package:mgw_tutorial/models/semester.dart';
 import 'package:mgw_tutorial/models/order.dart' as AppOrder;
-import 'package:mgw_tutorial/l10n/app_localizations.dart';import 'package:mgw_tutorial/screens/main_screen.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mgw_tutorial/screens/main_screen.dart';
 import 'package:mgw_tutorial/provider/semester_provider.dart';
 
 

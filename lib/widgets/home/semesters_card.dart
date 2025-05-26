@@ -5,7 +5,8 @@ import 'package:mgw_tutorial/screens/enrollment/order_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:mgw_tutorial/screens/auth/login_screen.dart';
-import 'package:mgw_tutorial/l10n/app_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 class SemestersCard extends StatelessWidget {
   final Semester semester;
   final VoidCallback? customOnTap;

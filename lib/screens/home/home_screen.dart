@@ -5,7 +5,8 @@ import 'package:mgw_tutorial/widgets/home/notes_card.dart';
 import 'package:mgw_tutorial/provider/semester_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/models/semester.dart';
-import 'package:mgw_tutorial/l10n/app_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 

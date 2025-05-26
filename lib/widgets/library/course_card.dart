@@ -1,7 +1,8 @@
 // lib/widgets/library/course_card.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mgw_tutorial/provider/api_course_provider.dart';
 import 'package:mgw_tutorial/models/api_course.dart';
-
 class CourseCard extends StatelessWidget {
   final ApiCourse course;
   final VoidCallback onTap;

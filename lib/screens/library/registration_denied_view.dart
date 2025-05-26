@@ -1,6 +1,7 @@
 //lib/screens/library/registration_denied_view.dart
 import 'package:flutter/material.dart';
-import 'package:mgw_tutorial/l10n/app_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // For localization
+
 class RegistrationDeniedView extends StatelessWidget {
   final VoidCallback onRegisterNow;
   const RegistrationDeniedView({super.key, required this.onRegisterNow});

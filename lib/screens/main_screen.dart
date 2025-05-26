@@ -5,7 +5,8 @@ import 'package:mgw_tutorial/screens/home/home_screen.dart';
 import 'package:mgw_tutorial/screens/library/library_screen.dart';
 import 'package:mgw_tutorial/screens/notifications/notifications_screen.dart';
 import 'package:mgw_tutorial/widgets/app_drawer.dart';
-import 'package:mgw_tutorial/l10n/app_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 

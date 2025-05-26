@@ -5,5 +5,5 @@ enum DownloadStatus {
   downloading,
   downloaded,
   failed,
-  cancelled, 
+  cancelled, // Added cancelled state for completeness
 }
