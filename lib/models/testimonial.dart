@@ -1,20 +1,17 @@
-// lib/models/testimonial.dart
-import 'package:mgw_tutorial/models/author.dart'; // We'll reuse the Author model
+import 'package:mgw_tutorial/models/author.dart';
 
 class Testimonial {
   final int id;
-  final String title; // New: from your API
-  final String description; // New: from your API (was 'text')
-  final int userId; // New: from your API
-  final String status; // New: from your API
-  final List<String> images; // New: from your API
+  final String title;
+  final String description;
+  final int userId;
+  final String status;
+  final List<String> images;
   final DateTime createdAt;
-  final DateTime updatedAt; // New: from your API
-  final Author author; // New: from your API
+  final DateTime updatedAt;
+  final Author author;
 
-  // Base URL for images - This should ideally be configurable or come from a central place
   static const String imageBaseUrl = "https://mgw-backend.onrender.com";
-
 
   Testimonial({
     required this.id,
@@ -28,46 +25,47 @@ class Testimonial {
     required this.author,
   });
 
+  // This getter constructs the full image URL
   String? get firstFullImageUrl {
     if (images.isNotEmpty) {
       final firstImage = images.first;
       if (firstImage.startsWith('http')) {
         return firstImage; // Already a full URL
       }
-      if (firstImage.startsWith('/')) { // Path like /uploads/image.jpg
-        return imageBaseUrl + firstImage;
-      }
-      // If it's just a filename, you might need a different prefix logic
-      // For now, assume it starts with '/' if not absolute
+
+      // Assume relative path like "uploads/image.jpg" or "/uploads/image.jpg"
+      // Ensure imageBaseUrl doesn't end with / and firstImage starts with /
+      final cleanBaseUrl = imageBaseUrl.endsWith('/') ? imageBaseUrl.substring(0, imageBaseUrl.length - 1) : imageBaseUrl;
+      final cleanImagePath = firstImage.startsWith('/') ? firstImage : '/$firstImage';
+
+      return cleanBaseUrl + cleanImagePath;
     }
     return null;
   }
 
   factory Testimonial.fromJson(Map<String, dynamic> json) {
-    // Helper for robust date parsing
     DateTime parseSafeDate(String? dateString) {
       if (dateString == null || dateString.isEmpty) {
-        return DateTime.now(); // Fallback or throw error
+        return DateTime.now();
       }
       try {
         return DateTime.parse(dateString);
       } catch (e) {
-        print("Error parsing date for testimonial: $dateString. Error: $e");
-        return DateTime.now(); // Fallback
+        // Consider logging the error more formally if needed
+        return DateTime.now();
       }
     }
-    
-    List<String> parseImages(dynamic imageList) {
-        if (imageList is List) {
-            return imageList.map((e) => e.toString()).toList();
-        }
-        return [];
-    }
 
+    List<String> parseImages(dynamic imageList) {
+      if (imageList is List) {
+        return imageList.map((e) => e.toString()).toList();
+      }
+      return [];
+    }
 
     final authorJson = json['author'];
     if (authorJson == null || authorJson is! Map<String, dynamic>) {
-      throw FormatException("Field 'author' is missing or not a map in Testimonial JSON: $json");
+      throw FormatException("Field 'author' is missing or not a map in Testimonial JSON.");
     }
 
     return Testimonial(

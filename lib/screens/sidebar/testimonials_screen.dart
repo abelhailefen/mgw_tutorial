@@ -1,15 +1,11 @@
-// lib/screens/sidebar/testimonials_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/testimonial_provider.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:mgw_tutorial/models/testimonial.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-
-// Import the new widgets from the widgets folder
 import 'package:mgw_tutorial/widgets/testimonials/create_testimonial_dialog.dart';
 import 'package:mgw_tutorial/widgets/testimonials/testimonial_list.dart';
-
 
 class TestimonialsScreen extends StatefulWidget {
   static const routeName = '/testimonials';
@@ -20,39 +16,26 @@ class TestimonialsScreen extends StatefulWidget {
 }
 
 class _TestimonialsScreenState extends State<TestimonialsScreen> {
-
   @override
   void initState() {
     super.initState();
-    print("[Screen] initState - TestimonialsScreen");
     WidgetsBinding.instance.addPostFrameCallback((_) {
-        print("[Screen] addPostFrameCallback - Calling _fetchInitialData.");
-        _fetchInitialData();
+      _fetchInitialData();
     });
   }
 
   Future<void> _fetchInitialData() async {
-    print("[Screen] _fetchInitialData CALLED");
-    if (!mounted) {
-       print("[Screen] _fetchInitialData - SKIPPED, widget not mounted.");
-       return;
-    }
+    if (!mounted) return;
     final provider = Provider.of<TestimonialProvider>(context, listen: false);
     provider.clearError();
     await provider.fetchTestimonials(forceRefresh: true);
-    print("[Screen] _fetchInitialData - Initial fetch call completed. Error: ${provider.error}");
   }
 
   Future<void> _handleRefresh() async {
-     print("[Screen] _handleRefresh CALLED (Pull-to-refresh)");
-     if (!mounted) {
-       print("[Screen] _handleRefresh - SKIPPED, widget not mounted.");
-       return;
-    }
+    if (!mounted) return;
     final provider = Provider.of<TestimonialProvider>(context, listen: false);
     provider.clearError();
     await provider.fetchTestimonials(forceRefresh: true);
-    print("[Screen] _handleRefresh - Refresh operation completed. Error: ${provider.error}");
   }
 
   void _showCreateTestimonialDialog() async {
@@ -63,11 +46,11 @@ class _TestimonialsScreenState extends State<TestimonialsScreen> {
     if (authProvider.currentUser == null || authProvider.currentUser!.id == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(
-               content: Text(l10n.pleaseLoginOrRegister),
-               backgroundColor: theme.colorScheme.secondaryContainer,
-               behavior: SnackBarBehavior.floating,
-           ),
+          SnackBar(
+            content: Text(l10n.pleaseLoginOrRegister),
+            backgroundColor: theme.colorScheme.secondaryContainer,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
       return;
@@ -83,36 +66,27 @@ class _TestimonialsScreenState extends State<TestimonialsScreen> {
     if (success == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(l10n.testimonialSubmittedSuccess),
-            backgroundColor: theme.colorScheme.primaryContainer,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
+          content: Text(l10n.testimonialSubmittedSuccess),
+          backgroundColor: theme.colorScheme.primaryContainer,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
         ),
       );
-    } else if (success == false && mounted) {
-        print("[Screen] Dialog dismissed with success=false (cancelled or submission failed).");
-    } else {
-         print("[Screen] Dialog dismissed without boolean result (e.g., backdrop tap).");
     }
   }
 
   Widget _buildContent(BuildContext context, TestimonialProvider testimonialProvider) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-
     final List<Testimonial> testimonialsToDisplay = testimonialProvider.testimonials;
     final bool isLoading = testimonialProvider.isLoading;
     final String? error = testimonialProvider.error;
 
-    print("[Screen] _buildContent REBUILDING - isLoading: $isLoading, error: $error, testimonialsToDisplay count: ${testimonialsToDisplay.length}");
-
     if (isLoading && testimonialsToDisplay.isEmpty) {
-      print("[Screen] _buildContent - STATE: Initial API Loading");
       return const Center(child: CircularProgressIndicator());
     }
 
     if (error != null && testimonialsToDisplay.isEmpty) {
-      print("[Screen] _buildContent - STATE: Error and No Data to Display - $error");
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -142,7 +116,6 @@ class _TestimonialsScreenState extends State<TestimonialsScreen> {
     }
 
     if (testimonialsToDisplay.isEmpty && !isLoading) {
-      print("[Screen] _buildContent - STATE: No Data to Display and Not Loading");
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -172,15 +145,15 @@ class _TestimonialsScreenState extends State<TestimonialsScreen> {
                 ),
               ),
             ],
-          )
+          ),
         ),
       );
     }
 
-    print("[Screen] _buildContent - STATE: Displaying List (${testimonialsToDisplay.length} items), isLoading (for refresh): $isLoading");
     return TestimonialList(
       testimonials: testimonialsToDisplay,
-      apiBaseUrl: TestimonialProvider.apiBaseUrl,
+      // Ensure you pass the correct base URL to your list widget if it needs it
+      apiBaseUrl: Testimonial.imageBaseUrl, // Use the base URL from the model
       onRefresh: _handleRefresh,
     );
   }
@@ -188,8 +161,6 @@ class _TestimonialsScreenState extends State<TestimonialsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    print("[Screen] TestimonialsScreen Build method called");
 
     return Scaffold(
       appBar: AppBar(
