@@ -1,3 +1,4 @@
+// lib/screens/library/lesson_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -220,25 +221,17 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
 
   Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider lessonProv) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    print("Building download button for lesson: ${lesson.title}, Type: ${lesson.lessonType}, Video URL: ${lesson.videoUrl}, Provider: ${lesson.videoProvider}");
+    
     if (lesson.lessonType != LessonType.video || lesson.videoUrl == null || lesson.videoUrl!.isEmpty) {
+      print("No download button: Not a video lesson or missing URL");
       return const SizedBox.shrink();
-    }
-    if (lesson.videoProvider?.toLowerCase() != 'youtube') {
-      return SizedBox(
-        width: 40,
-        height: 40,
-        child: Center(
-          child: Icon(
-            Icons.videocam_off_outlined,
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
-            size: 24,
-          ),
-        ),
-      );
     }
 
     final String? videoId = yt.VideoId.parseVideoId(lesson.videoUrl!);
     if (videoId == null) {
+      print("No download button: Invalid YouTube video ID for URL: ${lesson.videoUrl}");
       return SizedBox(
         width: 40,
         height: 40,
@@ -252,6 +245,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       );
     }
 
+    print("Showing download button for video ID: $videoId");
     return SizedBox(
       width: 40,
       height: 40,
@@ -263,7 +257,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
             case DownloadStatus.cancelled:
               return IconButton(
                 icon: Icon(Icons.download_for_offline_outlined, color: theme.colorScheme.secondary),
-                tooltip: AppLocalizations.of(context)!.downloadVideoTooltip,
+                tooltip: l10n.downloadVideoTooltip,
                 iconSize: 24,
                 padding: EdgeInsets.zero,
                 onPressed: () {
@@ -316,7 +310,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
             case DownloadStatus.downloaded:
               return IconButton(
                 icon: Icon(Icons.check_circle, color: theme.colorScheme.primary),
-                tooltip: AppLocalizations.of(context)!.downloadedVideoTooltip,
+                tooltip: l10n.downloadedVideoTooltip,
                 iconSize: 24,
                 padding: EdgeInsets.zero,
                 onPressed: () async {
@@ -331,7 +325,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
             case DownloadStatus.failed:
               return IconButton(
                 icon: Icon(Icons.error_outline, color: theme.colorScheme.error),
-                tooltip: AppLocalizations.of(context)!.downloadFailedTooltip,
+                tooltip: l10n.downloadFailedTooltip,
                 iconSize: 24,
                 padding: EdgeInsets.zero,
                 onPressed: () {

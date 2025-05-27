@@ -1,3 +1,4 @@
+// lib/models/lesson.dart
 enum LessonType { video, document, quiz, text, unknown }
 enum AttachmentType { youtube, vimeo, file, url, unknown }
 
@@ -133,20 +134,25 @@ class Lesson {
       return null;
     }
 
+    String? inferredVideoProvider = safeGetNullableString(json, 'video_provider') ?? safeGetNullableString(json, 'video_type');
+    if (inferredVideoProvider == null && safeGetNullableString(json, 'video_url')?.toLowerCase().contains('youtube') == true) {
+      inferredVideoProvider = 'youtube';
+    }
+
     return Lesson(
       id: safeGetInt(json['id'], 'id'),
       title: safeGetString(json, 'title', defaultValue: 'Untitled Lesson'),
       sectionId: safeGetInt(json['section_id'], 'section_id', defaultValue: -1),
       summary: safeGetNullableString(json, 'summary'),
       order: safeGetNullableInt(json['order'], 'order'),
-      videoProvider: safeGetNullableString(json, 'video_provider') ?? safeGetNullableString(json, 'video_type'),
+      videoProvider: inferredVideoProvider,
       videoUrl: safeGetNullableString(json, 'video_url'),
       attachmentUrl: safeGetNullableString(json, 'attachment'),
       attachmentTypeString: safeGetNullableString(json, 'attachment_type'),
       lessonTypeString: safeGetNullableString(json, 'lesson_type'),
       duration: safeGetNullableString(json, 'duration'),
-      createdAt: parseSafeDate(json['created_at'], 'created_at'),
-      updatedAt: parseSafeDate(json['updated_at'], 'updated_at'),
+      createdAt: parseSafeDate(json['createdAt'], 'createdAt'),
+      updatedAt: parseSafeDate(json['updatedAt'], 'updatedAt'),
     );
   }
 }
