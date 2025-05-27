@@ -1,13 +1,37 @@
+// lib/services/media_service.dart
 import 'dart:io';
 import 'package:dio/dio.dart';
-// import 'package:flutter/material.dart'; // <-- Remove this if deleteFile doesn't need context
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+import '../utils/download_status.dart';
 
 class MediaService {
   static final _dio = Dio();
   static const _secureStorage = FlutterSecureStorage();
+  static final Map<String, ValueNotifier<DownloadStatus>> _statusNotifiers = {};
+  static final Map<String, ValueNotifier<double>> _progressNotifiers = {};
+  static final Map<String, CancelToken> _cancelTokens = {};
+
+  // Get or create status notifier
+  static ValueNotifier<DownloadStatus> getDownloadStatus(String videoId) {
+    return _statusNotifiers.putIfAbsent(
+      videoId,
+      () => ValueNotifier<DownloadStatus>(DownloadStatus.notDownloaded),
+    );
+  }
+
+  // Get or create progress notifier
+  static ValueNotifier<double> getDownloadProgress(String videoId) {
+    return _progressNotifiers.putIfAbsent(
+      videoId,
+      () => ValueNotifier<double>(0.0),
+    );
+  }
 
   // Get the file path for storing the media
   static Future<String> _getFilePath(String id, String fileExtension) async {
@@ -19,11 +43,19 @@ class MediaService {
   static Future<bool> isFileDownloaded(String id) async {
     try {
       final storedPath = await _secureStorage.read(key: id);
-      // print("Checking if file is downloaded for ID: $id, storedPath: $storedPath"); // Optional: keep print for debugging
+      print("Checking if file is downloaded for ID: $id, storedPath: $storedPath");
       if (storedPath != null) {
         final file = File(storedPath);
         final exists = file.existsSync();
-        // print("File exists: $exists for path: $storedPath"); // Optional: keep print for debugging
+        print("File exists: $exists for path: $storedPath");
+        final statusNotifier = getDownloadStatus(id);
+        if (exists && statusNotifier.value != DownloadStatus.downloaded) {
+          statusNotifier.value = DownloadStatus.downloaded;
+          getDownloadProgress(id).value = 1.0;
+        } else if (!exists && statusNotifier.value == DownloadStatus.downloaded) {
+          statusNotifier.value = DownloadStatus.notDownloaded;
+          getDownloadProgress(id).value = 0.0;
+        }
         return exists;
       }
       return false;
@@ -34,35 +66,38 @@ class MediaService {
   }
 
   // Download a YouTube video
-  // Returns the file path if successful, null otherwise
-  static Future<String?> downloadVideoFile({
-    required String videoId, // Use the already parsed clean ID
+  static Future<bool> downloadVideoFile({
+    required String videoId,
     required String url,
-    required Function(double) onProgress,
-    CancelToken? cancelToken, // Add CancelToken parameter
+    required String title,
+    CancelToken? cancelToken,
   }) async {
     if (url.isEmpty) {
-      print("Error: Empty video URL for ID $videoId");
-      return null;
+      print("Error: Empty video URL for $title");
+      _updateStatus(videoId, DownloadStatus.failed);
+      return false;
     }
 
     final yt = YoutubeExplode();
+    final statusNotifier = getDownloadStatus(videoId);
+    final progressNotifier = getDownloadProgress(videoId);
+    final cancelToken = CancelToken();
+    _cancelTokens[videoId] = cancelToken;
+
     try {
-      // Note: url is already split by ';' in the provider.
-      // We now expect videoId to be passed directly here.
-      // If url still needs parsing here, do it:
-      // final video = await yt.videos.get(url);
-      // final cleanVideoId = video.id.value; // Re-parse if needed, but provider should do this
+      statusNotifier.value = DownloadStatus.downloading;
+      progressNotifier.value = 0.0;
 
-      // Use the clean videoId passed in
-      final manifest = await yt.videos.streamsClient.getManifest(videoId,
-          ytClients: [YoutubeApiClient.safari, YoutubeApiClient.androidVr]); // Using alternative clients
+      url = url.split(';').first;
+      final video = await yt.videos.get(url);
+      final cleanVideoId = video.id.value;
 
-      // Prefer muxed stream if available
+      final manifest = await yt.videos.streamsClient.getManifest(cleanVideoId,
+          ytClients: [YoutubeApiClient.safari, YoutubeApiClient.androidVr]);
+
       if (manifest.muxed.isNotEmpty) {
         final muxedStream = manifest.muxed.withHighestBitrate();
-        final fileExtension = muxedStream.container.name; // e.g., 'mp4'
-        final videoFilePath = await _getFilePath(videoId, fileExtension);
+        final videoFilePath = await _getFilePath(cleanVideoId, muxedStream.container.name);
 
         await _dio.download(
           muxedStream.url.toString(),
@@ -71,105 +106,49 @@ class MediaService {
           onReceiveProgress: (received, total) {
             if (total != -1) {
               final progress = received / total;
-              onProgress(progress);
+              progressNotifier.value = progress;
             }
           },
         );
 
-        await _secureStorage.write(key: videoId, value: videoFilePath);
-        print("Video downloaded successfully for ID $videoId to $videoFilePath");
-        return videoFilePath;
+        await _secureStorage.write(key: cleanVideoId, value: videoFilePath);
+        statusNotifier.value = DownloadStatus.downloaded;
+        progressNotifier.value = 1.0;
+        print("Video downloaded successfully for ID $cleanVideoId: $videoFilePath");
+        return true;
       } else {
-         // Fallback to audio + video if no muxed stream?
-         // This requires merging streams, which is more complex.
-         // For now, if no muxed stream, consider it a failure to download.
-         print("No muxed streams available for video ID: $videoId");
-         return null;
+        statusNotifier.value = DownloadStatus.failed;
+        progressNotifier.value = 0.0;
+        print("No muxed streams available for ID $cleanVideoId");
+        return false;
       }
-    } on DioException catch(e) {
-       if (CancelToken.isCancel(e)) {
-          print("Download cancelled for ID $videoId: ${e.message}");
-       } else {
-          print("Dio Error downloading video for ID $videoId: ${e.message}");
-          if (e.response != null) {
-             print("Dio Error Response Status: ${e.response?.statusCode}");
-             print("Dio Error Response Data: ${e.response?.data}");
-          }
-       }
-       // Clean up potential partial file if download failed/cancelled unexpectedly
-       final partialPath = await _getFilePath(videoId, 'partial'); // Assume a default extension for cleanup attempt
-        if (await File(partialPath).exists()) {
-            try { await File(partialPath).delete(); } catch(_) {}
-        }
-
-
-       return null; // Indicate failure
-    } catch (e, s) {
-      print("Error downloading video for ID $videoId: $e");
-      print(s); // Print stack trace for generic errors
-      return null; // Indicate failure
+    } catch (e) {
+      if (e is DioException && e.type == DioExceptionType.cancel) {
+        statusNotifier.value = DownloadStatus.cancelled;
+        progressNotifier.value = 0.0;
+        print("Download cancelled for ID $videoId");
+      } else {
+        statusNotifier.value = DownloadStatus.failed;
+        progressNotifier.value = 0.0;
+        print("Error downloading video for ID $videoId: $e");
+      }
+      return false;
     } finally {
-      yt.close(); // Close youtube_explode_dart client
+      yt.close();
+      _cancelTokens.remove(videoId);
     }
   }
 
-  // Download an image - Keep this as is or update path logic if needed
-  // Returns the file path if successful, null otherwise
-  static Future<String?> downloadImageFile({
-    required String imageId,
-    required String url,
-    required Function(double) onProgress,
-    CancelToken? cancelToken, // Add CancelToken parameter
-  }) async {
-    if (url.isEmpty) {
-      print("Error: Empty image URL for ID $imageId");
-      return null;
-    }
-
-    try {
-      // Use the provided imageId directly, assuming it's clean or make it so.
-      // final cleanImageId = imageId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), ''); // Keep if necessary
-      final fileExtension = url.split('.').last.toLowerCase();
-      // Basic validation for extension
-      if (!['jpg', 'jpeg', 'png', 'gif'].contains(fileExtension)) {
-         print("Warning: Unexpected image file extension: $fileExtension for $url. Using '.jpg'.");
-         // Consider defaulting or failing if extension is weird
-         // For robustness, you might fetch headers first to get content-type
-         // For now, let's proceed but maybe force .jpg
-         // fileExtension = 'jpg'; // uncomment to force
-      }
-      final imageFilePath = await _getFilePath(imageId, fileExtension);
-
-
-      await _dio.download(
-        url,
-        imageFilePath,
-        cancelToken: cancelToken, // Pass CancelToken to Dio
-        onReceiveProgress: (received, total) {
-          if (total != -1) {
-            final progress = received / total;
-            onProgress(progress);
-          }
-        },
-      );
-
-      await _secureStorage.write(key: imageId, value: imageFilePath);
-      print("Image downloaded successfully for ID $imageId: $imageFilePath");
-      return imageFilePath;
-    } on DioException catch(e) {
-         if (CancelToken.isCancel(e)) {
-            print("Image download cancelled for ID $imageId: ${e.message}");
-         } else {
-            print("Dio Error downloading image for ID $imageId: ${e.message}");
-         }
-         return null;
-    } catch (e, s) {
-      print("Error downloading image for ID $imageId: $e");
-      print(s);
-      return null;
+  // Cancel a download
+  static void cancelDownload(String videoId) {
+    final cancelToken = _cancelTokens[videoId];
+    if (cancelToken != null && !cancelToken.isCancelled) {
+      cancelToken.cancel('Download cancelled by user');
+      _updateStatus(videoId, DownloadStatus.cancelled);
+      _updateProgress(videoId, 0.0);
+      _cancelTokens.remove(videoId);
     }
   }
-
 
   // Retrieve a file's local path
   static Future<String?> getSecurePath(String id) async {
@@ -177,73 +156,105 @@ class MediaService {
       final path = await _secureStorage.read(key: id);
       return path;
     } catch (e) {
-      print("Error getting secure path for ID $id: $e");
+      print("Error retrieving secure path for ID $id: $e");
       return null;
     }
   }
 
-  // Delete a downloaded file and its secure storage entry
-  // Returns true if deletion was attempted (file existed or storage entry existed), false otherwise
-  static Future<bool> deleteFile(String id) async {
+  // Delete a downloaded file
+  static Future<bool> deleteFile(String id, BuildContext context) async {
     try {
       final storedPath = await _secureStorage.read(key: id);
-      bool attemptedDeletion = false;
-
       if (storedPath != null) {
-        attemptedDeletion = true;
         final file = File(storedPath);
         if (await file.exists()) {
           await file.delete();
-          print("File deleted successfully for ID: $id at path $storedPath");
-        } else {
-           print("File not found at stored path for ID: $id ($storedPath)");
+          print("File deleted successfully for ID: $id");
         }
+        await _secureStorage.delete(key: id);
+        _updateStatus(id, DownloadStatus.notDownloaded);
+        _updateProgress(id, 0.0);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.fileDeletedSuccessfully),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+        return true;
       } else {
-         print("No stored path found for ID: $id");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.fileNotFoundOrFailedToDelete),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+        return false;
       }
-
-      // Always attempt to delete the secure storage key
-       await _secureStorage.delete(key: id);
-       print("Secure storage key deleted for ID: $id");
-
-
-      return attemptedDeletion || storedPath != null; // Return true if we had a path or key to delete
     } catch (e) {
       print("Error deleting file for ID $id: $e");
-      return false; // Indicate failure
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${AppLocalizations.of(context)!.couldNotDeleteFileError}: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return false;
     }
   }
 
-  // Retrieve all downloaded files (IDs mapped to paths)
+  // Retrieve all downloaded files
   static Future<Map<String, String>> getAllDownloadedFiles() async {
     try {
       final allEntries = await _secureStorage.readAll();
       final downloadedFiles = <String, String>{};
 
-      // Verify file existence - important for cleaning up stale entries
       for (var entry in allEntries.entries) {
         final file = File(entry.value);
         if (await file.exists()) {
           downloadedFiles[entry.key] = entry.value;
         } else {
-          // If file doesn't exist, remove the entry from secure storage
-          print("Stale entry found and removed for ID: ${entry.key}");
           await _secureStorage.delete(key: entry.key);
+          print("Removed stale secure storage entry for ID: ${entry.key}");
         }
       }
 
       return downloadedFiles;
     } catch (e) {
-      print("Error retrieving all downloaded files: $e");
+      print("Error retrieving downloaded files: $e");
       return {};
     }
   }
 
-   // You might want a way to clean up all downloads
-   static Future<void> deleteAllFiles() async {
-      final allEntries = await _secureStorage.readAll();
-      for (var entry in allEntries.entries) {
-         await deleteFile(entry.key); // Use the single delete logic
-      }
-   }
+  // Helper to update status
+  static void _updateStatus(String videoId, DownloadStatus status) {
+    final notifier = getDownloadStatus(videoId);
+    if (notifier.value != status) {
+      notifier.value = status;
+    }
+  }
+
+  // Helper to update progress
+  static void _updateProgress(String videoId, double progress) {
+    final notifier = getDownloadProgress(videoId);
+    if (notifier.value != progress) {
+      notifier.value = progress;
+    }
+  }
+
+  // Clean up resources
+  static void dispose() {
+    for (var token in _cancelTokens.values) {
+      token.cancel('Service disposed');
+    }
+    _cancelTokens.clear();
+    for (var notifier in _statusNotifiers.values) {
+      notifier.dispose();
+    }
+    for (var notifier in _progressNotifiers.values) {
+      notifier.dispose();
+    }
+    _statusNotifiers.clear();
+    _progressNotifiers.clear();
+    _dio.close();
+  }
 }

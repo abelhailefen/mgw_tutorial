@@ -1,5 +1,6 @@
 {
   "@@locale": "am",
+  "@@last_modified": "2025-05-26T16:45:00+03:00",
   "appTitle": "መጂወ አስጠኚ",
   "home": "መነሻ",
   "library": "ቤተ-መጽሐፍት",
@@ -26,10 +27,10 @@
   "getRegisteredTitle": "መለያ ፍጠር",
   "studentNameLabel": "የተማሪ ስም",
   "studentNameValidationError": "እባኮትን የተማሪ ስም ያስገቡ",
-  "fatherNameLabel": "አባት ስም",
+  "fatherNameLabel": "የአባት ስም",
   "fatherNameValidationError": "እባኮትን የአባት ስም ያስገቡ",
-  "streamLabel": "ዲፓርትመንት",
-  "naturalStream": "ተፈጥሯዊ",
+  "streamLabel": "የዲፓርትመንት",
+  "naturalStream": "ተፈጥሮ",
   "socialStream": "ማህበራዊ",
   "institutionLabel": "ተቋም",
   "selectInstitutionHint": "ተቋም ይምረጡ",
@@ -51,24 +52,34 @@
       }
     }
   },
-  "couldNotOpenFileError": "ፋይል መክፈት አልተቻለም፡- ",
+  "couldNotOpenFileError": "ፋይል መክፈት አልተቻለም፡ {error}",
+   "@couldNotOpenFileError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "couldNotFindDownloadedFileError": "የወረደውን ፋይል ማግኘት አልተቻለም።",
-  "videoIsDownloadingMessage": "ቪዲዮ በአሁኑ ጊዜ በመውረድ ላይ ነው። እባኮውን ይጠብቁ።",
+  "videoIsDownloadingMessage": "ቪዲዮ በአሁኑ ጊዜ በመውረድ ላይ ነው። እባክዎ ይጠብቁ።",
   "videoDownloadFailedMessage": "ቪዲዮ ማውረድ አልተሳካም። እንደገና ለመሞከር የማውረድ ቁልፍን ይንኩ።",
   "videoDownloadCancelledMessage": "ቪዲዮ ማውረድ ተሰርዟል።",
   "notImplementedMessage": "አልተተገበረም።",
   "noTextContent": "ምንም የጽሑፍ ይዘት የለም።",
   "closeButtonText": "ዝጋ",
   "downloadVideoTooltip": "ቪዲዮ አውርድ",
-  "downloadedVideoTooltip": "ወርዷል። ለማጫወት ነካ ያድርጉ።",
-  "downloadFailedTooltip": "ማውረድ አልተሳካም። እንደገና ለመሞከር ነካ ያድርጉ",
-  "deleteDownloadedFileTooltip": "ዳውንሎድድ ፋይድ",
+  "downloadedVideoTooltip": "ወርዷል። ለማጫወት ነካ ያድርጉ፣ ለማጥፋት በረዥም ይጫኑ።",
+  "downloadFailedTooltip": "ማውረድ አልተሳካም። እንደገና ለመሞከር ነካ ያድርጉ።",
+  "deleteDownloadedFileTooltip": "የወረደውን ፋይል ሰርዝ",
+  "couldNotDeleteFileError": "ፋይል መሰረዝ አልተቻለም፡ ትክክል ያልሆነ የትምህርት መረጃ።",
+  "fileDeletedSuccessfully": "ፋይል በተሳካ ሁኔታ ተሰርዟል።",
+  "fileNotFoundOrFailedToDelete": "ፋይል አልተገኘም ወይም መሰረዝ አልተሳካም።",
   "attachScreenshotButton": "ቅጽበታዊ ገጽ እይታን ያያይዙ",
   "screenshotAttachedButton": "ቅጽበታዊ ገጽ እይታ ተያይዟል!",
   "fileNamePrefix": "ፋይል",
-  "termsAndConditionsAgreement": "በመቀጠልዎ በውሎች እና ሁኔታዎች ተስማምተዋል ",
+  "termsAndConditionsAgreement": "በመቀጠልዎ በ",
   "termsAndConditionsLink": "ውሎች እና ሁኔታዎች",
-  "termsAndConditionsAnd": " እና ",
+  "termsAndConditionsAnd": " እና በ",
   "privacyPolicyLink": "የግላዊነት ፖሊሲ",
   "submitButton": "መለያ ፍጠር",
   "errorPickingImage": "ምስልን መምረጥ ላይ ስህተት: {errorMessage}",
@@ -140,15 +151,19 @@
   "selectSemesterLabel": "ሴሚስተር ይምረጡ",
   "selectSemesterHint": "ሴሚስተር ይምረጡ",
   "pleaseSelectSemesterError": "እባክዎ ሴሚስተር ይምረጡ።",
-
   "deviceInfoNotAvailable": "የመሳሪያ መረጃ የለም። እባክዎ ይጠብቁና እንደገና ይሞክሩ።",
   "deviceInfoProcessing": "የመሳሪያ መረጃ አሁንም እየተሰራ ነው። እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።",
   "deviceInfoInitializing": "በማስጀመር ላይ... እባክዎ እንደገና ለመግባት ይሞክሩ።",
-  "deviceInfoProceedingDefault": "የመሳሪያውን መረጃ ሙሉ በሙሉ ማወቅ አልተቻለም። ባለው መረጃ እንቀጥላለን።",
+  "deviceInfoProceedingDefault": "የመሳሪያውን መረጃ ሙሉ በሙሉ ማወቅ አልተቻለም።",
   "initializing": "በማስጀመር ላይ...",
-
   "enrollForSemesterTitle": "ለ {semesterName} ይመዝገቡ",
-  "@enrollForSemesterTitle": { "placeholders": { "semesterName": { "type": "String" }}},
+  "@enrollForSemesterTitle": {
+    "placeholders": {
+      "semesterName": {
+        "type": "String"
+      }
+    }
+  },
   "selectedSemesterLabel": "የተመረጠ ሴሚስተር:",
   "priceLabel": "ዋጋ:",
   "coursesIncludedLabel": "የተካተቱ ኮርሶች:",
@@ -159,7 +174,6 @@
   "enrollmentRequestFailed": "የምዝገባ ጥያቄ ማስገባት አልተሳካም።",
   "selectPaymentBankPrompt": "እባክዎ የክፍያ ባንክ ይምረጡ።",
   "goBackButton": "ተመለስ",
-
   "createPostTitle": "አዲስ ልጥፍ ፍጠር",
   "postTitleLabel": "የልጥፍ ርዕስ",
   "postTitleHint": "ግልጽ እና አጭር ርዕስ ያስገቡ",
@@ -172,7 +186,6 @@
   "submitPostButton": "ልጥፍ አስገባ",
   "postCreatedSuccess": "ልጥፍ በተሳካ ሁኔታ ተፈጥሯል!",
   "postCreateFailed": "ልጥፍ መፍጠር አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
-
   "editPostTitle": "ልጥፍ አስተካክል",
   "generalTitleLabel": "ርዕስ",
   "generalTitleEmptyValidation": "ርዕስ ባዶ መሆን አይችልም",
@@ -196,11 +209,29 @@
   "deleteCommentTitle": "አስተያየት ሰርዝ",
   "deleteReplyTitle": "መልስ ሰርዝ",
   "deleteItemConfirmation": "ይህንን {itemType} መሰረዝ እርግጠኛ ነዎት? ይህ ድርጊት ሊቀለበስ አይችልም።",
-  "@deleteItemConfirmation": { "placeholders": { "itemType": { "type": "String" }}},
+  "@deleteItemConfirmation": {
+    "placeholders": {
+      "itemType": {
+        "type": "String"
+      }
+    }
+  },
   "itemDeletedSuccess": "{itemType} በተሳካ ሁኔታ ተሰርዟል!",
-  "@itemDeletedSuccess": { "placeholders": { "itemType": { "type": "String" }}},
+  "@itemDeletedSuccess": {
+    "placeholders": {
+      "itemType": {
+        "type": "String"
+      }
+    }
+  },
   "itemDeleteFailed": "{itemType} መሰረዝ አልተሳካም።",
-  "@itemDeleteFailed": { "placeholders": { "itemType": { "type": "String" }}},
+  "@itemDeleteFailed": {
+    "placeholders": {
+      "itemType": {
+        "type": "String"
+      }
+    }
+  },
   "commentsSectionHeader": "አስተያየቶች",
   "noCommentsYet": "ምንም አስተያየቶች የሉም። የመጀመሪያ ይሁኑ!",
   "writeCommentHint": "አስተያየት ይጻፉ...",
@@ -213,10 +244,15 @@
   "editFieldValidationEmpty": "ባዶ መሆን አይችልም",
   "saveChangesButton": "ለውጦችን አስቀምጥ",
   "viewAllReplies": "ሁሉንም {replyCount} መልሶች ይመልከቱ...",
-  "@viewAllReplies": { "placeholders": { "replyCount": { "type": "String" }}},
+  "@viewAllReplies": {
+    "placeholders": {
+      "replyCount": {
+        "type": "String"
+      }
+    }
+  },
   "commentItemDisplay": "አስተያየት",
   "replyItemDisplay": "መልስ",
-
   "darkModeLabel": "ጨለማ ገፅታ",
   "darkModeSubtitle": "የጨለማ ገፅታን አንቃ ወይም አሰናክል",
   "receiveNotificationsSubtitle": "ጠቃሚ ዝመናዎችን ተቀበል",
@@ -225,10 +261,21 @@
   "viewPrivacyPolicyAction": "የግላዊነት ፖሊሲ ይመልከቱ",
   "viewTermsAction": "የአገልግሎት ውሎችን ይመልከቱ",
   "actionNotImplemented": "{featureName}: ገና አልተተገበረም",
-  "@actionNotImplemented": { "placeholders": { "featureName": { "type": "String" }}},
+  "@actionNotImplemented": {
+    "placeholders": {
+      "featureName": {
+        "type": "String"
+      }
+    }
+  },
   "couldNotLaunchUrl": "{urlString} መክፈት አልተቻለም።",
-  "@couldNotLaunchUrl": { "placeholders": { "urlString": { "type": "String" }}},
-
+  "@couldNotLaunchUrl": {
+    "placeholders": {
+      "urlString": {
+        "type": "String"
+      }
+    }
+  },
   "shareAppSubject": "መጂወ አስጠኚ መተግበሪያ",
   "emailSupportSubject": "የመተግበሪያ ድጋፍ ጥያቄ",
   "contactViaEmail": "በኢሜል ያግኙን",
@@ -237,17 +284,24 @@
   "refreshingData": "ዳታ እየታደሰ ነው...",
   "dataRefreshed": "ዳታ ታድሷል!",
   "errorRefreshingData": "ዳታ በማደስ ላይ ስህተት ተፈጥሯል። እባክዎ የበይነመረብ ግንኙነትዎን ያረጋግጡ።",
-
   "notesSectionTitle": "ማስታወሻዎች",
   "notesSectionDescription": "ከአገር ዙሪያ ከተማሪዎች የሰበሰብናቸው ማስታወሻዎች።",
   "notesComingSoon": "የማስታወሻዎች ክፍል በቅርቡ ይመጣል!",
   "coursesDetailsComingSoon": "የኮርስ ዝርዝሮች በቅርቡ ይመጣሉ።",
-  "semesterCardTapped": "{semesterName} (ID: {semesterId}) ተነክቷል",
-  "@semesterCardTapped": { "placeholders": { "semesterName": { "type": "String" }, "semesterId": { "type": "String" }}},
+  "semesterCardTapped": "{semesterName} (መለያ፡ {semesterId}) ተነክቷል",
+  "@semesterCardTapped": {
+    "placeholders": {
+      "semesterName": {
+        "type": "String"
+      },
+      "semesterId": {
+        "type": "String"
+      }
+    }
+  },
   "enrollNowButton": "አሁን ይመዝገቡ",
   "currencySymbol": "ብር",
   "submitEnrollmentRequestButton": "የምዝገባ ጥያቄ አስገባ",
-
   "currentPasswordLabel": "የአሁኑ የይለፍ ቃል",
   "newPasswordLabel": "አዲስ የይለፍ ቃል",
   "confirmNewPasswordLabel": "አዲስ የይለፍ ቃል አረጋግጥ",
@@ -265,31 +319,58 @@
   "otpRequestFailed": "OTP መጠየቅ አልተሳካም።",
   "phoneUpdateSuccess": "ስልክ ቁጥር በተሳካ ሁኔታ ተዘምኗል።",
   "phoneUpdateFailed": "ስልክ ቁጥር ማዘመን አልተሳካም።",
-
   "videoItemType": "ቪዲዮ",
   "documentItemType": "ሰነድ",
   "quizItemType": "ፈተና",
   "textItemType": "ጽሑፍ",
   "unknownItemType": "ይዘት",
-  "noVideosAvailable": "ምንም ቪዲዮዎች የሉም።",
-  "noDocumentsAvailable": "ምንም ሰነዶች የሉም።",
-  "noTextLessonsAvailable": "ምንም የጽሑፍ ትምህርቶች የሉም።",
-  "noQuizzesAvailable": "ምንም ፈተናዎች የሉም።",
-  "itemNotAvailable": "{contentType} የለም።",
-  "@itemNotAvailable": {"placeholders": {"contentType": {"type": "String"}}},
-  "couldNotLaunchItem": "{urlString} መክፈት አልተቻለም",
-  "@couldNotLaunchItem": {"placeholders": {"urlString": {"type": "String"}}},
-  "noLaunchableContent": "ለ {itemName} ምንም ሊከፈት የሚችል ይዘት የለም",
-  "@noLaunchableContent": {"placeholders": {"itemName": {"type": "String"}}},
-
+  "noVideosAvailable": "በዚህ ክፍል ምንም ቪዲዮዎች የሉም።",
+  "noDocumentsAvailable": "በዚህ ክፍል ምንም ሰነዶች የሉም።",
+  "noTextLessonsAvailable": "በዚህ ክፍል ምንም የጽሑፍ ትምህርቶች የሉም።",
+  "noQuizzesAvailable": "በዚህ ክፍል ምንም ፈተናዎች የሉም።",
+  "itemNotAvailable": "ለ {title} ምንም ይዘት የለም።",
+  "@itemNotAvailable": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "couldNotLaunchItem": "{url} መክፈት አልተቻለም",
+  "@couldNotLaunchItem": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "noLaunchableContent": "ለ {title} ምንም ሊከፈት የሚችል ይዘት የለም",
+  "@noLaunchableContent": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "chaptersTitle": "ምዕራፎች",
-  "failedToLoadChaptersError": "ምዕራፎችን መጫን አልተሳካም።\n{error}",
-  "@failedToLoadChaptersError": {"placeholders": {"error": {"type": "String"}}},
+  "failedToLoadChaptersError": "ምዕራፎችን መጫን አልተሳካም: {error}",
+  "@failedToLoadChaptersError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "noChaptersForCourse": "ለዚህ ኮርስ ምንም ምዕራፎች አልተገኙም።",
-  "failedToLoadLessonsError": "ትምህርቶችን መጫን አልተሳካም።\n{error}",
-  "@failedToLoadLessonsError": {"placeholders": {"error": {"type": "String"}}},
+  "failedToLoadLessonsError": "ትምህርቶችን መጫን አልተሳካም: {error}",
+  "@failedToLoadLessonsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "noLessonsInChapter": "በዚህ ምዕራፍ ምንም ትምህርቶች የሉም።",
-
   "noCoursesAvailable": "በአሁኑ ሰዓት ምንም ኮርሶች የሉም።",
   "shareYourTestimonialTitle": "ምስክርነትዎን ያጋሩ",
   "titleLabel": "ርዕስ",
