@@ -15,6 +15,7 @@ import 'package:mgw_tutorial/provider/discussion_provider.dart';
 import 'package:mgw_tutorial/provider/department_provider.dart';
 
 // Import Screens
+import 'package:mgw_tutorial/screens/sidebar/faq_screen.dart';
 import 'package:mgw_tutorial/screens/auth/login_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/about_us_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/settings_screen.dart';
@@ -323,6 +324,10 @@ class AppDrawer extends StatelessWidget {
           _buildDrawerItem(
             theme: theme, icon: Icons.settings_outlined, text: l10n.settings,
             onTap: () => _navigateTo(context, SettingsScreen.routeName),
+          ),
+           _buildDrawerItem( // <<< ADD FAQ ITEM HERE
+            theme: theme, icon: Icons.quiz_outlined, text: l10n.faqTitle, 
+            onTap: () => _navigateTo(context, FaqScreen.routeName),
           ),
           Divider(color: theme.dividerColor),
           if (authProvider.currentUser != null)

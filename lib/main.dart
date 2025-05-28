@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart'; // For initializeDateFormatti
 import 'package:mgw_tutorial/constants/color.dart';
 
 // Providers
+import 'package:mgw_tutorial/provider/faq_provider.dart'; 
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:mgw_tutorial/provider/department_provider.dart';
@@ -22,6 +23,7 @@ import 'package:mgw_tutorial/provider/order_provider.dart';
 
 
 // Screens
+import 'package:mgw_tutorial/screens/sidebar/faq_screen.dart';
 import 'package:mgw_tutorial/screens/main_screen.dart';
 import 'package:mgw_tutorial/screens/auth/login_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/about_us_screen.dart';
@@ -68,6 +70,7 @@ void main() async {
         ChangeNotifierProvider(create: (context) => LessonProvider()),
         ChangeNotifierProvider(create: (context) => TestimonialProvider()),
         ChangeNotifierProvider(create: (context) => OrderProvider()),
+        ChangeNotifierProvider(create: (context) => FaqProvider()),
         ChangeNotifierProxyProvider<AuthProvider, DiscussionProvider>(
           create: (context) => DiscussionProvider(
             Provider.of<AuthProvider>(context, listen: false),
@@ -390,6 +393,7 @@ class MyApp extends StatelessWidget {
         CreatePostScreen.routeName: (ctx) => const CreatePostScreen(),
         TestimonialsScreen.routeName: (ctx) => const TestimonialsScreen(),
         MyCoursesScreen.routeName: (ctx) => const MyCoursesScreen(), // <<< ROUTE IS CORRECTLY DEFINED
+        FaqScreen.routeName: (ctx) => const FaqScreen(),
         OrderScreen.routeName: (ctx) {
           final args = ModalRoute.of(ctx)?.settings.arguments;
           if (args is Semester) {

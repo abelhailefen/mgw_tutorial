@@ -387,5 +387,9 @@
   "lastNameValidationErrorRequired": "የአባት ስም ያስፈልጋል",
   "nameChangedSuccess": "ስም በተሳካ ሁኔታ ተቀይሯል",
   "nameChangeFailed": "ስም መቀየር አልተሳካም",
-  "sessionInvalid": "የስብሰባ ጊዜ ተጠናቋል። እባክዎ ወደ መጀመሪያ ገፅ ይመለሱ።"
+  "sessionInvalid": "የስብሰባ ጊዜ ተጠናቋል። እባክዎ ወደ መጀመሪያ ገፅ ይመለሱ።",
+  "errorLoadingData": "መጫን ላይ ስህተት",
+  "retry": "እንደገና ይሞክሩ",
+  "faqTitle": "FAQ",
+  "faqNoItems": "ምንም የተመዘገበ ጥያቄ የለም።"
 }

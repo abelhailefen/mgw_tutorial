@@ -387,5 +387,9 @@
   "lastNameValidationErrorRequired": "Last name is required",
   "nameChangedSuccess": "Name changed successfully",
   "nameChangeFailed": "Failed to change name",
-  "sessionInvalid": "Session expired. Please log in again"
+  "sessionInvalid": "Session expired. Please log in again",
+  "errorLoadingData": "Error Loading Data",
+  "retry": "Retry",
+  "faqTitle": "FAQ",
+  "faqNoItems": "No FAQ items available at the moment."
 }
