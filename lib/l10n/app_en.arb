@@ -108,10 +108,10 @@
   "signUpSuccessMessage": "Account created successfully! You can now sign in.",
   "signUpFailedErrorGeneral": "Sign up failed. Please try again.",
   "loginTitle": "Sign In",
-  "loginToContinue": "Sign in to continue your learning journey.",
+  "loginToContinue": "Welcome To MGW, Your Smarter Freshman Path To Straight A+/A’s in Every Course.",
   "signInButton": "Sign In",
   "dontHaveAccount": "Don't have an account?",
-  "signUpLinkText": "Sign Up Now",
+  "signUpLinkText": "Create Now",
   "phoneNumberLabel": "Phone Number",
   "phoneNumberHint": "912 345 678",
   "phoneNumberValidationErrorRequired": "Please enter your phone number",
@@ -378,5 +378,14 @@
   "yourExperienceLabel": "Your Experience",
   "experienceValidationPrompt": "Please describe your experience",
   "submitButtonGeneral": "Submit",
-  "testimonialSubmittedSuccess": "Testimonial submitted! It will appear after approval."
+  "testimonialSubmittedSuccess": "Testimonial submitted! It will appear after approval.",
+  "accountNameLabel": "Name",
+  "changeNameLabel": "Change Name",
+  "firstNameLabel": "First Name",
+  "lastNameLabel": "Last Name",
+  "firstNameValidationErrorRequired": "First name is required",
+  "lastNameValidationErrorRequired": "Last name is required",
+  "nameChangedSuccess": "Name changed successfully",
+  "nameChangeFailed": "Failed to change name",
+  "sessionInvalid": "Session expired. Please log in again"
 }

@@ -108,7 +108,7 @@
   "signUpSuccessMessage": "ሕሳብ ብዕዉት ተፈጢሩ! ሕጂ ክትኣቱ ትኽእል ኢኻ።",
   "signUpFailedErrorGeneral": "ምምዝጋብ ኣይተዓወተን። እባኽ እንደገና ፈትን።",
   "loginTitle": "እቶ",
-  "loginToContinue": "ምምሃርካ ንምቕጻል እቶ።",
+  "loginToContinue": "እንቋዕ ናብ MGW ብደሓን መጻእኩም፣ ናትኩም በሊሕ ናይ ሓደሽቲ ተማሃሮ መንገዲ ናብ A+/A’s ኣብ ነፍሲ ወከፍ ኮርስ።",
   "signInButton": "እቶ",
   "dontHaveAccount": "ሕሳብ የብልካን?",
   "signUpLinkText": "ሕጂ ተመዝገብ",
@@ -378,5 +378,14 @@
   "yourExperienceLabel": "ናይ ንስኻ ተሞክሮ",
   "experienceValidationPrompt": "እባኽ ኣትተሞክሮኻ ግለጽ",
   "submitButtonGeneral": "ኣቕርብ",
-  "testimonialSubmittedSuccess": "ምስክርነት ቀሪቡ! ድሕሪ ፍቓድ ክርአ እዩ።"
+  "testimonialSubmittedSuccess": "ምስክርነት ቀሪቡ! ድሕሪ ፍቓድ ክርአ እዩ።",
+  "accountNameLabel": "ሽም",
+  "changeNameLabel": "ሽም ቀይር",
+  "firstNameLabel": "ሽም",
+  "lastNameLabel": "ሽም ኣቦ",
+  "firstNameValidationErrorRequired": "ሽም ኣድላዪ እዩ",
+  "lastNameValidationErrorRequired": "ሽም ኣቦ ኣድላዪ እዩ",
+  "nameChangedSuccess": "ሽም ብዕዉት ተቐይሩ",
+  "nameChangeFailed": "ሽም ንምቕያር ኣይተዓወተን",
+  "sessionInvalid": "ምምዝጋብ ሰነድ ኣይተፈተረን። እባኽ እንደገና ፈትን።"
 }

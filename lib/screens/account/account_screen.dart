@@ -1,7 +1,4 @@
-// lib/screens/account/account_screen.dart
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:mgw_tutorial/screens/auth/login_screen.dart';
@@ -17,9 +14,7 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
-  File? _profileImageFile;
   bool _notificationsEnabled = true;
-  final ImagePicker _picker = ImagePicker();
 
   final _changePasswordFormKey = GlobalKey<FormState>();
   final _currentPasswordController = TextEditingController();
@@ -31,8 +26,10 @@ class _AccountScreenState extends State<AccountScreen> {
 
   final _changePhoneFormKey = GlobalKey<FormState>();
   final _newPhoneController = TextEditingController();
-  final _otpController = TextEditingController();
-  // bool _otpRequested = false; // No longer needed at class level for dialog
+
+  final _changeNameFormKey = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
 
   @override
   void dispose() {
@@ -40,7 +37,8 @@ class _AccountScreenState extends State<AccountScreen> {
     _newPasswordController.dispose();
     _confirmNewPasswordController.dispose();
     _newPhoneController.dispose();
-    _otpController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     super.dispose();
   }
 
@@ -74,25 +72,91 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
-
-  Future<void> _changeProfilePicture() async {
-    if (!mounted) return;
+  void _showChangeNameDialog() {
     final l10n = AppLocalizations.of(context)!;
-    try {
-      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-      if (pickedFile != null) {
-        if (mounted) {
-          setState(() {
-            _profileImageFile = File(pickedFile.path);
-          });
-          _showThemedSuccessSnackBar(l10n.profilePictureSelectedMessage);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        _showThemedErrorSnackBar(l10n.errorPickingImage(e.toString()));
-      }
-    }
+    final theme = Theme.of(context);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    _firstNameController.text = authProvider.currentUser?.firstName ?? '';
+    _lastNameController.text = authProvider.currentUser?.lastName ?? '';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setDialogState) {
+            final authProvider = Provider.of<AuthProvider>(context, listen: true);
+
+            return AlertDialog(
+              backgroundColor: theme.dialogBackgroundColor,
+              title: Text('Change Name', style: theme.textTheme.titleLarge),
+              content: Form(
+                key: _changeNameFormKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      TextFormField(
+                        controller: _firstNameController,
+                        decoration: const InputDecoration(labelText: 'First Name'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'First name is required';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _lastNameController,
+                        decoration: const InputDecoration(labelText: 'Last Name'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Last name is required';
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: Text(l10n.cancelButton, style: TextStyle(color: theme.colorScheme.primary)),
+                  onPressed: authProvider.isLoading ? null : () => Navigator.of(ctx).pop(),
+                ),
+                ElevatedButton(
+                  onPressed: authProvider.isLoading
+                      ? null
+                      : () async {
+                          if (_changeNameFormKey.currentState!.validate()) {
+                            final result = await authProvider.changeName(
+                              firstName: _firstNameController.text,
+                              lastName: _lastNameController.text,
+                            );
+                            if (!mounted) return;
+                            Navigator.of(ctx).pop();
+                            if (result['success']) {
+                              _showThemedSuccessSnackBar(result['message'] ?? 'Name changed successfully');
+                            } else {
+                              _showThemedErrorSnackBar(result['message'] ?? 'Failed to change name');
+                            }
+                          }
+                        },
+                  child: authProvider.isLoading
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(theme.colorScheme.onPrimary),
+                          ))
+                      : Text(l10n.changeButton),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showChangePasswordDialog() {
@@ -101,8 +165,7 @@ class _AccountScreenState extends State<AccountScreen> {
     _currentPasswordController.clear();
     _newPasswordController.clear();
     _confirmNewPasswordController.clear();
-    
-    // Reset visibility flags locally for the dialog instance
+
     bool localIsCurrentPasswordVisible = false;
     bool localIsNewPasswordVisible = false;
     bool localIsConfirmNewPasswordVisible = false;
@@ -126,7 +189,7 @@ class _AccountScreenState extends State<AccountScreen> {
                     children: <Widget>[
                       PasswordFormField(
                         controller: _currentPasswordController,
-                        isPasswordVisible: localIsCurrentPasswordVisible, // Use local state
+                        isPasswordVisible: localIsCurrentPasswordVisible,
                         onToggleVisibility: () => setDialogState(() => localIsCurrentPasswordVisible = !localIsCurrentPasswordVisible),
                         labelText: l10n.currentPasswordLabel,
                         l10n: l10n,
@@ -138,20 +201,20 @@ class _AccountScreenState extends State<AccountScreen> {
                       const SizedBox(height: 16),
                       PasswordFormField(
                         controller: _newPasswordController,
-                        isPasswordVisible: localIsNewPasswordVisible, // Use local state
+                        isPasswordVisible: localIsNewPasswordVisible,
                         onToggleVisibility: () => setDialogState(() => localIsNewPasswordVisible = !localIsNewPasswordVisible),
                         labelText: l10n.newPasswordLabel,
                         l10n: l10n,
-                         validator: (value) {
+                        validator: (value) {
                           if (value == null || value.isEmpty) return l10n.passwordValidationErrorRequired;
                           if (value.length < 6) return l10n.passwordValidationErrorLength;
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
-                       PasswordFormField(
+                      PasswordFormField(
                         controller: _confirmNewPasswordController,
-                        isPasswordVisible: localIsConfirmNewPasswordVisible, // Use local state
+                        isPasswordVisible: localIsConfirmNewPasswordVisible,
                         onToggleVisibility: () => setDialogState(() => localIsConfirmNewPasswordVisible = !localIsConfirmNewPasswordVisible),
                         labelText: l10n.confirmNewPasswordLabel,
                         l10n: l10n,
@@ -171,28 +234,36 @@ class _AccountScreenState extends State<AccountScreen> {
                   onPressed: authProvider.isLoading ? null : () => Navigator.of(ctx).pop(),
                 ),
                 ElevatedButton(
-                  onPressed: authProvider.isLoading ? null : () async {
-                    if (_changePasswordFormKey.currentState!.validate()) {
-                      final result = await authProvider.changePassword(
-                        currentPassword: _currentPasswordController.text,
-                        newPassword: _newPasswordController.text,
-                      );
-                      if (!mounted) return;
-                      Navigator.of(ctx).pop();
-                      if (result['success']) {
-                        _showThemedSuccessSnackBar(result['message'] ?? l10n.passwordChangedSuccess);
-                      } else {
-                        _showThemedErrorSnackBar(result['message'] ?? l10n.passwordChangeFailed);
-                      }
-                    }
-                  },
+                  onPressed: authProvider.isLoading
+                      ? null
+                      : () async {
+                          if (_changePasswordFormKey.currentState!.validate()) {
+                            final result = await authProvider.changePassword(
+                              currentPassword: _currentPasswordController.text,
+                              newPassword: _newPasswordController.text,
+                            );
+                            if (!mounted) return;
+                            Navigator.of(ctx).pop();
+                            if (result['success']) {
+                              _showThemedSuccessSnackBar(result['message'] ?? l10n.passwordChangedSuccess);
+                            } else {
+                              _showThemedErrorSnackBar(result['message'] ?? l10n.passwordChangeFailed);
+                            }
+                          }
+                        },
                   child: authProvider.isLoading
-                      ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(theme.colorScheme.onPrimary)))
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(theme.colorScheme.onPrimary),
+                          ))
                       : Text(l10n.changeButton),
                 ),
               ],
             );
-          }
+          },
         );
       },
     );
@@ -202,9 +273,6 @@ class _AccountScreenState extends State<AccountScreen> {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     _newPhoneController.clear();
-    _otpController.clear();
-    
-    bool dialogOtpRequested = false; // Local state for the dialog
 
     showDialog(
       context: context,
@@ -223,36 +291,24 @@ class _AccountScreenState extends State<AccountScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      if (!dialogOtpRequested)
-                        PhoneFormField(
-                          controller: _newPhoneController,
-                          labelText: l10n.newPhoneNumberLabel,
-                          hintText: l10n.phoneNumberHint,
-                          l10n: l10n,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) return l10n.phoneNumberValidationErrorRequired;
-                            final normalizedInput = authProvider.normalizePhoneNumberToE164('0$value');
-                            final currentUserPhone = authProvider.currentUser?.phone;
-                            if (!RegExp(r'^[0-9]{9}$').hasMatch(value)){
-                               return l10n.phoneNumberValidationErrorInvalid;
-                            }
-                            if (currentUserPhone != null && normalizedInput == currentUserPhone) {
-                                return l10n.otpNewPhoneSameAsCurrentError;
-                            }
-                            return null;
-                          },
-                        )
-                      else
-                        TextFormField(
-                          controller: _otpController,
-                          decoration: InputDecoration(labelText: l10n.otpEnterPrompt),
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) return l10n.otpValidationErrorRequired;
-                            if (value.length != 6) return l10n.otpValidationErrorLength;
-                            return null;
-                          },
-                        ),
+                      PhoneFormField(
+                        controller: _newPhoneController,
+                        labelText: l10n.newPhoneNumberLabel,
+                        hintText: l10n.phoneNumberHint,
+                        l10n: l10n,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return l10n.phoneNumberValidationErrorRequired;
+                          final normalizedInput = authProvider.normalizePhoneNumberToE164('0$value');
+                          final currentUserPhone = authProvider.currentUser?.phone;
+                          if (!RegExp(r'^[0-9]{9}$').hasMatch(value)) {
+                            return l10n.phoneNumberValidationErrorInvalid;
+                          }
+                          if (currentUserPhone != null && normalizedInput == currentUserPhone) {
+                            return l10n.otpNewPhoneSameAsCurrentError;
+                          }
+                          return null;
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -263,38 +319,31 @@ class _AccountScreenState extends State<AccountScreen> {
                   onPressed: authProvider.isLoading ? null : () => Navigator.of(ctx).pop(),
                 ),
                 ElevatedButton(
-                  onPressed: authProvider.isLoading ? null : () async {
-                    if (_changePhoneFormKey.currentState!.validate()) {
-                      if (!dialogOtpRequested) {
-                        final result = await authProvider.requestPhoneChangeOTP(
-                          newRawPhoneNumber: _newPhoneController.text,
-                        );
-                        if (!mounted) return;
-                        if (result['success']) {
-                          setDialogState(() { dialogOtpRequested = true; });
-                           _showThemedSuccessSnackBar(result['message'] ?? l10n.otpSentSuccess);
-                        } else {
-                          _showThemedErrorSnackBar(result['message'] ?? l10n.otpRequestFailed);
-                        }
-                      } else {
-                        final result = await authProvider.verifyOtpAndChangePhone(
-                          newRawPhoneNumber: _newPhoneController.text,
-                          otp: _otpController.text,
-                        );
-                        if (!mounted) return;
-                        Navigator.of(ctx).pop();
-                        if (result['success']) {
-                           _showThemedSuccessSnackBar(result['message'] ?? l10n.phoneUpdateSuccess);
-                           setState(() {});
-                        } else {
-                           _showThemedErrorSnackBar(result['message'] ?? l10n.phoneUpdateFailed);
-                        }
-                      }
-                    }
-                  },
+                  onPressed: authProvider.isLoading
+                      ? null
+                      : () async {
+                          if (_changePhoneFormKey.currentState!.validate()) {
+                            final result = await authProvider.changePhoneNumber(
+                              newRawPhoneNumber: _newPhoneController.text,
+                            );
+                            if (!mounted) return;
+                            Navigator.of(ctx).pop();
+                            if (result['success']) {
+                              _showThemedSuccessSnackBar(result['message'] ?? l10n.phoneUpdateSuccess);
+                            } else {
+                              _showThemedErrorSnackBar(result['message'] ?? l10n.phoneUpdateFailed);
+                            }
+                          }
+                        },
                   child: authProvider.isLoading
-                    ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(theme.colorScheme.onPrimary)))
-                    : Text(dialogOtpRequested ? l10n.otpVerifyButton : l10n.otpRequestButton),
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(theme.colorScheme.onPrimary),
+                          ))
+                      : Text(l10n.changeButton),
                 ),
               ],
             );
@@ -323,45 +372,27 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final authProvider = Provider.of<AuthProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context); // Listen to AuthProvider changes
     final currentUser = authProvider.currentUser;
 
     String displayName = l10n.guestUser;
     String displayPhone = "";
-    String? userProfileNetworkUrl;
 
     if (currentUser != null) {
-      displayName = ('${currentUser.firstName} ${currentUser.lastName}').trim();
-      if (displayName.isEmpty) {
-        displayName = currentUser.phone;
-      }
+      final name = ('${currentUser.firstName} ${currentUser.lastName}').trim();
+      displayName = name.isNotEmpty ? name : currentUser.phone;
       displayPhone = currentUser.phone;
     }
 
-    Widget profilePictureWidget;
-    if (_profileImageFile != null) {
-      profilePictureWidget = CircleAvatar(
-        radius: 60,
-        backgroundImage: FileImage(_profileImageFile!),
-        backgroundColor: theme.colorScheme.surfaceVariant,
-      );
-    } else if (userProfileNetworkUrl != null && userProfileNetworkUrl.isNotEmpty) {
-      profilePictureWidget = CircleAvatar(
-        radius: 60,
-        backgroundImage: NetworkImage(userProfileNetworkUrl),
-        backgroundColor: theme.colorScheme.surfaceVariant,
-      );
-    } else {
-      profilePictureWidget = CircleAvatar(
-        radius: 60,
-        backgroundColor: theme.colorScheme.primaryContainer,
-        child: Icon(
-          Icons.person,
-          size: 70,
-          color: theme.colorScheme.onPrimaryContainer,
-        ),
-      );
-    }
+    Widget profilePictureWidget = CircleAvatar(
+      radius: 60,
+      backgroundColor: theme.colorScheme.primaryContainer,
+      child: Icon(
+        Icons.person,
+        size: 70,
+        color: theme.colorScheme.onPrimaryContainer,
+      ),
+    );
 
     if (currentUser == null) {
       return Scaffold(
@@ -375,10 +406,11 @@ class _AccountScreenState extends State<AccountScreen> {
                 onPressed: () {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    (route) => false);
+                    (route) => false,
+                  );
                 },
                 child: Text(l10n.signInLink),
-              )
+              ),
             ],
           ),
         ),
@@ -399,17 +431,22 @@ class _AccountScreenState extends State<AccountScreen> {
                   const SizedBox(height: 8),
                   Text(displayName, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                   if (displayPhone.isNotEmpty)
-                     Text(displayPhone, style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7))),
-                  const SizedBox(height: 12),
-                  TextButton.icon(
-                    icon: Icon(Icons.edit_outlined, size: 20, color: theme.colorScheme.primary),
-                    label: Text(l10n.changeProfilePictureButton, style: TextStyle(color: theme.colorScheme.primary)),
-                    onPressed: _changeProfilePicture,
-                  ),
+                    Text(
+                      displayPhone,
+                      style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                    ),
                 ],
               ),
             ),
             const SizedBox(height: 30),
+            _buildInfoCard(
+              context: context,
+              l10n: l10n,
+              label: 'Name',
+              value: displayName,
+              onChange: _showChangeNameDialog,
+            ),
+            const SizedBox(height: 16),
             _buildInfoCard(
               context: context,
               l10n: l10n,
@@ -429,7 +466,7 @@ class _AccountScreenState extends State<AccountScreen> {
             Card(
               child: SwitchListTile(
                 title: Text(
-                  l10n.notifications, // <<< CORRECTED KEY
+                  l10n.notifications,
                   style: theme.textTheme.titleMedium,
                 ),
                 value: _notificationsEnabled,
@@ -479,16 +516,12 @@ class _AccountScreenState extends State<AccountScreen> {
                 children: [
                   Text(
                     label,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.6)
-                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.6)),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],

@@ -108,7 +108,7 @@
   "signUpSuccessMessage": "መለያ በተሳካ ሁኔታ ተፈጥሯል! አሁን መግባት ይችላሉ።",
   "signUpFailedErrorGeneral": "መለያ መፍጠር አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
   "loginTitle": "ይግቡ",
-  "loginToContinue": "የመማር ጉዞዎን ለመቀጠል ይግቡ።",
+  "loginToContinue": "ወደ MGW እንኳን በደህና መጡ፣ የእርስዎ ብልህ የፍሬሽማን መንገድ ወደ A+/A በእያንዳንዱ ኮርስ።",
   "signInButton": "ይግቡ",
   "dontHaveAccount": "መለያ የሎትም?",
   "signUpLinkText": "አሁን ይመዝገቡ",
@@ -378,5 +378,14 @@
   "yourExperienceLabel": "የእርስዎ ተሞክሮ",
   "experienceValidationPrompt": "እባክዎ ተሞክሮዎን ይግለጹ",
   "submitButtonGeneral": "አስገባ",
-  "testimonialSubmittedSuccess": "ምስክርነት ገብቷል! ከማረጋገጫ በኋላ ይታያል።"
+  "testimonialSubmittedSuccess": "ምስክርነት ገብቷል! ከማረጋገጫ በኋላ ይታያል።",
+   "accountNameLabel": "ስም",
+  "changeNameLabel": "ስም ቀይር",
+  "firstNameLabel": "የመጀመሪያ ስም",
+  "lastNameLabel": "የአባት ስም",
+  "firstNameValidationErrorRequired": "የመጀመሪያ ስም ያስፈልጋል",
+  "lastNameValidationErrorRequired": "የአባት ስም ያስፈልጋል",
+  "nameChangedSuccess": "ስም በተሳካ ሁኔታ ተቀይሯል",
+  "nameChangeFailed": "ስም መቀየር አልተሳካም",
+  "sessionInvalid": "የስብሰባ ጊዜ ተጠናቋል። እባክዎ ወደ መጀመሪያ ገፅ ይመለሱ።"
 }

@@ -1,11 +1,8 @@
-// lib/provider/auth_provider.dart
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io'; // Import for SocketException
-import 'dart:async'; // Import for TimeoutException
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
-
 import 'package:mgw_tutorial/models/user.dart';
 import 'package:mgw_tutorial/models/auth_response.dart';
 import 'package:mgw_tutorial/models/api_error.dart';
@@ -21,19 +18,24 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   bool get isLoading => _isLoading;
   ApiError? get apiError => _apiError;
+  String? get errorMessage => _apiError?.message;
+  List<FieldError>? get errorFields => _apiError?.errors;
 
-  static const String _networkErrorMessage = "Sorry, there seems to be a network error. Please check your connection and try again.";
-  static const String _timeoutErrorMessage = "The request timed out. Please check your connection or try again later.";
-  static const String _unexpectedErrorMessage = "An unexpected error occurred. Please try again later.";
-  static const String _defaultFailedMessage = "Operation failed. Please try again.";
-  static const String _invalidCredentialsMessage = "Invalid phone number or password. Please try again.";
+  static const String _networkErrorMessage = "Sorry, there seems to be a network error.";
+  static const String _timeoutErrorMessage = "The request timed out.";
+  static const String _unexpectedErrorMessage = "An unexpected error occurred.";
+  static const String _defaultFailedMessage = "Operation failed. Try again.";
+  static const String _invalidCredentialsMessage = "Invalid phone number or password.";
   static const String _defaultRegistrationFailedMessage = "Registration failed. Please check your details and try again.";
-  static const String _defaultSignUpFailedMessage = "Sign up failed. Please try again.";
+  static const String _defaultSignUpFailedMessage = "Sign up failed.";
+  static const String _sessionInvalidMessage = "Session expired. Please log in again.";
+  static const String _notAuthenticatedMessage = "Not authenticated. Please log in.";
 
-  static const String _apiBaseUrl = "https://usersservicefx.amtprinting19.com"; // VERIFY THIS URL IS CORRECT AND REACHABLE
+  static const String _apiBaseUrl = "https://usersservicefx.amtprinting19.com";
 
   void clearError() {
     _apiError = null;
+    notifyListeners();
   }
 
   void setErrorManually(String message) {
@@ -47,17 +49,9 @@ class AuthProvider with ChangeNotifier {
     if (cleanedNumber.startsWith('0') && cleanedNumber.length == 10) return '+251${cleanedNumber.substring(1)}';
     if (cleanedNumber.length == 9 && !cleanedNumber.startsWith('0')) return '+251$cleanedNumber';
     if (rawPhoneNumber.startsWith('+251') && rawPhoneNumber.length == 13) return rawPhoneNumber;
-    // More robust checks might be needed depending on expected formats
-    if (cleanedNumber.length == 12 && cleanedNumber.startsWith('251')) return '+$cleanedNumber';
-    if (cleanedNumber.length == 10 && cleanedNumber.startsWith('0')) return '+251${cleanedNumber.substring(1)}';
-    if (cleanedNumber.length == 9) return '+251$cleanedNumber';
-
-    // Fallback for potentially unusual formats or if strict E.164 can't be determined
-    // Depending on backend requirements, you might need stricter validation
-    print("Warning: Could not reliably normalize phone number '$rawPhoneNumber' to E.164 strictly. Returning processed version: $cleanedNumber");
-    return cleanedNumber; // Return the cleaned number or consider throwing an error if format is strictly required
+    print("Warning: Could not normalize phone number '$rawPhoneNumber' to E.164. Returning: $cleanedNumber");
+    return cleanedNumber;
   }
-
 
   Future<bool> login({
     required String phoneNumber,
@@ -65,66 +59,57 @@ class AuthProvider with ChangeNotifier {
     required String deviceInfo,
   }) async {
     _isLoading = true;
-    _apiError = null; // Clear previous errors before new attempt
-    notifyListeners(); // Notify to show loading spinner
+    _apiError = null;
+    notifyListeners();
 
-    final String normalizedPhoneNumber = normalizePhoneNumberToE164(phoneNumber);
-    final url = Uri.parse('$_apiBaseUrl/api/auth/login'); // Ensure this URL is correct
+    final normalizedPhoneNumber = normalizePhoneNumberToE164(phoneNumber);
+    final url = Uri.parse('$_apiBaseUrl/api/auth/login');
     final loginPayload = User(
-      firstName: '', // Not needed for login, but part of User model
-      lastName: '', // Not needed for login, but part of User model
+      firstName: '',
+      lastName: '',
       phone: normalizedPhoneNumber,
       password: password,
       device: deviceInfo,
     );
+
     try {
       final body = json.encode(loginPayload.toJsonForLogin());
-      print("Login Request URL: $url");
-      print("Login Request Body: ${body}"); // Be cautious logging sensitive data like password
-      final response = await http.post(url, headers: {"Content-Type": "application/json", "Accept": "application/json"}, body: body)
-                                .timeout(const Duration(seconds: 15)); // Reduced timeout for testing
-      print("Login API Response Status: ${response.statusCode}");
-      print("Login API Response Body: ${response.body.substring(0, (response.body.length > 500 ? 500 : response.body.length))}");
-
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: body,
+          )
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        final authResponse = AuthResponse.fromJson(responseData);
+        final data = json.decode(response.body);
+        final authResponse = AuthResponse.fromJson(data);
         _currentUser = authResponse.user;
         _token = authResponse.token;
+        print("Login successful: User ID=${_currentUser?.id}, Token=${_token?.substring(0, 10)}...");
         _isLoading = false;
-        notifyListeners(); // Notify success state (user logged in, loading false)
+        notifyListeners();
         return true;
       } else {
-        // Handle API errors (e.g., 401, 403, 404, 500 etc.)
         _handleErrorResponse(response, _invalidCredentialsMessage, isLogin: true);
-        _isLoading = false; // Set loading false on API error
-        notifyListeners(); // Notify failure state (error set, loading false)
+        _isLoading = false;
+        notifyListeners();
         return false;
       }
-    } on TimeoutException catch (e) { // Catch TimeoutException specifically
-      print("Login TimeoutException: $e");
-      _handleCatchError(e, 'Login failed due to timeout.'); // Pass more context
-      _isLoading = false; // Set loading false on timeout
-      notifyListeners(); // Notify failure state (error set, loading false)
+    } on TimeoutException catch (e) {
+      _handleCatchError(e, 'Login timed out.');
+      _isLoading = false;
+      notifyListeners();
       return false;
-    } on SocketException catch (e) { // Catch SocketException specifically (network issues)
-       print("Login SocketException: $e");
-      _handleCatchError(e, 'Login failed due to network issue.');
-      _isLoading = false; // Set loading false on network error
-      notifyListeners(); // Notify failure state (error set, loading false)
+    } on SocketException catch (e) {
+      _handleCatchError(e, 'Login failed: network error.');
+      _isLoading = false;
+      notifyListeners();
       return false;
-    } on http.ClientException catch (e) { // Catch other HTTP client errors
-      print("Login ClientException: $e");
-      _handleCatchError(e, 'Login failed due to client-side HTTP issue.');
-      _isLoading = false; // Set loading false on client error
-      notifyListeners(); // Notify failure state (error set, loading false)
-      return false;
-    }
-    catch (error) { // Catch any other errors during the process
-      print("Login Generic Catch: $error");
+    } catch (error) {
       _handleCatchError(error, 'Login failed unexpectedly.');
-      _isLoading = false; // Set loading false on unexpected error
-      notifyListeners(); // Notify failure state (error set, loading false)
+      _isLoading = false;
+      notifyListeners();
       return false;
     }
   }
@@ -132,7 +117,9 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     _currentUser = null;
     _token = null;
-    _apiError = null; // Clear error on logout
+    _apiError = null;
+    print("Logged out: User and token cleared.");
+    _isLoading = false;
     notifyListeners();
   }
 
@@ -141,14 +128,14 @@ class AuthProvider with ChangeNotifier {
     required String password,
     String? firstName,
     String? lastName,
-    String? languageCode, // Unused in current payload logic but kept from original
+    String? languageCode,
     String? deviceInfo,
   }) async {
     _isLoading = true;
     _apiError = null;
-    notifyListeners(); // Notify to show loading spinner
+    notifyListeners();
 
-    final String normalizedPhone = normalizePhoneNumberToE164(phoneNumber);
+    final normalizedPhone = normalizePhoneNumberToE164(phoneNumber);
     final url = Uri.parse('$_apiBaseUrl/api/users');
     final userPayload = User(
       firstName: firstName ?? '',
@@ -157,80 +144,68 @@ class AuthProvider with ChangeNotifier {
       password: password,
       device: deviceInfo,
     );
+
     try {
       final body = json.encode(userPayload.toJsonForSimpleSignUp());
-      final response = await http.post(url, headers: {"Content-Type": "application/json", "Accept": "application/json"}, body: body)
-                                .timeout(const Duration(seconds: 20));
-      print("SignUpSimple API Response Status: ${response.statusCode}");
-      print("SignUpSimple API Response Body: ${response.body.substring(0, (response.body.length > 500 ? 500 : response.body.length))}");
-
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: body,
+          )
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final responseData = json.decode(response.body);
-        // API might return AuthResponse (user+token) or just User object on success
-        if (responseData.containsKey('user') && responseData.containsKey('token')) {
-            final authResponse = AuthResponse.fromJson(responseData);
-            _currentUser = authResponse.user;
-            _token = authResponse.token;
-        } else if (responseData.containsKey('id') && responseData.containsKey('phone')) {
-            _currentUser = User.fromJson(responseData);
-            _token = null; // No token returned, might need separate login after signup
+        final data = json.decode(response.body);
+        if (data.containsKey('user') && data.containsKey('token')) {
+          final authResponse = AuthResponse.fromJson(data);
+          _currentUser = authResponse.user;
+          _token = authResponse.token;
+          print("Sign up successful: User ID=${_currentUser?.id}, Token=${_token?.substring(0, 10)}...");
         } else {
-             // Handle unexpected success response structure
-             print("Warning: SignUpSimple success but unexpected response structure.");
-             _currentUser = null;
-             _token = null;
-             // Potentially still return true if API indicated success, but user state might be incomplete
+          _currentUser = User.fromJson(data);
+          _token = null;
         }
         _isLoading = false;
-        notifyListeners(); // Notify success state
+        notifyListeners();
         return true;
       } else {
-        // Handle API errors
         _handleErrorResponse(response, _defaultSignUpFailedMessage);
-        _isLoading = false; // Set loading false on API error
-        notifyListeners(); // Notify failure state
+        _isLoading = false;
+        notifyListeners();
         return false;
       }
     } on TimeoutException catch (e) {
-      _handleCatchError(e, 'Sign up failed due to timeout.');
-      _isLoading = false; // Set loading false on timeout
-      notifyListeners(); // Notify failure state
+      _handleCatchError(e, 'Sign up timed out.');
+      _isLoading = false;
+      notifyListeners();
       return false;
     } on SocketException catch (e) {
-      _handleCatchError(e, 'Sign up failed due to network issue.');
-      _isLoading = false; // Set loading false on network error
-      notifyListeners(); // Notify failure state
+      _handleCatchError(e, 'Sign up failed: network error.');
+      _isLoading = false;
+      notifyListeners();
       return false;
-    } on http.ClientException catch (e) {
-      _handleCatchError(e, 'Sign up failed due to client-side HTTP issue.');
-      _isLoading = false; // Set loading false on client error
-      notifyListeners(); // Notify failure state
-      return false;
-    }
-    catch (error) {
+    } catch (error) {
       _handleCatchError(error, 'Sign up failed unexpectedly.');
-      _isLoading = false; // Set loading false on unexpected error
-      notifyListeners(); // Notify failure state
+      _isLoading = false;
+      notifyListeners();
       return false;
     }
   }
 
   Future<bool> registerUserFull({
     required User registrationData,
-    XFile? screenshotFile, // Assuming screenshot is handled elsewhere or optional
   }) async {
     _isLoading = true;
     _apiError = null;
-    notifyListeners(); // Notify to show loading spinner
+    notifyListeners();
 
-    final String normalizedPhoneForRegistration = normalizePhoneNumberToE164(registrationData.phone);
-    // Create a new User object with potentially normalized phone number
-    final User updatedRegistrationData = User(
-      id: registrationData.id,
+    final normalizedPhone = normalizePhoneNumberToE164(registrationData.phone);
+    final userPayload = User(
       firstName: registrationData.firstName,
       lastName: registrationData.lastName,
-      phone: normalizedPhoneForRegistration, // Use normalized number
+      phone: normalizedPhone,
       password: registrationData.password,
+      device: registrationData.device,
       allCourses: registrationData.allCourses,
       grade: registrationData.grade,
       category: registrationData.category,
@@ -239,53 +214,141 @@ class AuthProvider with ChangeNotifier {
       region: registrationData.region,
       status: registrationData.status,
       enrolledAll: registrationData.enrolledAll,
-      device: registrationData.device,
       serviceType: registrationData.serviceType,
     );
 
     final url = Uri.parse('$_apiBaseUrl/api/users');
     try {
-     
-      final body = json.encode(updatedRegistrationData.toJsonForFullRegistration());
-      final response = await http.post(url, headers: {"Content-Type": "application/json", "Accept": "application/json"}, body: body)
-                                .timeout(const Duration(seconds: 30)); // Registration might take longer
-
-      print("RegisterUserFull API Response Status: ${response.statusCode}");
-      print("RegisterUserFull API Response Body: ${response.body.substring(0, (response.body.length > 500 ? 500 : response.body.length))}");
-
+      final body = json.encode(userPayload.toJsonForFullRegistration());
+      final response = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: body,
+          )
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200 || response.statusCode == 201) {
-        
         _isLoading = false;
-        notifyListeners(); // Notify success state
+        notifyListeners();
         return true;
       } else {
-        // Handle API errors
         _handleErrorResponse(response, _defaultRegistrationFailedMessage);
-        _isLoading = false; // Set loading false on API error
-        notifyListeners(); // Notify failure state
+        _isLoading = false;
+        notifyListeners();
         return false;
       }
     } on TimeoutException catch (e) {
-      _handleCatchError(e, 'Registration failed due to timeout.');
-      _isLoading = false; // Set loading false on timeout
-      notifyListeners(); // Notify failure state
+      _handleCatchError(e, 'Registration timed out.');
+      _isLoading = false;
+      notifyListeners();
       return false;
     } on SocketException catch (e) {
-      _handleCatchError(e, 'Registration failed due to network issue.');
-      _isLoading = false; // Set loading false on network error
-      notifyListeners(); // Notify failure state
+      _handleCatchError(e, 'Registration failed: network error.');
+      _isLoading = false;
+      notifyListeners();
       return false;
-    } on http.ClientException catch (e) {
-      _handleCatchError(e, 'Registration failed due to client-side HTTP issue.');
-      _isLoading = false; // Set loading false on client error
-      notifyListeners(); // Notify failure state
+    } catch (error) {
+      _handleCatchError(error, 'Registration failed unexpectedly.');
+      _isLoading = false;
+      notifyListeners();
       return false;
     }
-    catch (error) {
-      _handleCatchError(error, 'Registration failed unexpectedly.');
-      _isLoading = false; // Set loading false on unexpected error
-      notifyListeners(); // Notify failure state
-      return false;
+  }
+
+  Future<Map<String, dynamic>> changeName({
+    required String firstName,
+    required String lastName,
+  }) async {
+    if (_currentUser == null || _currentUser!.id == null) {
+      _apiError = ApiError(message: _notAuthenticatedMessage);
+      print("Change name failed: User=${_currentUser}, User ID=${_currentUser?.id}");
+      _isLoading = false;
+      notifyListeners();
+      return {'success': false, 'message': _apiError!.message};
+    }
+
+    _isLoading = true;
+    _apiError = null;
+    notifyListeners();
+
+    final url = Uri.parse('$_apiBaseUrl/api/users/update/${_currentUser!.id}');
+    final previousUser = _currentUser;
+
+    try {
+      final response = await http
+          .put(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Id': _currentUser!.id!.toString(),
+            },
+            body: json.encode({
+              'first_name': firstName,
+              'last_name': lastName,
+              'phone': _currentUser!.phone,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print("Change name response: ${response.statusCode}, Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        // Update user locally to reflect changes
+        _currentUser = User(
+          id: _currentUser!.id,
+          firstName: firstName,
+          lastName: lastName,
+          phone: _currentUser!.phone,
+          device: _currentUser!.device,
+          allCourses: _currentUser!.allCourses,
+          grade: _currentUser!.grade,
+          category: _currentUser!.category,
+          school: _currentUser!.school,
+          gender: _currentUser!.gender,
+          region: _currentUser!.region,
+          status: _currentUser!.status,
+          enrolledAll: _currentUser!.enrolledAll,
+          serviceType: _currentUser!.serviceType,
+        );
+        // Skip session validation if no token
+        bool sessionValid = true;
+        if (_token != null) {
+          sessionValid = await _validateSession();
+        }
+        _isLoading = false;
+        notifyListeners();
+        if (!sessionValid) {
+          return {
+            'success': true,
+            'message': 'Name updated, but session may have expired. Please log in again if issues occur.'
+          };
+        }
+        return {'success': true, 'message': 'Name updated successfully.'};
+      } else {
+        _currentUser = previousUser;
+        _handleErrorResponse(response, 'Failed to update name.');
+        _isLoading = false;
+        notifyListeners();
+        return {'success': false, 'message': _apiError?.message ?? _defaultFailedMessage};
+      }
+    } on TimeoutException catch (e) {
+      _handleCatchError(e, 'Name update timed out.');
+      _currentUser = previousUser;
+      _isLoading = false;
+      notifyListeners();
+      return {'success': false, 'message': _apiError?.message ?? _timeoutErrorMessage};
+    } on SocketException catch (e) {
+      _handleCatchError(e, 'Name update failed: network error.');
+      _currentUser = previousUser;
+      _isLoading = false;
+      notifyListeners();
+      return {'success': false, 'message': _apiError?.message ?? _networkErrorMessage};
+    } catch (error) {
+      _handleCatchError(error, 'Name update failed unexpectedly.');
+      _currentUser = previousUser;
+      _isLoading = false;
+      notifyListeners();
+      return {'success': false, 'message': _apiError?.message ?? _unexpectedErrorMessage};
     }
   }
 
@@ -293,288 +356,290 @@ class AuthProvider with ChangeNotifier {
     required String currentPassword,
     required String newPassword,
   }) async {
-    if (_token == null || _currentUser == null) {
-      _apiError = ApiError(message: 'User not authenticated. Please log in again.');
-      notifyListeners(); // Notify the authentication state change
+    if (_currentUser == null || _currentUser!.id == null) {
+      _apiError = ApiError(message: _notAuthenticatedMessage);
+      print("Change password failed: User=${_currentUser}, User ID=${_currentUser?.id}");
+      _isLoading = false;
+      notifyListeners();
       return {'success': false, 'message': _apiError!.message};
     }
+
     _isLoading = true;
     _apiError = null;
     notifyListeners();
 
-    final url = Uri.parse('$_apiBaseUrl/api/auth/change-password');
-    try {
-      final response = await http.put(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": "Bearer $_token",
-        },
-        body: json.encode({
-          'currentPassword': currentPassword,
-          'newPassword': newPassword,
-        }),
-      ).timeout(const Duration(seconds: 20));
+    final url = Uri.parse('$_apiBaseUrl/api/users/update/${_currentUser!.id}');
+    final previousUser = _currentUser;
 
-      _isLoading = false; // Set loading false after response
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        notifyListeners(); // Notify success state
+    try {
+      final response = await http
+          .put(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Id': _currentUser!.id!.toString(),
+            },
+            body: json.encode({
+              'current_password': currentPassword,
+              'password': newPassword,
+              'first_name': _currentUser!.firstName,
+              'last_name': _currentUser!.lastName,
+              'phone': _currentUser!.phone,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print("Change password response: ${response.statusCode}, Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final reLoginSuccess = await _reLogin(
+          phoneNumber: _currentUser!.phone,
+          password: newPassword,
+        );
+        _isLoading = false;
+        notifyListeners();
+        if (!reLoginSuccess) {
+          _currentUser = previousUser;
+          return {
+            'success': true,
+            'message': 'Password changed, but session refresh failed. Please log in again.'
+          };
+        }
         return {'success': true, 'message': 'Password changed successfully.'};
       } else {
-        _handleErrorResponse(response, 'Failed to change password. Please ensure current password is correct.');
-        notifyListeners(); // Notify failure state
+        _currentUser = previousUser;
+        _handleErrorResponse(response, 'Failed to change password.');
+        _isLoading = false;
+        notifyListeners();
         return {'success': false, 'message': _apiError?.message ?? _defaultFailedMessage};
       }
     } on TimeoutException catch (e) {
-       _handleCatchError(e, 'Failed to change password due to timeout.');
-       _isLoading = false;
-       notifyListeners(); // Notify failure state
-       return {'success': false, 'message': _apiError?.message ?? _timeoutErrorMessage};
-    } on SocketException catch (e) {
-      _handleCatchError(e, 'Failed to change password due to network issue.');
+      _handleCatchError(e, 'Password change timed out.');
+      _currentUser = previousUser;
       _isLoading = false;
-      notifyListeners(); // Notify failure state
-      return {'success': false, 'message': _apiError?.message ?? _networkErrorMessage};
-    } on http.ClientException catch (e) {
-      _handleCatchError(e, 'Failed to change password due to client-side HTTP issue.');
-      _isLoading = false;
-      notifyListeners(); // Notify failure state
-      return {'success': false, 'message': _apiError?.message ?? _unexpectedErrorMessage};
-    }
-    catch (error) {
-      _handleCatchError(error, 'Failed to change password unexpectedly.');
-       _isLoading = false;
-       notifyListeners(); // Notify failure state
-      return {'success': false, 'message': _apiError?.message ?? _unexpectedErrorMessage};
-    }
-  }
-
-  Future<Map<String, dynamic>> requestPhoneChangeOTP({
-    required String newRawPhoneNumber,
-  }) async {
-    if (_token == null || _currentUser == null) {
-       _apiError = ApiError(message: 'User not authenticated.');
-       notifyListeners(); // Notify authentication state change
-       return {'success': false, 'message': _apiError!.message};
-    }
-    _isLoading = true;
-    _apiError = null;
-    notifyListeners();
-
-    final normalizedNewPhone = normalizePhoneNumberToE164(newRawPhoneNumber);
-    final url = Uri.parse('$_apiBaseUrl/api/auth/request-phone-change-otp');
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": "Bearer $_token",
-        },
-        body: json.encode({'newPhoneNumber': normalizedNewPhone}),
-      ).timeout(const Duration(seconds: 20));
-
-      _isLoading = false; // Set loading false after response
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        notifyListeners(); // Notify success state
-        return {'success': true, 'message': 'OTP sent to $normalizedNewPhone.'};
-      } else {
-        _handleErrorResponse(response, 'Failed to request OTP. Please try again.');
-        notifyListeners(); // Notify failure state
-        return {'success': false, 'message': _apiError?.message ?? _defaultFailedMessage};
-      }
-    } on TimeoutException catch (e) {
-      _handleCatchError(e, 'Failed to request OTP due to timeout.');
-      _isLoading = false; notifyListeners(); // Notify failure state
+      notifyListeners();
       return {'success': false, 'message': _apiError?.message ?? _timeoutErrorMessage};
     } on SocketException catch (e) {
-      _handleCatchError(e, 'Failed to request OTP due to network issue.');
-      _isLoading = false; notifyListeners(); // Notify failure state
+      _handleCatchError(e, 'Password change failed: network error.');
+      _currentUser = previousUser;
+      _isLoading = false;
+      notifyListeners();
       return {'success': false, 'message': _apiError?.message ?? _networkErrorMessage};
-    } on http.ClientException catch (e) {
-      _handleCatchError(e, 'Failed to request OTP due to client-side HTTP issue.');
-      _isLoading = false; notifyListeners(); // Notify failure state
-      return {'success': false, 'message': _apiError?.message ?? _unexpectedErrorMessage};
-    }
-    catch (error) {
-      _handleCatchError(error, 'Failed to request OTP unexpectedly.');
-      _isLoading = false; notifyListeners(); // Notify failure state
+    } catch (error) {
+      _handleCatchError(error, 'Password change failed unexpectedly.');
+      _currentUser = previousUser;
+      _isLoading = false;
+      notifyListeners();
       return {'success': false, 'message': _apiError?.message ?? _unexpectedErrorMessage};
     }
   }
 
-  Future<Map<String, dynamic>> verifyOtpAndChangePhone({
+  Future<Map<String, dynamic>> changePhoneNumber({
     required String newRawPhoneNumber,
-    required String otp, // This OTP might need to be sent in the body or headers depending on API
-    
   }) async {
-    if (_token == null || _currentUser == null) {
-       _apiError = ApiError(message: 'User not authenticated.');
-       notifyListeners(); // Notify authentication state change
-       return {'success': false, 'message': _apiError!.message};
+    if (_currentUser == null || _currentUser!.id == null) {
+      _apiError = ApiError(message: _notAuthenticatedMessage);
+      print("Change phone failed: User=${_currentUser}, User ID=${_currentUser?.id}");
+      _isLoading = false;
+      notifyListeners();
+      return {'success': false, 'message': _apiError!.message};
     }
+
     _isLoading = true;
     _apiError = null;
     notifyListeners();
 
     final normalizedNewPhone = normalizePhoneNumberToE164(newRawPhoneNumber);
-    final userId = _currentUser!.id;
-    if (userId == null) {
-        _isLoading = false;
-        _apiError = ApiError(message: 'User ID not found.');
-        notifyListeners();
-        return {'success': false, 'message': _apiError!.message};
-    }
-    
-    final url = Uri.parse('$_apiBaseUrl/api/users/update/$userId');
-    
-    Map<String, dynamic> updatePayload = {
-        'phone': normalizedNewPhone,
-        // Include other required fields from the user object if the API expects a full or partial user update
-        'first_name': _currentUser!.firstName, // Example: Include other existing fields
-        'last_name': _currentUser!.lastName, // Example: Include other existing fields
-        
-    };
+    final url = Uri.parse('$_apiBaseUrl/api/users/update/${_currentUser!.id}');
+    final previousUser = _currentUser;
 
     try {
-      final response = await http.put(
-        url,
-        headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": "Bearer $_token", // Requires authentication
-        },
-        body: json.encode(updatePayload),
-      ).timeout(const Duration(seconds: 20));
+      final response = await http
+          .put(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Id': _currentUser!.id!.toString(),
+            },
+            body: json.encode({
+              'phone': normalizedNewPhone,
+              'first_name': _currentUser!.firstName,
+              'last_name': _currentUser!.lastName,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
-      _isLoading = false; // Set loading false after response
+      print("Change phone response: ${response.statusCode}, Body: ${response.body}");
+
       if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        // Assuming the response contains the updated user object
-        _currentUser = User.fromJson(responseData);
-        notifyListeners(); // Notify success state (user state updated)
+        // Update user locally to reflect changes
+        _currentUser = User(
+          id: _currentUser!.id,
+          firstName: _currentUser!.firstName,
+          lastName: _currentUser!.lastName,
+          phone: normalizedNewPhone,
+          device: _currentUser!.device,
+          allCourses: _currentUser!.allCourses,
+          grade: _currentUser!.grade,
+          category: _currentUser!.category,
+          school: _currentUser!.school,
+          gender: _currentUser!.gender,
+          region: _currentUser!.region,
+          status: _currentUser!.status,
+          enrolledAll: _currentUser!.enrolledAll,
+          serviceType: _currentUser!.serviceType,
+        );
+        // Skip session validation if no token
+        bool sessionValid = true;
+        if (_token != null) {
+          sessionValid = await _validateSession();
+        }
+        _isLoading = false;
+        notifyListeners();
+        if (!sessionValid) {
+          return {
+            'success': true,
+            'message': 'Phone number updated, but session may have expired. Please log in again if issues occur.'
+          };
+        }
         return {'success': true, 'message': 'Phone number updated successfully.'};
       } else {
-        // Handle API errors
-        _handleErrorResponse(response, 'Failed to update phone number. Please check OTP and try again.');
-        notifyListeners(); // Notify failure state
+        _currentUser = previousUser;
+        _handleErrorResponse(response, 'Failed to update phone number.');
+        _isLoading = false;
+        notifyListeners();
         return {'success': false, 'message': _apiError?.message ?? _defaultFailedMessage};
       }
     } on TimeoutException catch (e) {
-      _handleCatchError(e, 'Failed to update phone number due to timeout.');
-      _isLoading = false; notifyListeners(); // Notify failure state
+      _handleCatchError(e, 'Phone update timed out.');
+      _currentUser = previousUser;
+      _isLoading = false;
+      notifyListeners();
       return {'success': false, 'message': _apiError?.message ?? _timeoutErrorMessage};
     } on SocketException catch (e) {
-      _handleCatchError(e, 'Failed to update phone number due to network issue.');
-      _isLoading = false; notifyListeners(); // Notify failure state
+      _handleCatchError(e, 'Phone update failed: network error.');
+      _currentUser = previousUser;
+      _isLoading = false;
+      notifyListeners();
       return {'success': false, 'message': _apiError?.message ?? _networkErrorMessage};
-    } on http.ClientException catch (e) {
-      _handleCatchError(e, 'Failed to update phone number due to client-side HTTP issue.');
-      _isLoading = false; notifyListeners(); // Notify failure state
-      return {'success': false, 'message': _apiError?.message ?? _unexpectedErrorMessage};
-    }
-    catch (error) {
-      _handleCatchError(error, 'Failed to update phone number unexpectedly.');
-      _isLoading = false; notifyListeners(); // Notify failure state
+    } catch (error) {
+      _handleCatchError(error, 'Phone update failed unexpectedly.');
+      _currentUser = previousUser;
+      _isLoading = false;
+      notifyListeners();
       return {'success': false, 'message': _apiError?.message ?? _unexpectedErrorMessage};
     }
   }
 
-
-  // Helper method for handling API response errors (non-2xx status codes)
-  void _handleErrorResponse(http.Response response, String defaultUserMessage, {bool isLogin = false}) {
-    String errorMessageToShow;
-    List<FieldError>? fieldErrorsFromApi;
+  Future<bool> _reLogin({
+    required String phoneNumber,
+    required String? password,
+  }) async {
+    if (_currentUser == null || password == null) {
+      print("Re-login failed: Missing user or password.");
+      _apiError = ApiError(message: _sessionInvalidMessage);
+      return false;
+    }
 
     try {
-      final errorBody = json.decode(response.body);
-      if (errorBody is Map) {
-        // Common API structure: {'message': '...', 'errors': [...]}
-        if (errorBody.containsKey('message') && errorBody['message'] != null && errorBody['message'].toString().isNotEmpty) {
-           errorMessageToShow = errorBody['message'].toString();
-
-           // Special handling for login credentials
-           if (isLogin && (response.statusCode == 400 || response.statusCode == 401 || response.statusCode == 403)) {
-              // Override generic messages with a specific invalid credentials message
-              final lowerMessage = errorMessageToShow.toLowerCase();
-              if (lowerMessage.contains("user not found") || lowerMessage.contains("invalid credentials") || lowerMessage.contains("password does not match") || lowerMessage.contains("phone number") || lowerMessage.contains("password")) {
-                 errorMessageToShow = _invalidCredentialsMessage;
-              }
-           }
-
-           if (errorBody.containsKey('errors') && errorBody['errors'] is List && (errorBody['errors'] as List).isNotEmpty) {
-             fieldErrorsFromApi = (errorBody['errors'] as List).map((e) {
-               if (e is Map<String, dynamic>) {
-                 return FieldError.fromJson(e);
-               }
-               // Handle cases where errors list contains simple strings or unexpected types
-               return FieldError(field: 'unknown', message: e.toString());
-             }).toList();
-            
-           }
-        }
-        // Alternative API structure: {'errorMessage': '...'}
-        else if (errorBody.containsKey('errorMessage') && errorBody['errorMessage'] != null && errorBody['errorMessage'].toString().isNotEmpty) {
-           errorMessageToShow = errorBody['errorMessage'].toString();
-           // Apply login-specific override here as well if needed
-            if (isLogin && (response.statusCode == 400 || response.statusCode == 401 || response.statusCode == 403)) {
-               final lowerMessage = errorMessageToShow.toLowerCase();
-                if (lowerMessage.contains("user not found") || lowerMessage.contains("invalid credentials") || lowerMessage.contains("password does not match") || lowerMessage.contains("phone number") || lowerMessage.contains("password")) {
-                   errorMessageToShow = _invalidCredentialsMessage;
-                }
-            }
-        }
-        // Fallback if message/errorMessage is missing but body is a map
-        else {
-          if (isLogin && (response.statusCode == 400 || response.statusCode == 401 || response.statusCode == 403)) {
-            errorMessageToShow = _invalidCredentialsMessage;
-          } else {
-            // Provide a default message including status code if no specific message found in body
-            errorMessageToShow = "$defaultUserMessage (Status: ${response.statusCode})";
-          }
-        }
+      final deviceInfo = _currentUser!.device ?? 'unknown_device';
+      final loginSuccess = await login(
+        phoneNumber: phoneNumber,
+        password: password,
+        deviceInfo: deviceInfo,
+      );
+      if (!loginSuccess) {
+        print("Re-login failed: Invalid credentials.");
+        _apiError = ApiError(message: _sessionInvalidMessage);
+        return false;
       }
-      // Fallback if response body is not a map or cannot be decoded
-      else {
-         if (isLogin && (response.statusCode == 400 || response.statusCode == 401 || response.statusCode == 403)) {
-            errorMessageToShow = _invalidCredentialsMessage;
-          } else {
-            errorMessageToShow = "$defaultUserMessage (Status: ${response.statusCode}). Could not parse error response.";
-          }
-      }
-      _apiError = ApiError(message: errorMessageToShow, errors: fieldErrorsFromApi);
+      print("Re-login successful: User ID=${_currentUser?.id}, Token=${_token?.substring(0, 10)}...");
+      return true;
     } catch (e) {
-      // Handle errors during parsing the error response body
-      print("Error parsing error response: $e");
-      if (isLogin && (response.statusCode == 400 || response.statusCode == 401 || response.statusCode == 403)) {
-         _apiError = ApiError(message: _invalidCredentialsMessage);
-      } else {
-        _apiError = ApiError(message: '$defaultUserMessage (Status: ${response.statusCode}). Failed to process error details.');
-      }
+      print("Re-login error: $e");
+      _apiError = ApiError(message: _sessionInvalidMessage);
+      return false;
     }
-    // _isLoading is set to false by the calling method (e.g. login, signUpSimple)
-    // notifyListeners is called by the calling method (e.g. login, signUpSimple)
   }
 
-  // Helper method for handling network/timeout/client exceptions
-  void _handleCatchError(dynamic error, String uiContextMessage) {
-    // uiContextMessage is for logging and debugging, not directly shown to user usually.
-    print('AuthProvider Exception during "$uiContextMessage": ${error.toString()}');
-    if (error is SocketException || (error is http.ClientException && error.message.contains('Failed host lookup'))) {
-      // Treat SocketException and certain ClientExceptions (like host lookup failure) as network errors
+  Future<bool> _validateSession() async {
+    if (_currentUser == null || _currentUser!.id == null || _token == null) {
+      print("Session validation skipped: User=${_currentUser}, User ID=${_currentUser?.id}, Token=${_token != null}");
+      _apiError = ApiError(message: _sessionInvalidMessage);
+      return false;
+    }
+
+    final url = Uri.parse('$_apiBaseUrl/api/users/me'); // Adjust if endpoint differs
+    try {
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Id': _currentUser!.id!.toString(),
+            },
+          )
+          .timeout(const Duration(seconds: 5));
+
+      print("Session validation response: ${response.statusCode}, Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        _currentUser = User.fromJson(data);
+        if (data.containsKey('token')) {
+          _token = data['token'];
+          print("Updated token: ${_token?.substring(0, 10)}...");
+        }
+        notifyListeners();
+        return true;
+      } else {
+        _apiError = ApiError(message: _sessionInvalidMessage);
+        return false;
+      }
+    } on TimeoutException catch (e) {
+      print("Session validation timeout: $e");
+      _apiError = ApiError(message: _sessionInvalidMessage);
+      return false;
+    } catch (e) {
+      print("Session validation error: $e");
+      _apiError = ApiError(message: _sessionInvalidMessage);
+      return false;
+    }
+  }
+
+  void _handleErrorResponse(http.Response response, String defaultMessage, {bool isLogin = false}) {
+    String message;
+    List<FieldError>? errors;
+
+    print('Error response (${response.statusCode}): ${response.body}');
+
+    try {
+      final data = json.decode(response.body);
+      message = data['message'] ?? defaultMessage;
+      if (isLogin && (response.statusCode == 401 || response.statusCode == 403)) {
+        message = _invalidCredentialsMessage;
+      }
+      if (data['errors'] is List) {
+        errors = (data['errors'] as List)
+            .map((e) => FieldError(field: e['field'] ?? 'unknown', message: e['message'] ?? ''))
+            .toList();
+      }
+      _apiError = ApiError(message: message, errors: errors);
+    } catch (e) {
+      _apiError = ApiError(message: defaultMessage);
+    }
+    notifyListeners();
+  }
+
+  void _handleCatchError(dynamic error, String context) {
+    print('Error in $context: $error');
+    if (error is TimeoutException) {
+      _apiError = ApiError(message: _timeoutErrorMessage);
+    } else if (error is SocketException) {
       _apiError = ApiError(message: _networkErrorMessage);
-    } else if (error is TimeoutException) {
-       _apiError = ApiError(message: _timeoutErrorMessage); // Specific message for timeout
-    } else if (error is http.ClientException) {
-       // Other client exceptions (e.g., response body not JSON)
-       _apiError = ApiError(message: 'Client error: ${error.message}'); // Maybe more specific error message or just unexpected error
-       print("Specific HTTP Client Exception: ${error.message}");
-    }
-    else {
-      // For any other unknown error during the HTTP call process (e.g., format exceptions in parsing)
+    } else {
       _apiError = ApiError(message: _unexpectedErrorMessage);
-       print("Unexpected Catch Error Type: ${error.runtimeType}");
     }
-   }
+    notifyListeners();
+  }
 }
