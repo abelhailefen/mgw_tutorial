@@ -2,10 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/faq_provider.dart';
-import 'package:mgw_tutorial/models/faq.dart'; // Ensure this is imported if FaqItem was removed
+import 'package:mgw_tutorial/models/faq.dart'; 
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
-class FaqScreen extends StatefulWidget { // Changed to StatefulWidget for initState
+class FaqScreen extends StatefulWidget { 
   static const String routeName = '/faq';
 
   const FaqScreen({super.key});
@@ -19,7 +19,6 @@ class _FaqScreenState extends State<FaqScreen> {
   void initState() {
     super.initState();
     // Fetch FAQs when the screen is initialized, if not already loaded
-    // Use a post-frame callback to ensure Provider is available
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Check if FAQs are empty or if there was a previous error, then fetch
       final faqProvider = Provider.of<FaqProvider>(context, listen: false);
@@ -118,7 +117,7 @@ class _FaqScreenState extends State<FaqScreen> {
                 collapsedIconColor: theme.colorScheme.onSurfaceVariant,
                 tilePadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 title: Text(
-                  item.question, // Assuming your Faq model has 'question'
+                  item.question, 
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 childrenPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0).copyWith(top: 0),
@@ -126,7 +125,7 @@ class _FaqScreenState extends State<FaqScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
                     child: Text(
-                      item.answer, // Assuming your Faq model has 'answer'
+                      item.answer, 
                       style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
                     ),
                   ),
