@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform; // <<< ADD THIS IMPORT
 // ... other imports
 import 'package:mgw_tutorial/provider/auth_provider.dart';
-import 'package:mgw_tutorial/provider/department_provider.dart';
+// import 'package:mgw_tutorial/provider/department_provider.dart'; // <<< REMOVE THIS IMPORT
 import 'package:mgw_tutorial/services/device_info.dart';
 import 'package:mgw_tutorial/models/user.dart';
-import 'package:mgw_tutorial/models/department.dart';
+// import 'package:mgw_tutorial/models/department.dart'; // <<< REMOVE THIS IMPORT
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:mgw_tutorial/widgets/phone_form_field.dart';
 import 'package:mgw_tutorial/widgets/password_form_field.dart';
@@ -28,7 +28,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  Department? _selectedDepartment;
+  // Department? _selectedDepartment; // <<< REMOVE THIS LINE
+  String? _selectedCategory; // <<< ADD THIS LINE to hold 'Natural' or 'Social'
   String? _selectedInstitution;
   String? _selectedGender;
   String? _selectedYear;
@@ -42,6 +43,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   bool _hasAttemptedSubmit = false;
 
+  // <<< DEFINE THE STATIC CATEGORY OPTIONS
+  final List<String> _categories = ['Natural', 'Social'];
+
   final List<String> _institutions = [
     'Addis Ababa University', 'Bahir Dar University', 'Hawassa University', 'Other',
   ];
@@ -54,7 +58,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeDeviceInfo();
-      Provider.of<DepartmentProvider>(context, listen: false).fetchDepartments();
+      // Provider.of<DepartmentProvider>(context, listen: false).fetchDepartments(); // <<< REMOVE THIS LINE
     });
   }
 
@@ -146,7 +150,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         }
     }
 
-    if (_selectedDepartment == null) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.pleaseSelectDepartmentError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,)); return; }
+    // <<< UPDATE NULL CHECK FOR CATEGORY
+    if (_selectedCategory == null) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.pleaseSelectDepartmentError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,)); return; }
     if (_selectedInstitution == null) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.pleaseSelectInstitutionError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,)); return; }
     if (_selectedYear == null) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.pleaseSelectYearError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,)); return; }
     if (_selectedGender == null) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.pleaseSelectGenderError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,)); return; }
@@ -172,7 +177,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       phone: finalPhoneNumberForUser!,
       password: _passwordController.text,
       grade: _selectedYear!,
-      category: _selectedDepartment!.name,
+      // <<< UPDATE CATEGORY FIELD TO USE _selectedCategory
+      category: _selectedCategory!, // Use the selected static category
       school: _selectedInstitution!,
       gender: _selectedGender!,
       device: currentDeviceInfo,
@@ -238,35 +244,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               PasswordFormField(controller: _passwordController, isPasswordVisible: _isPasswordVisible, onToggleVisibility: _togglePasswordVisibility, l10n: l10n),
               const SizedBox(height: 20),
 
-              Text(l10n.departmentLabel, style: theme.textTheme.titleMedium),
+              Text(l10n.departmentLabel, style: theme.textTheme.titleMedium), // Keeping label as 'Department' based on the request
               const SizedBox(height: 8),
-              Consumer<DepartmentProvider>(
-                builder: (context, deptProvider, child) {
-                   if (deptProvider.isLoading && deptProvider.departments.isEmpty) {
-                    return const Center(child: CircularProgressIndicator(strokeWidth: 2.0));
-                  }
-                  if (deptProvider.error != null && deptProvider.departments.isEmpty) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(deptProvider.error!, style: TextStyle(color: theme.colorScheme.error)),
-                        ElevatedButton.icon(icon: const Icon(Icons.refresh, size: 18), label: Text(l10n.refresh), onPressed: () => deptProvider.fetchDepartments(), style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.errorContainer,foregroundColor: theme.colorScheme.onErrorContainer, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), textStyle: const TextStyle(fontSize: 14))),
-                      ],
-                    );
-                  }
-                  if (deptProvider.departments.isEmpty && !deptProvider.isLoading) {
-                    return Text(l10n.appTitle.contains("መጂወ") ? "ምንም ዲፓርትመንቶች የሉም።" : 'No departments available.', style: TextStyle(color: theme.textTheme.bodySmall?.color?.withOpacity(0.7)));
-                  }
-                  return DropdownButtonFormField<Department>(
-                    decoration: InputDecoration(hintText: l10n.selectDepartmentHint, contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0)),
-                    value: _selectedDepartment,
-                    isExpanded: true,
-                    items: deptProvider.departments.map((Department department) => DropdownMenuItem<Department>(value: department, child: Text(department.name))).toList(),
-                    onChanged: (Department? newValue) => setState(() => _selectedDepartment = newValue),
-                    validator: (value) => value == null ? l10n.pleaseSelectDepartmentError : null,
-                  );
-                },
+              // <<< REPLACE CONSUMER AND DEPARTMENT DROPDOWN WITH STATIC STRING DROPDOWN
+              DropdownButtonFormField<String>(
+                // Reusing existing l10n key for hint text
+                decoration: InputDecoration(hintText: l10n.selectDepartmentHint, contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0)),
+                value: _selectedCategory, // Use the new state variable
+                isExpanded: true,
+                items: _categories.map((String category) => DropdownMenuItem<String>(value: category, child: Text(category))).toList(), // Use the static list
+                onChanged: (String? newValue) => setState(() => _selectedCategory = newValue), // Update the new state variable
+                validator: (value) => value == null ? l10n.pleaseSelectDepartmentError : null, // Reusing existing l10n key for error
               ),
+              // <<< END REPLACEMENT
               const SizedBox(height: 20),
 
               Text(l10n.institutionLabel, style: theme.textTheme.titleMedium),
