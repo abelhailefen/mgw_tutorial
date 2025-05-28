@@ -4,8 +4,8 @@ import 'package:mgw_tutorial/widgets/library/course_card.dart';
 import 'package:mgw_tutorial/screens/library/course_sections_screen.dart';
 import 'package:mgw_tutorial/models/api_course.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:provider/provider.dart'; // Import Provider
-import 'package:mgw_tutorial/provider/api_course_provider.dart'; // Import ApiCourseProvider
+import 'package:provider/provider.dart';
+import 'package:mgw_tutorial/provider/api_course_provider.dart';
 
 
 class LibraryContentView extends StatefulWidget {
@@ -17,20 +17,16 @@ class LibraryContentView extends StatefulWidget {
 
 class _LibraryContentViewState extends State<LibraryContentView> {
 
-  // Hardcoded data removed
-  // late List<ApiCourse> _hardcodedCourses;
-
   @override
   void initState() {
     super.initState();
-    // Fetching from provider is now enabled
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Fetch courses when the view is first built, will load from DB then network
       Provider.of<ApiCourseProvider>(context, listen: false).fetchCourses();
     });
   }
 
   Future<void> _refreshCourses() async {
-    // Call provider to refresh
     await Provider.of<ApiCourseProvider>(context, listen: false).fetchCourses(forceRefresh: true);
   }
 
@@ -39,16 +35,17 @@ class _LibraryContentViewState extends State<LibraryContentView> {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    // Use ApiCourseProvider
     final courseProvider = Provider.of<ApiCourseProvider>(context);
     final List<ApiCourse> displayCourses = courseProvider.courses;
     final bool isLoading = courseProvider.isLoading;
     final String? error = courseProvider.error;
 
+    // Display loading indicator only if no courses are currently shown
     if (isLoading && displayCourses.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
+    // Display error message only if no courses are currently shown and there's an error
     if (error != null && displayCourses.isEmpty) {
       return Center(
         child: Padding(
@@ -59,7 +56,8 @@ class _LibraryContentViewState extends State<LibraryContentView> {
               Icon(Icons.error_outline, color: theme.colorScheme.error, size: 50),
               const SizedBox(height: 16),
               Text(
-                "${l10n.appTitle.contains("መጂወ") ? "ኮርሶችን መጫን አልተሳካም።" : "Failed to load courses."}\n$error",
+                // Use localized string and include the error detail
+                l10n.appTitle.contains("መጂወ") ? "ኮርሶችን መጫን አልተሳካም።\n$error" : "Failed to load courses.\n$error",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
               ),
@@ -75,6 +73,7 @@ class _LibraryContentViewState extends State<LibraryContentView> {
       );
     }
 
+    // Display message if no courses are available (neither from DB nor network)
     if (displayCourses.isEmpty && !isLoading) {
       return Center(
         child: Column(
@@ -83,12 +82,12 @@ class _LibraryContentViewState extends State<LibraryContentView> {
             Icon(Icons.school_outlined, size: 80, color: theme.iconTheme.color?.withOpacity(0.5)),
             const SizedBox(height: 16),
             Text(
-              l10n.noCoursesAvailable, // Using existing localized string
+              l10n.noCoursesAvailable,
               style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            ElevatedButton.icon( // Add refresh button here too for convenience
+            ElevatedButton.icon(
               icon: const Icon(Icons.refresh),
               label: Text(l10n.refresh),
               onPressed: _refreshCourses,
@@ -98,7 +97,8 @@ class _LibraryContentViewState extends State<LibraryContentView> {
       );
     }
 
-    return RefreshIndicator( // Added RefreshIndicator
+    // Display the list of courses
+    return RefreshIndicator(
       onRefresh: _refreshCourses,
       color: theme.colorScheme.primary,
       backgroundColor: theme.colorScheme.surface,

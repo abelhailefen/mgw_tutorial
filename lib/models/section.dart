@@ -1,8 +1,9 @@
-// lib/models/section_model.dart
+// lib/models/section.dart
+import 'dart:convert';
 
 class Section {
   final int id;
-  final String title; // This is likely the culprit if API sends null for title
+  final String title;
   final int courseId;
   final int? order;
   final DateTime createdAt;
@@ -18,21 +19,17 @@ class Section {
   });
 
   factory Section.fromJson(Map<String, dynamic> json) {
-    // Helper to safely get a string, providing a default if null
     String safeGetString(Map<String, dynamic> jsonMap, String key, {String defaultValue = ""}) {
       final value = jsonMap[key];
       if (value is String) {
         return value;
       }
-      // If you expect it to sometimes be a number and want to convert:
-      // if (value is num) {
-      //   return value.toString();
-      // }
-      print("Warning: Field '$key' in Section JSON was null or not a String. Using default: '$defaultValue'. JSON: $jsonMap");
+      if (value != null) {
+        return value.toString();
+      }
       return defaultValue;
     }
 
-    // Helper for robust date parsing
     DateTime parseSafeDate(dynamic dateValue, String fieldName) {
       if (dateValue is String && dateValue.isNotEmpty) {
         try {
@@ -42,30 +39,73 @@ class Section {
           return DateTime.now();
         }
       }
-      print("Warning: Date field '$fieldName' in Section JSON was null or not a valid string. Using current time as fallback. Value: $dateValue");
       return DateTime.now();
     }
-    
-    // Helper for safe int parsing (can also handle strings if needed)
+
     int safeGetInt(dynamic value, String fieldName, {int defaultValue = 0}) {
       if (value is int) {
         return value;
       }
       if (value is String) {
-        return int.tryParse(value) ?? defaultValue;
+        final parsed = int.tryParse(value);
+        if (parsed != null) return parsed;
       }
-      print("Warning: Integer field '$fieldName' in Section JSON was not int or string. Using default: '$defaultValue'. Value: $value");
+       if (value is num) return value.toInt();
+      print("Warning: Integer field '$fieldName' in Section JSON was not int or parsable string/number. Using default: '$defaultValue'. Value: $value");
       return defaultValue;
     }
 
+    int? safeGetNullableInt(dynamic value, String fieldName) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value);
+      if (value is num) return value.toInt();
+      print("Warning: Nullable integer field '$fieldName' in Section JSON was not int or parsable string/number. Returning null. Value: $value");
+      return null;
+    }
 
     return Section(
-      id: safeGetInt(json['id'], 'id'), // Use helper or ensure 'id' is never null
-      title: safeGetString(json, 'title', defaultValue: 'Untitled Section'), // SAFELY GET STRING
-      courseId: safeGetInt(json['course_id'], 'course_id'), // Ensure 'course_id' is never null or handle it
-      order: json['order'] as int?, // 'order' is already nullable in the model, so `as int?` is okay if API might omit it
-      createdAt: parseSafeDate(json['created_at'], 'created_at'), // SAFELY PARSE DATE
-      updatedAt: parseSafeDate(json['updated_at'], 'updated_at'), // SAFELY PARSE DATE
+      id: safeGetInt(json['id'], 'id'),
+      title: safeGetString(json, 'title', defaultValue: 'Untitled Section'),
+      courseId: safeGetInt(json['course_id'], 'course_id', defaultValue: -1),
+      order: safeGetNullableInt(json['order'], 'order'),
+      createdAt: parseSafeDate(json['created_at'], 'created_at'),
+      updatedAt: parseSafeDate(json['updated_at'], 'updated_at'),
+    );
+  }
+
+  // Added for DB
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'courseId': courseId,
+      'title': title,
+      'order': order,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  // Added for DB
+  factory Section.fromMap(Map<String, dynamic> map) {
+     DateTime parseSafeDateFromDb(dynamic dateValue, String fieldName) {
+      if (dateValue is String && dateValue.isNotEmpty) {
+        try {
+          return DateTime.parse(dateValue);
+        } catch (e) {
+          print("Error parsing date from DB for Section field '$fieldName': $dateValue. Error: $e. Using current time as fallback.");
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+    return Section(
+      id: map['id'] as int? ?? 0,
+      courseId: map['courseId'] as int? ?? -1,
+      title: map['title'] as String? ?? 'Untitled Section',
+      order: map['order'] as int?,
+      createdAt: parseSafeDateFromDb(map['createdAt'], 'createdAt'),
+      updatedAt: parseSafeDateFromDb(map['updatedAt'], 'updatedAt'),
     );
   }
 }

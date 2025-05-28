@@ -1,4 +1,6 @@
 // lib/models/lesson.dart
+import 'dart:convert';
+
 enum LessonType { video, document, quiz, text, unknown }
 enum AttachmentType { youtube, vimeo, file, url, unknown }
 
@@ -82,8 +84,8 @@ class Lesson {
         return value;
       }
       if (value != null) {
-        print("Warning: Field '$key' in Lesson JSON was not a String (type: ${value.runtimeType}). Using its toString() or default. JSON: $jsonMap");
-        return value.toString();
+        final strValue = value.toString();
+        if (strValue.isNotEmpty) return strValue;
       }
       return defaultValue;
     }
@@ -121,7 +123,7 @@ class Lesson {
         if (parsed != null) return parsed;
       }
       if (value is num) return value.toInt();
-      print("Warning: Integer field '$fieldName' in Lesson JSON was not int or parsable string/number. Using default: '$defaultValue'. Value: $value");
+      print("Warning: Integer field '$fieldName' in Lesson JSON was not int or parsable string/number. Using default: '$defaultValue'. Value: $value);");
       return defaultValue;
     }
 
@@ -133,6 +135,7 @@ class Lesson {
       print("Warning: Nullable integer field '$fieldName' in Lesson JSON was not int or parsable string/number. Returning null. Value: $value");
       return null;
     }
+
 
     String? inferredVideoProvider = safeGetNullableString(json, 'video_provider') ?? safeGetNullableString(json, 'video_type');
     if (inferredVideoProvider == null && safeGetNullableString(json, 'video_url')?.toLowerCase().contains('youtube') == true) {
@@ -153,6 +156,56 @@ class Lesson {
       duration: safeGetNullableString(json, 'duration'),
       createdAt: parseSafeDate(json['createdAt'], 'createdAt'),
       updatedAt: parseSafeDate(json['updatedAt'], 'updatedAt'),
+    );
+  }
+
+
+  // Added for DB
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'sectionId': sectionId,
+      'title': title,
+      'summary': summary,
+      'order': order,
+      'videoProvider': videoProvider,
+      'videoUrl': videoUrl,
+      'attachmentUrl': attachmentUrl,
+      'attachmentTypeString': attachmentTypeString,
+      'lessonTypeString': lessonTypeString,
+      'duration': duration,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  // Added for DB
+  factory Lesson.fromMap(Map<String, dynamic> map) {
+     DateTime parseSafeDateFromDb(dynamic dateValue, String fieldName) {
+      if (dateValue is String && dateValue.isNotEmpty) {
+        try {
+          return DateTime.parse(dateValue);
+        } catch (e) {
+          print("Error parsing date from DB for Lesson field '$fieldName': $dateValue. Error: $e. Using current time as fallback.");
+          return DateTime.now();
+        }
+      }
+      return DateTime.now();
+    }
+    return Lesson(
+      id: map['id'] as int? ?? 0,
+      sectionId: map['sectionId'] as int? ?? -1,
+      title: map['title'] as String? ?? 'Untitled Lesson',
+      summary: map['summary'] as String?,
+      order: map['order'] as int?,
+      videoProvider: map['videoProvider'] as String?,
+      videoUrl: map['videoUrl'] as String?,
+      attachmentUrl: map['attachmentUrl'] as String?,
+      attachmentTypeString: map['attachmentTypeString'] as String?,
+      lessonTypeString: map['lessonTypeString'] as String?,
+      duration: map['duration'] as String?,
+      createdAt: parseSafeDateFromDb(map['createdAt'], 'createdAt'),
+      updatedAt: parseSafeDateFromDb(map['updatedAt'], 'updatedAt'),
     );
   }
 }

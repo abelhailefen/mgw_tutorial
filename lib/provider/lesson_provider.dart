@@ -9,8 +9,11 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/lesson.dart';
-import '../services/media_service.dart';
+import '../models/section.dart';
+import '../services/media_service.dart'; // Import MediaService
 import '../utils/download_status.dart';
+import '../services/database_helper.dart'; // Import DatabaseHelper
+
 
 class LessonProvider with ChangeNotifier {
   final Map<int, List<Lesson>> _lessonsBySectionId = {};
@@ -21,6 +24,9 @@ class LessonProvider with ChangeNotifier {
   bool isLoadingForSection(int sectionId) => _isLoadingForSectionId[sectionId] ?? false;
   String? errorForSection(int sectionId) => _errorForSectionId[sectionId];
 
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+
+
   ValueNotifier<double> getDownloadProgressNotifier(String videoId) {
     return MediaService.getDownloadProgress(videoId);
   }
@@ -29,9 +35,18 @@ class LessonProvider with ChangeNotifier {
     return MediaService.getDownloadStatus(videoId);
   }
 
-  String? _getDownloadId(Lesson lesson) {
+  // Made public (removed _) so it can be accessed from the UI screen
+  String? getDownloadId(Lesson lesson) {
     if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
-      return VideoId.parseVideoId(lesson.videoUrl!);
+      // Only attempt to parse YouTube ID if it's a YouTube URL
+      if (lesson.videoUrl!.contains('youtu.be/') || lesson.videoUrl!.contains('youtube.com/')) {
+         try {
+            return VideoId.parseVideoId(lesson.videoUrl!);
+         } catch (e) {
+            print("Failed to parse YouTube ID from URL: ${lesson.videoUrl}, Error: $e");
+            return null;
+         }
+      }
     }
     return null;
   }
@@ -47,23 +62,35 @@ class LessonProvider with ChangeNotifier {
   static const String _apiBaseUrl = "https://lessonservice.amtprinting19.com/api";
 
   Future<void> fetchLessonsForSection(int sectionId, {bool forceRefresh = false}) async {
-    if (!forceRefresh && _lessonsBySectionId.containsKey(sectionId) && !(_isLoadingForSectionId[sectionId] ?? false)) {
-      final currentLessons = _lessonsBySectionId[sectionId];
-      if (currentLessons != null) {
-        await _checkExistingDownloads(currentLessons);
-      }
+    // First, try to load from DB immediately for this section
+    if (!_lessonsBySectionId.containsKey(sectionId) || (_lessonsBySectionId[sectionId]?.isEmpty ?? true)) {
+       print("Attempting to load lessons for section $sectionId from DB...");
+       await _loadLessonsFromDb(sectionId);
+       if (_lessonsBySectionId.containsKey(sectionId) && _lessonsBySectionId[sectionId]!.isNotEmpty) {
+         print("Loaded ${_lessonsBySectionId[sectionId]!.length} lessons for section $sectionId from DB.");
+         await _checkExistingDownloads(_lessonsBySectionId[sectionId]!);
+         notifyListeners();
+       } else {
+          print("No lessons found in DB for section $sectionId.");
+       }
+    }
+
+    // Check if we should SKIP the network fetch
+    if (!forceRefresh && (_lessonsBySectionId[sectionId]?.isNotEmpty ?? false)) {
+      print("Skipping network fetch for section $sectionId as non-empty data is available and not forcing refresh.");
+      _isLoadingForSectionId[sectionId] = false;
       return;
     }
 
     _isLoadingForSectionId[sectionId] = true;
-    if (forceRefresh || !_lessonsBySectionId.containsKey(sectionId)) {
+    if (forceRefresh || (_lessonsBySectionId[sectionId]?.isEmpty ?? true)) {
       _errorForSectionId[sectionId] = null;
-      _lessonsBySectionId.remove(sectionId);
     }
     notifyListeners();
 
+
     final url = Uri.parse('$_apiBaseUrl/lessons/section/$sectionId');
-    print("Fetching lessons for section $sectionId from: $url");
+    print("Fetching lessons for section $sectionId from network: $url (Force Refresh: $forceRefresh)");
 
     try {
       final response = await http.get(url, headers: {"Accept": "application/json"}).timeout(const Duration(seconds: 20));
@@ -72,74 +99,99 @@ class LessonProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final List<dynamic> extractedData = json.decode(response.body);
         if (extractedData is List) {
-          final lessons = extractedData
+          final List<Lesson> fetchedLessons = extractedData
               .map((lessonJson) => Lesson.fromJson(lessonJson as Map<String, dynamic>))
               .toList();
-          lessons.sort((a, b) => (a.order ?? 0).compareTo(b.order ?? 0));
 
-          _lessonsBySectionId[sectionId] = lessons;
+          await _saveLessonsToDb(sectionId, fetchedLessons);
+
+          fetchedLessons.sort((a, b) => (a.order ?? 0).compareTo(b.order ?? 0));
+          _lessonsBySectionId[sectionId] = fetchedLessons;
           _errorForSectionId[sectionId] = null;
-          await _checkExistingDownloads(lessons);
+
+          await _checkExistingDownloads(fetchedLessons);
+
         } else {
           _errorForSectionId[sectionId] = 'Failed to load lessons: Unexpected API response format.';
-          _lessonsBySectionId[sectionId] = [];
+           print(_errorForSectionId[sectionId]);
         }
       } else {
-        _handleHttpErrorResponse(response, sectionId, _failedToLoadLessonsMessage);
+         _handleHttpErrorResponse(response, sectionId, _failedToLoadLessonsMessage);
       }
     } on TimeoutException catch (e) {
       print("TimeoutException fetching lessons for section $sectionId: $e");
       _errorForSectionId[sectionId] = _timeoutErrorMessage;
-      _lessonsBySectionId[sectionId] = [];
     } on SocketException catch (e) {
       print("SocketException fetching lessons for section $sectionId: $e");
       _errorForSectionId[sectionId] = _networkErrorMessage;
-      _lessonsBySectionId[sectionId] = [];
     } on http.ClientException catch (e) {
       print("ClientException fetching lessons for section $sectionId: $e");
       _errorForSectionId[sectionId] = _networkErrorMessage;
-      _lessonsBySectionId[sectionId] = [];
     } catch (e, s) {
       print("Generic Exception fetching lessons for section $sectionId: $e");
       print(s);
       _errorForSectionId[sectionId] = _unexpectedErrorMessage;
-      _lessonsBySectionId[sectionId] = [];
     } finally {
       _isLoadingForSectionId[sectionId] = false;
       notifyListeners();
     }
   }
 
+   Future<void> _loadLessonsFromDb(int sectionId) async {
+    try {
+      final List<Map<String, dynamic>> lessonMaps = await _dbHelper.query(
+        'lessons',
+        where: 'sectionId = ?',
+        whereArgs: [sectionId],
+         orderBy: "'order' ASC",
+      );
+      final loadedLessons = lessonMaps.map((map) => Lesson.fromMap(map)).toList();
+      _lessonsBySectionId[sectionId] = loadedLessons;
+    } catch (e) {
+      print("Error loading lessons for section $sectionId from DB: $e");
+    }
+  }
+
+   Future<void> _saveLessonsToDb(int sectionId, List<Lesson> lessonsToSave) async {
+     if (lessonsToSave.isEmpty) {
+       print("No lessons to save to DB for section $sectionId.");
+       return;
+     }
+     try {
+       print("Clearing existing lessons for section $sectionId from DB...");
+       await _dbHelper.deleteLessonsForSection(sectionId);
+       print("Saving ${lessonsToSave.length} lessons for section $sectionId to DB...");
+       for (final lesson in lessonsToSave) {
+         await _dbHelper.upsert('lessons', lesson.toMap());
+       }
+       print("Lessons for section $sectionId saved to DB successfully.");
+     } catch (e) {
+       print("Error saving lessons for section $sectionId to DB: $e");
+     }
+   }
+
+
   Future<void> _checkExistingDownloads(List<Lesson> lessons) async {
     print("Checking existing downloads for ${lessons.length} lessons...");
     for (final lesson in lessons) {
-      final downloadId = _getDownloadId(lesson);
-      if (downloadId != null && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
+      final downloadId = getDownloadId(lesson); // Use the now public getter
+      if (downloadId != null) {
         await MediaService.isFileDownloaded(downloadId);
-      } else if (lesson.lessonType == LessonType.video && (lesson.videoUrl == null || lesson.videoUrl!.isEmpty || downloadId == null)) {
-        final fallBackId = lesson.id.toString();
-        final statusNotifier = MediaService.getDownloadStatus(fallBackId);
-        final progressNotifier = MediaService.getDownloadProgress(fallBackId);
-        if (statusNotifier.value == DownloadStatus.downloading || statusNotifier.value == DownloadStatus.downloaded) {
-          print("Resetting status for video lesson with invalid URL/ID: ${lesson.title}");
-          statusNotifier.value = DownloadStatus.failed;
-          progressNotifier.value = 0.0;
-        }
       }
     }
   }
 
   Future<void> startDownload(Lesson lesson) async {
-    final downloadId = _getDownloadId(lesson);
+    final downloadId = getDownloadId(lesson); // Use the now public getter
     if (downloadId == null || lesson.videoUrl == null || lesson.videoUrl!.isEmpty) {
-      print("Cannot download lesson: Invalid type or missing URL.");
-      if (lesson.lessonType == LessonType.video && lesson.id != null) {
-        final fallBackId = lesson.id.toString();
-        final statusNotifier = MediaService.getDownloadStatus(fallBackId);
-        final progressNotifier = MediaService.getDownloadProgress(fallBackId);
-        statusNotifier.value = DownloadStatus.failed;
-        progressNotifier.value = 0.0;
-        print("Download status set to failed for lesson ID: $fallBackId due to invalid URL");
+      print("Cannot download lesson: Not a supported video type or missing URL.");
+      if (lesson.lessonType == LessonType.video) {
+         final fallBackId = lesson.id.toString();
+         final statusNotifier = MediaService.getDownloadStatus(fallBackId);
+         final progressNotifier = MediaService.getDownloadProgress(fallBackId);
+         statusNotifier.value = DownloadStatus.failed;
+         progressNotifier.value = 0.0;
+         print("Download status set to failed for lesson ID: $fallBackId due to invalid URL or not YouTube.");
       }
       return;
     }
@@ -153,15 +205,15 @@ class LessonProvider with ChangeNotifier {
   }
 
   Future<String?> getDownloadedFilePath(Lesson lesson) async {
-    final downloadId = _getDownloadId(lesson);
+    final downloadId = getDownloadId(lesson); // Use the now public getter
     if (downloadId == null) return null;
     return await MediaService.getSecurePath(downloadId);
   }
 
   Future<void> deleteDownload(Lesson lesson, BuildContext context) async {
-    final downloadId = _getDownloadId(lesson);
+    final downloadId = getDownloadId(lesson); // Use the now public getter
     if (downloadId == null || lesson.videoUrl == null || lesson.videoUrl!.isEmpty) {
-      print("Cannot delete, invalid lesson or URL: ${lesson.title}");
+      print("Cannot delete, invalid lesson or URL for deletion: ${lesson.title}");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.couldNotDeleteFileError),
@@ -176,7 +228,7 @@ class LessonProvider with ChangeNotifier {
   }
 
   void cancelDownload(Lesson lesson) {
-    final downloadId = _getDownloadId(lesson);
+    final downloadId = getDownloadId(lesson); // Use the now public getter
     if (downloadId != null) {
       print("LessonProvider: Cancelling download for ${lesson.title} ($downloadId)");
       MediaService.cancelDownload(downloadId);
@@ -194,7 +246,6 @@ class LessonProvider with ChangeNotifier {
     } catch (e) {
       _errorForSectionId[sectionId] = "$defaultUserMessage (Status: ${response.statusCode}). Response not parsable.";
     }
-    _lessonsBySectionId[sectionId] = [];
   }
 
   void clearErrorForSection(int sectionId) {
@@ -205,7 +256,8 @@ class LessonProvider with ChangeNotifier {
   @override
   void dispose() {
     print("LessonProvider dispose called");
-    MediaService.dispose();
+    // Consider MediaService disposal if needed
+    // MediaService.dispose();
     super.dispose();
   }
 }

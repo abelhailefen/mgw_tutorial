@@ -1,49 +1,18 @@
 // lib/services/database_helper.dart
+import 'dart:io';
 import 'package:sqflite/sqflite.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
 
-class DownloadedVideo {
-  final String videoId;
-  final String title;
-  final String filePath;
-  final bool isVideoOnly;
-  final DateTime downloadedAt;
 
-  DownloadedVideo({
-    required this.videoId,
-    required this.title,
-    required this.filePath,
-    required this.isVideoOnly,
-    required this.downloadedAt,
-  });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'videoId': videoId,
-      'title': title,
-      'filePath': filePath,
-      'isVideoOnly': isVideoOnly ? 1 : 0,
-      'downloadedAt': downloadedAt.toIso8601String(),
-    };
-  }
-
-  factory DownloadedVideo.fromMap(Map<String, dynamic> map) {
-    return DownloadedVideo(
-      videoId: map['videoId'] as String,
-      title: map['title'] as String,
-      filePath: map['filePath'] as String,
-      isVideoOnly: (map['isVideoOnly'] as int) == 1,
-      downloadedAt: DateTime.parse(map['downloadedAt'] as String),
-    );
-  }
-}
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   factory DatabaseHelper() => _instance;
-  static Database? _database;
-
   DatabaseHelper._internal();
+
+  static Database? _database;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -52,77 +21,141 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'app_downloads.db');
-
+    Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    String path = join(documentsDirectory.path, 'app_database.db');
+    print("Database path: $path");
     return await openDatabase(
       path,
-      version: 1, // Increment version if you change schema
-      onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE downloaded_videos (
-            videoId TEXT PRIMARY KEY,
-            title TEXT NOT NULL,
-            filePath TEXT NOT NULL UNIQUE,
-            isVideoOnly INTEGER NOT NULL DEFAULT 0,
-            downloadedAt TEXT NOT NULL
-          )
-        ''');
-      },
-      // onUpgrade: (db, oldVersion, newVersion) async {
-      //   if (oldVersion < 2) {
-      //     // await db.execute("ALTER TABLE downloaded_videos ADD COLUMN new_column TEXT;");
-      //   }
-      // },
+      version: 1,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
-  // === Video Download Operations ===
-  Future<void> insertOrUpdateDownloadedVideo(DownloadedVideo video) async {
-    final db = await database;
-    await db.insert(
-      'downloaded_videos',
-      video.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace, // Replaces if videoId already exists
-    );
-    print('DB: Inserted/Updated video: ${video.videoId}');
+  Future<void> _onCreate(Database db, int version) async {
+    print("Creating database tables...");
+    await db.execute('''
+      CREATE TABLE courses(
+        id INTEGER PRIMARY KEY,
+        title TEXT,
+        shortDescription TEXT,
+        description TEXT,
+        outcomes TEXT, -- Stored as JSON string
+        language TEXT,
+        categoryId INTEGER,
+        section TEXT,
+        requirements TEXT, -- Stored as JSON string
+        price TEXT,
+        discountFlag INTEGER, -- Stored as 0 or 1
+        discountedPrice TEXT,
+        thumbnail TEXT,
+        videoUrl TEXT,
+        isTopCourse INTEGER, -- Stored as 0 or 1
+        status TEXT,
+        isVideoCourse INTEGER, -- Stored as 0 or 1
+        isFreeCourse INTEGER, -- Stored as 0 or 1
+        multiInstructor INTEGER, -- Stored as 0 or 1
+        creator TEXT,
+        createdAt TEXT, -- Stored as ISO 8601 string
+        updatedAt TEXT, -- Stored as ISO 8601 string
+        courseCategoryId INTEGER,
+        courseCategoryName TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE sections(
+        id INTEGER PRIMARY KEY,
+        courseId INTEGER,
+        title TEXT,
+        'order' INTEGER,
+        createdAt TEXT,
+        updatedAt TEXT,
+        FOREIGN KEY (courseId) REFERENCES courses(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE lessons(
+        id INTEGER PRIMARY KEY,
+        sectionId INTEGER,
+        title TEXT,
+        summary TEXT,
+        'order' INTEGER,
+        videoProvider TEXT,
+        videoUrl TEXT,
+        attachmentUrl TEXT,
+        attachmentTypeString TEXT,
+        lessonTypeString TEXT,
+        duration TEXT,
+        createdAt TEXT,
+        updatedAt TEXT,
+        FOREIGN KEY (sectionId) REFERENCES sections(id) ON DELETE CASCADE
+      )
+    ''');
+    print("Database tables created successfully.");
   }
 
-  Future<DownloadedVideo?> getDownloadedVideo(String videoId) async {
+   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    print("Database upgrading from version $oldVersion to $newVersion. No schema changes implemented.");
+  }
+
+
+  Future<int> upsert(String table, Map<String, dynamic> data) async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'downloaded_videos',
-      where: 'videoId = ?',
-      whereArgs: [videoId],
-      limit: 1,
-    );
-    if (maps.isNotEmpty) {
-      return DownloadedVideo.fromMap(maps.first);
+    try {
+      final id = await db.insert(
+        table,
+        data,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return id;
+    } catch (e) {
+      print("Error upserting into $table: $e\nData: $data");
+      rethrow;
     }
-    return null;
   }
 
-  Future<List<DownloadedVideo>> getAllDownloadedVideos() async {
+  Future<List<Map<String, dynamic>>> query(String table, {String? where, List<dynamic>? whereArgs, String? orderBy}) async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('downloaded_videos', orderBy: 'downloadedAt DESC');
-    return List.generate(maps.length, (i) {
-      return DownloadedVideo.fromMap(maps[i]);
-    });
+    try {
+      final result = await db.query(
+        table,
+        where: where,
+        whereArgs: whereArgs,
+        orderBy: orderBy,
+      );
+      return result;
+    } catch (e) {
+      print("Error querying $table: $e\nWhere: $where, Args: $whereArgs, Order: $orderBy");
+      rethrow;
+    }
   }
 
-  Future<int> deleteDownloadedVideo(String videoId) async {
+   Future<int> delete(String table, {String? where, List<dynamic>? whereArgs}) async {
     final db = await database;
-    final count = await db.delete(
-      'downloaded_videos',
-      where: 'videoId = ?',
-      whereArgs: [videoId],
-    );
-    print('DB: Deleted video: $videoId, count: $count');
-    return count;
-  }
+     try {
+       final count = await db.delete(
+         table,
+         where: where,
+         whereArgs: whereArgs,
+       );
+       return count;
+     } catch (e) {
+       print("Error deleting from $table: $e\nWhere: $where, Args: $whereArgs");
+       rethrow;
+     }
+   }
 
-  Future<bool> isVideoDownloadedInDb(String videoId) async {
-    final video = await getDownloadedVideo(videoId);
-    return video != null;
-  }
+   Future<void> deleteAllCourses() async {
+     await delete('courses');
+   }
+
+   Future<void> deleteSectionsForCourse(int courseId) async {
+     await delete('sections', where: 'courseId = ?', whereArgs: [courseId]);
+   }
+
+    Future<void> deleteLessonsForSection(int sectionId) async {
+     await delete('lessons', where: 'sectionId = ?', whereArgs: [sectionId]);
+   }
 }
