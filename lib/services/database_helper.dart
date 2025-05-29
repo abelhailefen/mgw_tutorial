@@ -2,8 +2,10 @@
 import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' show join; // Only need 'join' from path
 import 'package:mgw_tutorial/models/user.dart'; // Import the User model
+// No need to import ApiCourse here just for thumbnailBaseUrl
+
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -24,7 +26,7 @@ class DatabaseHelper {
     print("Database path: $path");
     return await openDatabase(
       path,
-      version: 3, // <<< INCREMENT DATABASE VERSION AGAIN (from 2 to 3)
+      version: 4, // Database version is 4
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -32,7 +34,7 @@ class DatabaseHelper {
 
   Future<void> _onCreate(Database db, int version) async {
     print("Creating database tables...");
-    // Existing tables
+    // Existing tables + new column
     await db.execute('''
       CREATE TABLE courses(
         id INTEGER PRIMARY KEY,
@@ -47,7 +49,7 @@ class DatabaseHelper {
         price TEXT,
         discountFlag INTEGER, -- Stored as 0 or 1
         discountedPrice TEXT,
-        thumbnail TEXT,
+        thumbnail TEXT, -- Network path
         videoUrl TEXT,
         isTopCourse INTEGER, -- Stored as 0 or 1
         status TEXT,
@@ -58,7 +60,8 @@ class DatabaseHelper {
         createdAt TEXT, -- Stored as ISO 8601 string
         updatedAt TEXT, -- Stored as ISO 8601 string
         courseCategoryId INTEGER,
-        courseCategoryName TEXT
+        courseCategoryName TEXT,
+        localThumbnailPath TEXT -- NEW: Stored as local file path
       )
     ''');
 
@@ -93,7 +96,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // NEW TABLE for logged in user - Removed token
+    // Logged in user table (v3 structure)
     await db.execute('''
       CREATE TABLE logged_in_user(
         id INTEGER PRIMARY KEY, -- Local DB ID, using constant 1
@@ -121,38 +124,37 @@ class DatabaseHelper {
 
    Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     print("Database upgrading from version $oldVersion to $newVersion.");
-    // IMPORTANT: Implement upgrade logic for each version increment
+    // Handle upgrades incrementally from oldVersion to newVersion
     if (oldVersion < 2) {
-        // Logic to add the 'logged_in_user' table if it didn't exist before version 2
-        // Note: This table structure had 'token' in version 2.
-        // If upgrading directly from < 2 to 3, this block will run first, then the < 3 block.
-        print("Adding 'logged_in_user' table (v2 structure) during upgrade from < v2.");
-        await db.execute('''
-          CREATE TABLE logged_in_user(
-            id INTEGER PRIMARY KEY,
-            user_id INTEGER UNIQUE,
-            first_name TEXT,
-            last_name TEXT,
-            phone TEXT UNIQUE,
-            token TEXT, -- Token was present in v2
-            login_timestamp TEXT
-          )
-        ''');
+        // Upgrade logic for version < 2 to version 2 (if needed)
+         print("Executing upgrade logic for version < 2.");
+         var userTableExists = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='logged_in_user'");
+         if (userTableExists.isEmpty) {
+            // This structure includes the 'token' which is removed in v3 upgrade below
+            await db.execute('''
+              CREATE TABLE logged_in_user(
+                id INTEGER PRIMARY KEY,
+                user_id INTEGER UNIQUE,
+                first_name TEXT,
+                last_name TEXT,
+                phone TEXT UNIQUE,
+                token TEXT,
+                login_timestamp TEXT
+              )
+            ''');
+            print("Created 'logged_in_user' table (v2 structure) during upgrade from < v2.");
+         }
     }
     if (oldVersion < 3) {
-      // Logic to drop the table created in v2 and recreate it without the token column
-      // OR, more safely, rename the old table, create the new one, copy data, drop old.
-      // For simplicity here, we'll just drop and recreate if it exists.
-      // A real app might need migration logic to keep existing user data if possible.
-      print("Upgrading 'logged_in_user' table (removing token) from v2 to v3.");
+      // Upgrade logic for version < 3 to version 3 (removing token)
+      print("Executing upgrade logic for version < 3 (removing token from logged_in_user).");
        // Check if the table exists before attempting to drop
        var tableExists = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='logged_in_user'");
        if (tableExists.isNotEmpty) {
           await db.execute('DROP TABLE logged_in_user');
            print("Dropped old 'logged_in_user' table.");
        }
-
-       // Create the new table without the token column
+       // Create the new table without the token column (V3 structure)
        await db.execute('''
          CREATE TABLE logged_in_user(
            id INTEGER PRIMARY KEY,
@@ -164,14 +166,29 @@ class DatabaseHelper {
          )
        ''');
        print("Created new 'logged_in_user' table (v3 structure).");
-
-       // **WARNING:** This simple drop/create means any previously saved user session
-       // from version 2 will be LOST during the upgrade to version 3.
-       // For a real application, a proper migration retaining user_id, first_name, etc.,
-       // should be implemented here.
+       // User session data is lost here, as previously noted.
     }
+     if (oldVersion < 4) {
+       // Upgrade logic for version < 4 to version 4 (adding localThumbnailPath to courses)
+       print("Executing upgrade logic for version < 4 (adding localThumbnailPath to courses).");
+       var columnExists = await db.rawQuery("PRAGMA table_info(courses)");
+       bool foundColumn = false;
+       for(var column in columnExists) {
+         if(column['name'] == 'localThumbnailPath') {
+           foundColumn = true;
+           break;
+         }
+       }
+       if (!foundColumn) {
+          await db.execute('ALTER TABLE courses ADD COLUMN localThumbnailPath TEXT');
+          print("Added 'localThumbnailPath' column to 'courses' table.");
+       } else {
+           print("'localThumbnailPath' column already exists in 'courses' table.");
+       }
+     }
      // Add further upgrade logic for subsequent versions here
-     // if (oldVersion < 4) { ... }
+     // if (oldVersion < 5) { ... }
+     // if (oldVersion < 6) { ... }
   }
 
 
@@ -222,19 +239,75 @@ class DatabaseHelper {
      }
    }
 
+   // Helper to get local thumbnail paths before deleting courses
+   Future<List<String>> _getCourseThumbnailPaths() async {
+      final db = await database;
+      try {
+        // Select only the localThumbnailPath column from the courses table
+        final List<Map<String, dynamic>> results = await db.query(
+          'courses',
+          columns: ['localThumbnailPath'],
+          where: 'localThumbnailPath IS NOT NULL AND localThumbnailPath != ""',
+        );
+        // Extract paths and filter out null/empty
+        return results
+            .map((row) => row['localThumbnailPath'] as String?)
+            .where((path) => path != null && path.isNotEmpty)
+            .cast<String>()
+            .toList();
+      } catch (e) {
+        print("Error getting course thumbnail paths from DB: $e");
+        return []; // Return empty list on error
+      }
+   }
+
+   // Modified: Delete all courses and associated thumbnail files
    Future<void> deleteAllCourses() async {
-     await delete('courses');
+     print("Starting deletion of all courses and thumbnails...");
+     try {
+       // 1. Get all local thumbnail paths before deleting DB records
+       final List<String> pathsToDelete = await _getCourseThumbnailPaths();
+       print("Found ${pathsToDelete.length} thumbnail paths to delete.");
+
+       // 2. Delete physical files
+       for (final path in pathsToDelete) {
+         try {
+           final file = File(path);
+           if (file.existsSync()) {
+             await file.delete();
+             // print("Deleted thumbnail file: $path"); // Can be noisy
+           } else {
+              // print("Thumbnail file not found, skipping deletion: $path"); // Can be noisy
+           }
+         } catch (e) {
+           print("Error deleting thumbnail file '$path': $e");
+           // Continue with other files
+         }
+       }
+       print("Attempted deletion of all thumbnail files.");
+
+       // 3. Delete records from the courses table
+       await delete('courses');
+       print("All course records deleted from DB.");
+
+     } catch (e) {
+       print("Critical error during deleteAllCourses: $e");
+       rethrow; // Re-throw if DB deletion itself fails
+     }
+      print("Finished deleteAllCourses operation.");
    }
 
    Future<void> deleteSectionsForCourse(int courseId) async {
+     // We could also delete associated lesson files here if lessons ever had files
      await delete('sections', where: 'courseId = ?', whereArgs: [courseId]);
    }
 
     Future<void> deleteLessonsForSection(int sectionId) async {
+     // We could also delete associated lesson files here if lessons ever had files
      await delete('lessons', where: 'sectionId = ?', whereArgs: [sectionId]);
    }
 
-   // NEW: Save logged in user session - Removed token parameter
+   // Save logged in user session (already updated for v3)
    Future<void> saveLoggedInUser(User user) async {
      if (user.id == null) {
        print("Cannot save logged in user with null ID");
@@ -245,57 +318,58 @@ class DatabaseHelper {
        await db.insert(
          'logged_in_user',
          {
-           // We'll use a constant local ID (e.g., 1) to ensure only one row
-           'id': 1,
+           'id': 1, // Use constant local ID
            'user_id': user.id,
            'first_name': user.firstName,
            'last_name': user.lastName,
            'phone': user.phone,
            'login_timestamp': DateTime.now().toIso8601String(),
-           // Map other fields if you added them to the table and uncommented:
-           // 'all_courses': user.allCourses == true ? 1 : 0,
-           // ...
          },
-         conflictAlgorithm: ConflictAlgorithm.replace, // Replace if a row with id 1 exists
+         conflictAlgorithm: ConflictAlgorithm.replace,
        );
-       print("Logged in user session saved to DB (without token).");
+       print("Logged in user session saved to DB.");
      } catch (e) {
        print("Error saving logged in user session: $e");
-       // Consider rethrowing or handling more gracefully if saving fails
      }
    }
 
-   // NEW: Retrieve logged in user session
+   // Retrieve logged in user session (already updated for v3)
    Future<Map<String, dynamic>?> getLoggedInUser() async {
      final db = await database;
      try {
-       // Query the single expected row (or the first one found)
        final List<Map<String, dynamic>> results = await db.query(
          'logged_in_user',
          limit: 1,
        );
        if (results.isNotEmpty) {
-         print("Found logged in user session in DB.");
          return results.first;
        } else {
-         print("No logged in user session found in DB.");
          return null;
        }
      } catch (e) {
        print("Error retrieving logged in user session: $e");
-       return null; // Return null on error
+       return null;
      }
    }
 
-   // NEW: Delete logged in user session
+   // Delete logged in user session (already updated for v3)
    Future<void> deleteLoggedInUser() async {
      final db = await database;
      try {
-       await db.delete('logged_in_user', where: 'id = ?', whereArgs: [1]); // Delete the row with id 1
+       await db.delete('logged_in_user', where: 'id = ?', whereArgs: [1]);
        print("Logged in user session deleted from DB.");
      } catch (e) {
        print("Error deleting logged in user session: $e");
-       // Consider rethrowing or handling more gracefully
      }
+   }
+
+   // NEW: Helper function to get the local directory for thumbnails (now public)
+   Future<Directory> getThumbnailDirectory() async {
+     final directory = await getApplicationSupportDirectory();
+     final thumbDir = Directory(join(directory.path, 'thumbnails'));
+     if (!await thumbDir.exists()) {
+       await thumbDir.create(recursive: true);
+     }
+     return thumbDir;
    }
 }

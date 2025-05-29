@@ -15,7 +15,8 @@ import 'package:mgw_tutorial/widgets/auth/auth_navigation_link.dart';
 import 'package:mgw_tutorial/widgets/phone_form_field.dart';
 import 'package:mgw_tutorial/widgets/password_form_field.dart';
 // Import DeviceInfoService
-import 'package:mgw_tutorial/services/device_info.dart';
+import 'package:mgw_tutorial/services/device_info.dart'; // <<< KEEP THIS
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -50,16 +51,41 @@ class _LoginScreenState extends State<LoginScreen> {
     // Set up the listener *before* checking state initially
     _authListener = () {
       // This listener fires whenever AuthProvider calls notifyListeners()
-      // Check the state here after initialization finishes
+      // Check the state here after initialization finishes OR after a successful login
       print("LoginScreen: AuthProvider listener triggered.");
       if (!authProvider.isInitializing && authProvider.currentUser != null && !_hasNavigatedAfterLogin) {
-          print("LoginScreen: AuthProvider initialized and user found. Navigating.");
-          _performNavigation(); // Call navigation method
+          print("LoginScreen: AuthProvider initialized and user found/logged in. Checking status.");
+          // Check user status before navigating
+          // This check is crucial for the "pending approval" message
+          if (authProvider.currentUser!.status == "pending") {
+              // User is logged in but status is pending. Show message and *do not navigate to MainScreen yet*.
+              // For now, let's show a snackbar. Ideally, this would navigate to a dedicated screen.
+              if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                       SnackBar(
+                         // FIX: Use an existing or generic localized string
+                         content: Text(
+                           
+                           AppLocalizations.of(context)!.registrationFailedDefaultMessage, // Using a fallback key
+                           // Or a hardcoded string: "Account pending admin approval."
+                           style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
+                         ),
+                         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                         behavior: SnackBarBehavior.floating,
+                         duration: Duration(seconds: 5), // Keep it visible longer
+                       ),
+                     );
+               }
+              print("LoginScreen: User status is pending. Navigation deferred.");
+              
+              _hasNavigatedAfterLogin = true; // Prevent infinite loop from listener
+          } else {
+             // Status is not pending (likely active), proceed with navigation
+             _performNavigation(); // Call navigation method
+          }
       } else if (!authProvider.isInitializing && authProvider.currentUser == null) {
           print("LoginScreen: AuthProvider initialized and no user found. Staying on login.");
-          // This case happens after DB lookup finishes and no user was found
-          // or validation failed (in the old logic)
-          // Ensure the UI updates if needed (the build method already listens)
+          
       }
       // If authProvider.isInitializing is true, we wait.
     };
@@ -70,32 +96,82 @@ class _LoginScreenState extends State<LoginScreen> {
     // Check initial state after the frame is built, but after setting up listener
      WidgetsBinding.instance.addPostFrameCallback((_) {
        print("LoginScreen: Post-frame callback. Checking initial state.");
-       // This check is necessary for the case where the AuthProvider is *already*
-       // initialized and has a user *before* the LoginScreen is ever built.
+       
         if (!authProvider.isInitializing && authProvider.currentUser != null && !_hasNavigatedAfterLogin) {
-            print("LoginScreen: Initial state check found user. Navigating.");
-           _performNavigation();
+            print("LoginScreen: Initial state check found user. Checking status.");
+            // Check status here too for saved sessions
+            if (authProvider.currentUser!.status == "pending") {
+               print("LoginScreen: Saved user status is pending. Deferring navigation, showing message.");
+                if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                       SnackBar(
+                         // FIX: Use an existing or generic localized string
+                         content: Text(
+                            // Replace with an existing localized string that makes sense,
+                            // or hardcode if no suitable one exists.
+                           AppLocalizations.of(context)!.registrationFailedDefaultMessage, // Using a fallback key
+                            // Or a hardcoded string: "Account pending admin approval."
+                           style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
+                         ),
+                         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                         behavior: SnackBarBehavior.floating,
+                         duration: Duration(seconds: 5),
+                       ),
+                     );
+                }
+                _hasNavigatedAfterLogin = true; // Prevent subsequent navigation attempts
+            } else {
+              // Status is not pending (likely active), proceed with navigation
+              _performNavigation();
+            }
        } else if (!authProvider.isInitializing && authProvider.currentUser == null) {
           print("LoginScreen: Initial state check found no user. Staying on login.");
        } else {
           print("LoginScreen: Initial state check: AuthProvider still initializing. Listener will handle navigation.");
        }
 
+       // Initialize device info once the context is available and valid
        _initializeDeviceInfo();
      });
   }
 
   // Navigation logic moved to a separate method
   void _performNavigation() {
-     if (mounted && !_hasNavigatedAfterLogin) { // Ensure widget is mounted and not already navigating
+     // Check user status one final time just before navigating
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+     if (mounted && !_hasNavigatedAfterLogin && authProvider.currentUser != null && authProvider.currentUser!.status != "pending") {
           _hasNavigatedAfterLogin = true;
+          print("LoginScreen: Navigating to MainScreen.");
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const MainScreen()),
           );
-          // Optional: Remove the listener after navigating to prevent further calls
-          // Provider.of<AuthProvider>(context, listen: false).removeListener(_authListener!);
-           _disposeAuthListener(); // Custom dispose
+           _disposeAuthListener(); // Dispose the listener after successful navigation
+     } else if (mounted && !_hasNavigatedAfterLogin && authProvider.currentUser != null && authProvider.currentUser!.status == "pending") {
+          print("LoginScreen: Attempted to navigate, but user status is pending. Navigation deferred.");
+          // This case might happen if the listener or post-frame callback trigger
+          // _performNavigation before the status check logic in the listener itself.
+          // Ensure _hasNavigatedAfterLogin is set to true here to prevent looping.
+           _hasNavigatedAfterLogin = true;
+            if (mounted) { // Show message if not already shown
+                ScaffoldMessenger.of(context).showSnackBar(
+                   SnackBar(
+                     // FIX: Use an existing or generic localized string
+                     content: Text(
+                        // Replace with an existing localized string that makes sense,
+                        // or hardcode if no suitable one exists.
+                       AppLocalizations.of(context)!.registrationFailedDefaultMessage, // Using a fallback key
+                        // Or a hardcoded string: "Account pending admin approval."
+                       style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
+                     ),
+                     backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                     behavior: SnackBarBehavior.floating,
+                     duration: Duration(seconds: 5),
+                   ),
+                 );
+            }
+     } else {
+        print("LoginScreen: _performNavigation called but conditions not met (mounted: $mounted, navigated: $_hasNavigatedAfterLogin, user: ${authProvider.currentUser != null})");
      }
   }
 
@@ -115,89 +191,20 @@ class _LoginScreenState extends State<LoginScreen> {
        return;
     }
 
-    final deviceData = await _deviceInfoService.getDeviceData();
-    String brand = deviceData['brand'] ?? deviceData['name'] ?? 'UnknownBrand';
-    String model = deviceData['model'] ?? deviceData['localizedModel'] ?? 'UnknownModel';
-    String os = deviceData['systemName'] ?? deviceData['platform'] ?? 'UnknownOS';
-    String deviceType = "Unknown";
+    // Use the new service method to get the formatted string
+    final formattedInfo = await _deviceInfoService.getFormattedDeviceString(context);
 
-    if (mounted && ModalRoute.of(context) != null && ModalRoute.of(context)!.isActive) {
-        try {
-           deviceType = _deviceInfoService.detectDeviceType(context);
-        } catch (e) {
-            print("Error detecting device type in LoginScreen _getDeviceInfoInternal: $e. Using platform default.");
-            deviceType = (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
-                         ? "Mobile"
-                         : (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)
-                           ? "Computer"
-                           : "Web Browser";
-        }
-    } else {
-        deviceType = (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
-                         ? "Mobile"
-                         : (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)
-                           ? "Computer"
-                           : "Web Browser";
-        print("Context not active for MediaQuery in _getDeviceInfoInternal, using platform default for deviceType: $deviceType");
-    }
-
-    String finalDeviceInfo = '$deviceType - $brand $model, $os';
     if (mounted) {
       setState(() {
-        _deviceInfoString = finalDeviceInfo;
+        _deviceInfoString = formattedInfo;
         _isDeviceInfoFetchedInitially = true;
       });
-      print("Device Info for Login Updated: $_deviceInfoString");
+      print("LoginScreen Device Info Updated: $_deviceInfoString");
     }
   }
 
-   Future<String> _getDeviceInfoForLoginAttempt() async {
-      if (_isDeviceInfoFetchedInitially && _deviceInfoString != 'Fetching device info...') {
-         return _deviceInfoString;
-      }
-
-     if (!mounted) return "Mobile - Default, UnknownOS";
-
-      final deviceData = await _deviceInfoService.getDeviceData();
-      String brand = deviceData['brand'] ?? deviceData['name'] ?? 'UnknownBrand';
-      String model = deviceData['model'] ?? deviceData['localizedModel'] ?? 'UnknownModel';
-      String os = deviceData['systemName'] ?? deviceData['platform'] ?? 'UnknownOS';
-      String deviceType = "Unknown";
-
-      if (mounted && ModalRoute.of(context) != null && ModalRoute.of(context)!.isActive) {
-          try {
-             deviceType = _deviceInfoService.detectDeviceType(context);
-          } catch (e) {
-              print("Error detecting device type in LoginScreen _getDeviceInfoInternal: $e. Using platform default.");
-              deviceType = (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
-                           ? "Mobile"
-                           : (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)
-                             ? "Computer"
-                             : "Web Browser";
-          }
-      } else {
-          deviceType = (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
-                           ? "Mobile"
-                           : (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)
-                             ? "Computer"
-                             : "Web Browser";
-          print("Context not active for MediaQuery in _getDeviceInfoInternal, using platform default for deviceType: $deviceType");
-      }
-
-      String finalDeviceInfo = '$deviceType - $brand $model, $os';
-
-       if (mounted && !_isDeviceInfoFetchedInitially) {
-            setState(() {
-               _deviceInfoString = finalDeviceInfo;
-               _isDeviceInfoFetchedInitially = true;
-            });
-             print("Device Info fetched (fallback) and state updated: $_deviceInfoString");
-       } else if (!mounted) {
-           print("_getDeviceInfoForLoginAttempt fetched info but not mounted, cannot update state.");
-       }
-
-      return finalDeviceInfo;
-   }
+   // This method is no longer needed as initialization handles fetching
+   // Future<String> _getDeviceInfoForLoginAttempt() async { /* ... simplified/removed ... */ }
 
 
   @override
@@ -224,26 +231,42 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
     }
 
-    String currentDeviceInfo = await _getDeviceInfoForLoginAttempt();
+    // Use the _deviceInfoString state variable directly now
+    String currentDeviceInfo = _deviceInfoString;
 
-    if (currentDeviceInfo == 'Fetching device info...' || currentDeviceInfo.contains("Unknown")) {
-        print("Device info still not ideal after re-fetch/check, proceeding with current value: $currentDeviceInfo");
+    // Add a check similar to registration screen's submit logic
+    if (currentDeviceInfo == 'Fetching device info...' || currentDeviceInfo.contains("Failed to get details")) {
+        print("Device info not ready or has error before login attempt, trying to refetch.");
+         // Re-fetch using the service method if it's still the initial placeholder or an error string
+        final refetchedInfo = await _deviceInfoService.getFormattedDeviceString(context);
         if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text(
-                       l10n.deviceInfoProceedingDefault,
-                       style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
-                    ),
-                    backgroundColor: theme.colorScheme.secondaryContainer,
-                    behavior: SnackBarBehavior.floating,
-                ),
-            );
+           setState(() => _deviceInfoString = refetchedInfo);
+            currentDeviceInfo = _deviceInfoString; // Use the refetched value
+           // Check again after refetch
+           if (_deviceInfoString == 'Fetching device info...' || _deviceInfoString.contains("Failed to get details")) {
+               print("Device info still not ready or has error after refetch attempt before login.");
+                if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                               // FIX: Use an existing or generic localized string
+                               l10n.deviceInfoProceedingDefault, // Using a fallback key
+                               style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
+                            ),
+                            backgroundColor: theme.colorScheme.secondaryContainer,
+                            behavior: SnackBarBehavior.floating,
+                        ),
+                    );
+                }
+                 // Optionally prevent login here if device info is critical, or proceed with error string
+                 // For now, we proceed with the error string in currentDeviceInfo
+           }
+        } else {
+            // If not mounted after refetch, cannot proceed safely
+            return;
         }
-         if (currentDeviceInfo == 'Fetching device info...') {
-             currentDeviceInfo = "Mobile - Generic, UnknownOS";
-         }
     }
+
 
     String rawPhoneInput = _phoneController.text.trim();
     String loginPhoneNumber;
@@ -286,27 +309,30 @@ class _LoginScreenState extends State<LoginScreen> {
     bool success = await authProvider.login(
       phoneNumber: loginPhoneNumber,
       password: password,
-      deviceInfo: currentDeviceInfo,
+      deviceInfo: currentDeviceInfo, // Pass the formatted string from state
     );
 
     if (mounted) {
       if (success) {
+        // Login was successful based on credentials and possibly device check.
+        // Navigation or pending status message will now be handled by the listener (_authListener).
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              l10n.loginSuccessMessage,
+              l10n.loginSuccessMessage, // This confirms credentials worked
               style: TextStyle(color: theme.colorScheme.onPrimary),
             ),
             backgroundColor: theme.colorScheme.primary,
             behavior: SnackBarBehavior.floating,
           ),
         );
-         // Navigation will be handled by the listener now after notifyListeners() from login success
-         // _hasNavigatedAfterLogin is set in _performNavigation()
+         // Do NOT navigate here directly. The listener watches authProvider state.
       } else {
+        // Login failed (wrong credentials or device mismatch from backend)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
+              // This is where "You are not registered with this device" comes from
               authProvider.apiError?.message ?? l10n.signInFailedErrorGeneral,
               style: TextStyle(color: theme.colorScheme.onErrorContainer),
             ),
@@ -343,9 +369,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     // showLoginForm determines if the login form part should be built
-    bool showLoginForm = !authProvider.isInitializing && authProvider.currentUser == null;
+    // Show form if AuthProvider is not initializing AND user is null AND we haven't navigated away yet.
+    bool showLoginForm = !authProvider.isInitializing && authProvider.currentUser == null && !_hasNavigatedAfterLogin;
     // canAttemptLogin determines if the login button should be enabled
-    bool canAttemptLogin = _isDeviceInfoFetchedInitially && !authProvider.isInitializing && !authProvider.isLoading;
+    // Button enabled if device info is fetched, AuthProvider is not initializing, and not already loading from a previous attempt
+    bool canAttemptLogin = _isDeviceInfoFetchedInitially && _deviceInfoString != 'Fetching device info...' && !authProvider.isInitializing && !authProvider.isLoading;
 
 
     return Scaffold(
@@ -371,6 +399,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       elevation: 2,
                       style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 14),
                       dropdownColor: theme.cardTheme.color,
+                      // Disable language change while auth provider is busy
                       onChanged: authProvider.isLoading || authProvider.isInitializing ? null : (String? newLanguageCode) {
                         if (newLanguageCode != null) {
                           localeProvider.setLocale(Locale(newLanguageCode));
@@ -394,22 +423,20 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 40),
 
-              // Show loading indicator if initializing, or if login is in progress
-              // Otherwise, show the login form if not logged in, or a placeholder if logged in but not navigated yet
-              authProvider.isInitializing || (authProvider.isLoading && !showLoginForm)
+              // Show loading indicator if initializing
+              authProvider.isInitializing
               ? Center(
                   child: Column(
                      mainAxisAlignment: MainAxisAlignment.center,
                      children: [
                         CircularProgressIndicator(),
                         SizedBox(height: 16),
-                        // Message indicates what's happening
-                        Text(authProvider.isInitializing ? l10n.initializing : l10n.signInButton, // Can use 'Signing In...' or similar if available
+                        Text(l10n.initializing,
                              style: theme.textTheme.bodyMedium),
                      ],
                    ),
                 )
-              : showLoginForm // If not initializing/loading AND user is null, show the form
+              : showLoginForm // If not initializing AND user is null AND hasn't navigated, show the form
                  ? AuthCardWrapper(
                      child: Form(
                        key: _formKey,
@@ -441,7 +468,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Text(
-                                l10n.initializing, // Maybe change this l10n key to be more descriptive if needed
+                                 // Check if initial fetch failed
+                                _deviceInfoString.contains("Failed to get details") ? "Device info failed. Try again." : "Initializing device info...",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
                               ),
@@ -451,16 +479,15 @@ class _LoginScreenState extends State<LoginScreen> {
                      ),
                    )
                  : Center(
-                     // This case means !isInitializing && currentUser != null
-                     // but _hasNavigatedAfterLogin is false. We are logged in
-                     // but haven't navigated yet. Show a spinner while waiting
-                     // for the next frame callback or listener to trigger navigation.
+                     // This case means !isInitializing && currentUser != null AND _hasNavigatedAfterLogin is false
+                     // We are logged in but haven't navigated or are pending approval.
+                     // Show a spinner while waiting for the next frame callback or listener to trigger navigation/message.
                      child: Column(
                          mainAxisAlignment: MainAxisAlignment.center,
                          children: [
                             CircularProgressIndicator(),
                             SizedBox(height: 16),
-                            Text(l10n.initializing, style: theme.textTheme.bodyMedium), // Or "Redirecting..."
+                            Text(l10n.initializing, style: theme.textTheme.bodyMedium), // Or "Redirecting..." / "Checking Status..."
                          ],
                        ),
                    ),

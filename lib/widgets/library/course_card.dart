@@ -1,8 +1,10 @@
 // lib/widgets/library/course_card.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:mgw_tutorial/provider/api_course_provider.dart';
+// import 'package:mgw_tutorial/provider/api_course_provider.dart'; // Not needed directly in widget
 import 'package:mgw_tutorial/models/api_course.dart';
+import 'dart:io'; // Needed for File
+
 class CourseCard extends StatelessWidget {
   final ApiCourse course;
   final VoidCallback onTap;
@@ -16,10 +18,53 @@ class CourseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    String? imageUrl = course.fullThumbnailUrl;
+    // Use the new getter that prioritizes local path
+    String? imageUrl = course.displayThumbnailPath;
+    bool isLocalFile = imageUrl != null && File(imageUrl).existsSync(); // Check if it's likely a valid local path
+
     final cardBorderRadius = theme.cardTheme.shape is RoundedRectangleBorder
         ? (theme.cardTheme.shape as RoundedRectangleBorder).borderRadius.resolve(Directionality.of(context))
         : BorderRadius.circular(12.0); // Fallback
+
+    Widget thumbnailWidget;
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+       if (isLocalFile) {
+         // Load from local file
+         thumbnailWidget = Image.file(
+           File(imageUrl),
+           fit: BoxFit.cover,
+           // errorBuilder can still be useful if the file exists but is corrupted
+           errorBuilder: (context, error, stackTrace) {
+              print("Error loading local thumbnail from ${imageUrl}: $error");
+              return Container(
+                color: theme.colorScheme.surfaceVariant,
+                child: Icon(Icons.broken_image_outlined, size: 50, color: theme.colorScheme.onSurfaceVariant),
+              );
+           },
+         );
+       } else {
+         // Load from network URL
+         thumbnailWidget = Image.network(
+           imageUrl,
+           fit: BoxFit.cover,
+           errorBuilder: (context, error, stackTrace) {
+              print("Error loading network thumbnail from ${imageUrl}: $error");
+              return Container(
+                color: theme.colorScheme.surfaceVariant,
+                child: Icon(Icons.school_outlined, size: 50, color: theme.colorScheme.onSurfaceVariant),
+              );
+           },
+         );
+       }
+    } else {
+      // Fallback when no URL/path is available
+      thumbnailWidget = Container(
+          color: theme.colorScheme.surfaceVariant,
+          child: Icon(Icons.school_outlined, size: 50, color: theme.colorScheme.onSurfaceVariant),
+        );
+    }
+
 
     return Card(
       // Uses CardTheme
@@ -36,19 +81,7 @@ class CourseCard extends StatelessWidget {
                   topLeft: cardBorderRadius.topLeft,
                   topRight: cardBorderRadius.topRight,
                 ),
-                child: imageUrl != null && imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                              color: theme.colorScheme.surfaceVariant,
-                              child: Icon(Icons.school_outlined, size: 50, color: theme.colorScheme.onSurfaceVariant),
-                            ),
-                      )
-                    : Container(
-                        color: theme.colorScheme.surfaceVariant,
-                        child: Icon(Icons.school_outlined, size: 50, color: theme.colorScheme.onSurfaceVariant),
-                      ),
+                child: thumbnailWidget, // Use the selected widget
               ),
             ),
             Padding(

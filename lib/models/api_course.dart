@@ -1,5 +1,6 @@
 // lib/models/api_course.dart
 import 'dart:convert'; // Import jsonEncode/jsonDecode
+import 'dart:io'; // Import File class
 
 class CourseCategoryInfo {
   final int id;
@@ -44,7 +45,7 @@ class ApiCourse {
   final String price;
   final bool? discountFlag;
   final String? discountedPrice;
-  final String? thumbnail;
+  final String? thumbnail; // Network path from API
   final String? videoUrl; // Note: This seems to be a course-level video URL
   final bool? isTopCourse;
   final String status;
@@ -55,6 +56,9 @@ class ApiCourse {
   final DateTime createdAt;
   final DateTime updatedAt;
   final CourseCategoryInfo? category;
+
+  // NEW: Field to store the local file path of the thumbnail
+  String? localThumbnailPath;
 
 
   static const String thumbnailBaseUrl = "https://mgw-backend.onrender.com";
@@ -84,9 +88,11 @@ class ApiCourse {
     required this.createdAt,
     required this.updatedAt,
     this.category,
+    // NEW: Initialize localThumbnailPath
+    this.localThumbnailPath,
   });
 
-  // Corrected getter for the full thumbnail URL
+  // Corrected getter for the full thumbnail URL (network)
   String? get fullThumbnailUrl {
     if (thumbnail != null && thumbnail!.isNotEmpty) {
       if (thumbnail!.toLowerCase().startsWith('http')) {
@@ -112,6 +118,29 @@ class ApiCourse {
     }
     return null;
   }
+
+  // NEW: Getter to use for display - prioritizes local path
+  String? get displayThumbnailPath {
+     // Check if the local path exists and the file is actually there
+     if (localThumbnailPath != null && localThumbnailPath!.isNotEmpty) {
+         try {
+           final file = File(localThumbnailPath!);
+           if (file.existsSync()) {
+             return localThumbnailPath; // Use local path
+           } else {
+              // File not found, clear the path and use network
+              print("Local thumbnail file not found: ${localThumbnailPath}. Falling back to network.");
+              localThumbnailPath = null; // Clear invalid path
+           }
+         } catch (e) {
+            print("Error checking local thumbnail file: $e. Falling back to network.");
+            localThumbnailPath = null; // Clear invalid path on error
+         }
+     }
+     // If local path is null, empty, or file doesn't exist, use network URL
+     return fullThumbnailUrl;
+  }
+
 
   factory ApiCourse.fromJson(Map<String, dynamic> json) {
     List<String> parseStringList(dynamic jsonField) {
@@ -177,6 +206,8 @@ class ApiCourse {
       category: json['category'] != null && json['category'] is Map<String, dynamic>
           ? CourseCategoryInfo.fromJson(json['category'] as Map<String, dynamic>)
           : null,
+      // localThumbnailPath is not from API, so it's not included here
+      localThumbnailPath: null,
     );
   }
 
@@ -196,7 +227,7 @@ class ApiCourse {
       // Store bool as int (1 for true, 0 for false, null for null)
       'discountFlag': discountFlag == null ? null : (discountFlag! ? 1 : 0),
       'discountedPrice': discountedPrice,
-      'thumbnail': thumbnail,
+      'thumbnail': thumbnail, // Save the network path
       'videoUrl': videoUrl,
       'isTopCourse': isTopCourse == null ? null : (isTopCourse! ? 1 : 0),
       'status': status,
@@ -209,6 +240,8 @@ class ApiCourse {
       // Store category info flattened (assuming CourseCategoryInfo won't change often)
       'courseCategoryId': category?.id,
       'courseCategoryName': category?.name,
+      // NEW: Include local thumbnail path
+      'localThumbnailPath': localThumbnailPath,
     };
   }
 
@@ -254,8 +287,8 @@ class ApiCourse {
        );
     }
 
-
-    return ApiCourse(
+    // Create the ApiCourse object
+    final course = ApiCourse(
       id: map['id'] as int? ?? 0,
       title: map['title'] as String? ?? 'Untitled Course',
       shortDescription: map['shortDescription'] as String?,
@@ -268,7 +301,7 @@ class ApiCourse {
       price: map['price'] as String? ?? "0.00",
       discountFlag: intToBool(map['discountFlag']),
       discountedPrice: map['discountedPrice'] as String?,
-      thumbnail: map['thumbnail'] as String?,
+      thumbnail: map['thumbnail'] as String?, // Load the network path
       videoUrl: map['videoUrl'] as String?,
       isTopCourse: intToBool(map['isTopCourse']),
       status: map['status'] as String? ?? 'unknown',
@@ -279,6 +312,10 @@ class ApiCourse {
       createdAt: parseSafeDateFromDb(map['createdAt'], 'createdAt'),
       updatedAt: parseSafeDateFromDb(map['updatedAt'], 'updatedAt'),
       category: categoryInfo, // Use the parsed category info
+      // NEW: Load the local thumbnail path
+      localThumbnailPath: map['localThumbnailPath'] as String?,
     );
+
+    return course;
   }
 }
