@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart'; // For initializeDateFormatting
-
+import 'package:media_kit/media_kit.dart';
 // Import AppColors
 import 'package:mgw_tutorial/constants/color.dart';
 
@@ -56,6 +56,8 @@ void main() async {
   await initializeDateFormatting('am', null);
   await initializeDateFormatting('ti', null);
   await initializeDateFormatting('or', null);
+  
+  MediaKit.ensureInitialized();
 
   runApp(
     MultiProvider(

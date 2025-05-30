@@ -1,145 +1,121 @@
-// lib/screens/video_player_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
+import 'package:mgw_tutorial/models/lesson.dart';
+import 'package:mgw_tutorial/provider/lesson_provider.dart';
+import 'package:mgw_tutorial/utils/download_status.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'package:mgw_tutorial/models/lesson.dart';
-import 'package:mgw_tutorial/screens/video_controls_overlay.dart';
-import 'package:mgw_tutorial/screens/video_bottom_controls.dart';
-// Import url_launcher to potentially launch the original URL
-import 'package:url_launcher/url_launcher.dart';
-
 class VideoPlayerScreen extends StatefulWidget {
-  static const routeName = '/video-player';
   final String videoTitle;
-  final String videoPath; // Local downloaded path
-  final String? originalVideoUrl; // Add original URL for fallback
+  final String videoPath;
   final List<Lesson> lessons;
+  final String? originalVideoUrl;
 
   const VideoPlayerScreen({
     super.key,
     required this.videoTitle,
     required this.videoPath,
-    this.originalVideoUrl, // Make original URL optional
     required this.lessons,
+    this.originalVideoUrl,
   });
 
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
 }
 
-class _VideoPlayerScreenState extends State<VideoPlayerScreen>
-    with TickerProviderStateMixin {
-  VideoPlayerController? _controller;
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  late final player = Player();
+  late final controller = VideoController(player);
+
+  int _currentlyPlayingIndex = -1;
+  final Map<String, Future<bool>> _fileStatuses = {};
+  final Set<String> _downloadingFiles = {};
+  final Map<String, double> _downloadProgress = {};
   bool isLoading = true;
   bool videoError = false;
   String errorMessage = '';
-  double _playbackSpeed = 1.0;
-  bool _isMuted = false;
-  late TabController _tabController;
-  bool _isFullscreen = false;
-
-  List<Lesson> videoLessons = [];
-  List<Lesson> otherLessons = [];
-
-  // Find the current lesson from the list based on the original URL or title
-  Lesson? get _currentLesson {
-     try {
-       // Try finding by original URL first
-        if (widget.originalVideoUrl != null && widget.originalVideoUrl!.isNotEmpty) {
-             return widget.lessons.firstWhere((l) => l.videoUrl == widget.originalVideoUrl, orElse: () => throw StateError('not found'));
-        }
-        // Fallback to finding by title (less reliable)
-        return widget.lessons.firstWhere((l) => l.title == widget.videoTitle, orElse: () => throw StateError('not found'));
-     } catch (e) {
-        print("Warning: Could not find the current lesson in the provided list.");
-        return null; // Return null if lesson is not found
-     }
-  }
-
+  String selectedSpeed = '1.0';
+  bool _isLocal = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    categorizeLessons();
-    initializeVideo(widget.videoPath); // Attempt to play downloaded file
+    _initializeFileStatuses();
   }
 
-  void categorizeLessons() {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    initializeVideo();
+  }
+
+  void _initializeFileStatuses() {
     for (var lesson in widget.lessons) {
-      if (lesson.lessonType == LessonType.video) {
-         videoLessons.add(lesson);
-      } else {
-        otherLessons.add(lesson);
+      final videoUrl = lesson.videoUrl;
+      if (videoUrl != null && videoUrl.isNotEmpty) {
+        _checkFileStatus(videoUrl);
       }
     }
   }
 
-  Future<void> initializeVideo(String path) async {
-    if (_controller != null) {
-        // No need to check isInitialized here, dispose handles it
-        await _controller!.dispose();
-    }
+  void _changePlaybackSpeed(double speed) {
+    setState(() {
+      selectedSpeed = speed.toString();
+      player.setRate(speed);
+    });
+  }
 
+  Future<void> initializeVideo({bool isLocal = true}) async {
     setState(() {
       isLoading = true;
       videoError = false;
       errorMessage = '';
-      _controller = null; // Ensure controller is null before assignment attempt
+      _isLocal = isLocal;
     });
 
-    try {
-      _controller = VideoPlayerController.file(File(path));
-      await _controller!.initialize();
-      _controller!.setLooping(true);
-      _controller!.play();
-      setState(() {
-        isLoading = false;
-        videoError = false;
-      });
-       print("Video initialized and playing from path: $path");
-    } catch (e) {
-      print("Error initializing video from path $path: $e");
-      _controller = null; // Set to null on error
+    String uri = isLocal
+        ? File(widget.videoPath).uri.toString()
+        : widget.originalVideoUrl ?? '';
+
+    if (!isLocal && (uri.isEmpty || widget.originalVideoUrl == null)) {
       setState(() {
         videoError = true;
-        // Capture a more concise error message if possible
-        errorMessage = _getConciseErrorMessage(e);
+        errorMessage = 'No online URL available for fallback';
         isLoading = false;
       });
-      _showSnackbar("Error playing video: $errorMessage");
+      _showSnackbar(errorMessage);
+      return;
+    }
+
+    try {
+      await player.open(Media(uri), play: true);
+      setState(() {
+        isLoading = false;
+      });
+      print("Playing ${isLocal ? 'local' : 'online'} video: $uri");
+    } catch (e) {
+      if (isLocal && widget.originalVideoUrl != null) {
+        print("Local playback failed: $e. Falling back to online URL: ${widget.originalVideoUrl}");
+        await initializeVideo(isLocal: false);
+      } else {
+        setState(() {
+          videoError = true;
+          errorMessage = e.toString();
+          isLoading = false;
+        });
+        _showSnackbar("Error playing video: $errorMessage");
+      }
     }
   }
-
-  // Helper to get a cleaner error message
-  String _getConciseErrorMessage(dynamic error) {
-    if (error is PlatformException) {
-       // Check for specific known error patterns
-       if (error.message != null && error.message!.contains('MediaCodecVideoRenderer error')) {
-          // Extract relevant part, like "Decoder init failed: OMX..."
-          final match = RegExp(r'Decoder init failed: .*').firstMatch(error.message!);
-          if (match != null) {
-             return match.group(0)!; // Return the matched string
-          }
-       }
-       // Fallback to platform exception message
-       return error.message ?? error.toString();
-    }
-     // Fallback to generic error string
-    return error.toString();
-  }
-
 
   void _showSnackbar(String message) {
     if (!mounted) return;
-    final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: theme.colorScheme.error,
+        backgroundColor: Theme.of(context).colorScheme.errorContainer,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
       ),
@@ -148,381 +124,335 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
   @override
   void dispose() {
-    if (_controller != null) {
-       _controller!.dispose();
-    }
-    if (_isFullscreen) {
-        SystemChrome.setPreferredOrientations([
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-        ]);
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    }
-    _tabController.dispose();
+    player.dispose();
     super.dispose();
   }
 
-  void _toggleMute() {
-     if (_controller == null || !_controller!.value.isInitialized) return;
-    setState(() {
-      _isMuted = !_isMuted;
-      _controller!.setVolume(_isMuted ? 0 : 1);
-    });
-  }
-
-  void _changeSpeed(double speed) {
-     if (_controller == null || !_controller!.value.isInitialized) return;
-    setState(() {
-      _playbackSpeed = speed;
-      _controller!.setPlaybackSpeed(speed);
-    });
-  }
-
-  void _toggleFullscreen() {
-     if (_controller == null || !_controller!.value.isInitialized) return;
-    setState(() {
-      _isFullscreen = !_isFullscreen;
-
-      if (_isFullscreen) {
-        SystemChrome.setPreferredOrientations([
-          DeviceOrientation.landscapeRight,
-          DeviceOrientation.landscapeLeft,
-        ]);
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-      } else {
-        SystemChrome.setPreferredOrientations([
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-        ]);
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-      }
-    });
-  }
-
-  Future<bool> _onWillPop() async {
-    if (_isFullscreen) {
-      _toggleFullscreen();
-      return false;
+  void _checkFileStatus(String url) {
+    final lessonProvider = Provider.of<LessonProvider>(context, listen: false);
+    final lesson = widget.lessons.firstWhere(
+      (l) => l.videoUrl == url,
+      orElse: () => Lesson(
+        id: -1,
+        title: '',
+        sectionId: -1,
+        lessonTypeString: 'video',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    final downloadId = lessonProvider.getDownloadId(lesson);
+    if (downloadId != null) {
+      _fileStatuses[downloadId] = Future.value(
+        lessonProvider.getDownloadStatusNotifier(downloadId).value == DownloadStatus.downloaded,
+      );
     }
-    return true;
   }
 
-   // Function to launch the original URL
-  Future<void> _launchOriginalUrl(BuildContext context) async {
-     final l10n = AppLocalizations.of(context)!;
-     final theme = Theme.of(context);
+  Future<void> _openFile(List<Lesson> lessons, String title, String url) async {
+    setState(() {
+      player.stop();
+    });
+    final lessonProvider = Provider.of<LessonProvider>(context, listen: false);
+    final lesson = lessons.firstWhere(
+      (l) => l.videoUrl == url,
+      orElse: () => Lesson(
+        id: -1,
+        title: '',
+        sectionId: -1,
+        lessonTypeString: 'video',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    final downloadId = lessonProvider.getDownloadId(lesson);
+    if (downloadId == null || !mounted) return;
 
-     if (widget.originalVideoUrl == null || widget.originalVideoUrl!.isEmpty) {
-        _showSnackbar(l10n.noOnlineVideoUrlAvailable ?? 'No online video URL available.'); // Assuming new key
-        return;
-     }
+    final filePath = await lessonProvider.getDownloadedFilePath(lesson);
+    if (filePath == null) {
+      _showSnackbar("Failed to get file path for $title");
+      return;
+    }
 
-     final Uri uri = Uri.parse(widget.originalVideoUrl!);
-      try {
-        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-           print("Cannot launch URL ${widget.originalVideoUrl} externally, trying in-app.");
-          if (!await launchUrl(uri, mode: LaunchMode.inAppWebView)) {
-             print("Cannot launch URL ${widget.originalVideoUrl} with any method.");
-             if (mounted) {
-               ScaffoldMessenger.of(context).showSnackBar(
-                 SnackBar(
-                   content: Text(l10n.couldNotLaunchItem(widget.originalVideoUrl!)), // Reuse key
-                   backgroundColor: theme.colorScheme.errorContainer,
-                   behavior: SnackBarBehavior.floating,
-                 ),
-               );
-             }
-          } else {
-             print("Launched URL ${widget.originalVideoUrl} in-app.");
-          }
-        } else {
-          print("Launched URL ${widget.originalVideoUrl} externally.");
-        }
-      } catch (e) {
-        print("Error launching URL ${widget.originalVideoUrl}: $e");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("${l10n.couldNotLaunchItem(widget.originalVideoUrl!)}: ${e.toString()}"),
-              backgroundColor: theme.colorScheme.errorContainer,
-              behavior: SnackBarBehavior.floating,
+    setState(() {
+      _currentlyPlayingIndex = lessons.indexWhere((l) => l.videoUrl == url);
+    });
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VideoPlayerScreen(
+          videoPath: filePath,
+          videoTitle: title,
+          lessons: lessons,
+          originalVideoUrl: url,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpeedDropdown() {
+    return DropdownButton<String>(
+      value: selectedSpeed,
+      onChanged: (String? newValue) {
+        double speed = double.parse(newValue!);
+        _changePlaybackSpeed(speed);
+      },
+      items: ['0.5', '1.0', '1.25', '1.5', '2.0']
+          .map<DropdownMenuItem<String>>((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(
+            'Speed: $value',
+            style: const TextStyle(color: Colors.black),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider lessonProv) {
+    final theme = Theme.of(context);
+    final String? downloadId = lessonProv.getDownloadId(lesson);
+
+    if (downloadId == null) {
+      if (lesson.lessonType == LessonType.video) {
+        return SizedBox(
+          width: 40,
+          height: 40,
+          child: Center(
+            child: Icon(
+              Icons.cloud_off_outlined,
+              color: theme.colorScheme.onSurface.withOpacity(0.3),
+              size: 24,
             ),
-          );
-        }
+          ),
+        );
       }
+      print("No download button: Not a supported downloadable type or missing/invalid URL.");
+      return const SizedBox.shrink();
+    }
+
+    print("Showing download button for video ID: $downloadId");
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: ValueListenableBuilder<DownloadStatus>(
+        valueListenable: lessonProv.getDownloadStatusNotifier(downloadId),
+        builder: (context, status, child) {
+          switch (status) {
+            case DownloadStatus.notDownloaded:
+            case DownloadStatus.cancelled:
+              return IconButton(
+                icon: Icon(Icons.download_for_offline_outlined, color: theme.colorScheme.secondary),
+                tooltip: 'Download Video',
+                iconSize: 24,
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  print("Download button pressed for ID: $downloadId");
+                  lessonProv.startDownload(lesson);
+                },
+              );
+            case DownloadStatus.downloading:
+              return ValueListenableBuilder<double>(
+                valueListenable: lessonProv.getDownloadProgressNotifier(downloadId),
+                builder: (context, progress, _) {
+                  final progressText = progress > 0 && progress < 1 ? "${(progress * 100).toInt()}%" : "";
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          value: progress > 0 ? progress : null,
+                          strokeWidth: 3.0,
+                          backgroundColor: theme.colorScheme.onSurface.withOpacity(0.1),
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      if (progressText.isNotEmpty)
+                        Text(
+                          progressText,
+                          style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
+                        ),
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: GestureDetector(
+                          onTap: () {
+                            print("Cancel download pressed for ID: $downloadId");
+                            lessonProv.cancelDownload(lesson);
+                          },
+                          child: Icon(
+                            Icons.cancel,
+                            size: 16,
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            case DownloadStatus.downloaded:
+              return IconButton(
+                icon: Icon(Icons.play_circle_fill, color: theme.colorScheme.primary),
+                tooltip: 'Play Downloaded Video',
+                iconSize: 24,
+                padding: EdgeInsets.zero,
+                onPressed: () async {
+                  print("Play button pressed for ID: $downloadId");
+                  await _openFile(widget.lessons, lesson.title, lesson.videoUrl!);
+                },
+                onLongPress: () {
+                  print("Delete button long pressed for ID: $downloadId");
+                  lessonProv.deleteDownload(lesson, context);
+                },
+              );
+            case DownloadStatus.failed:
+              return IconButton(
+                icon: Icon(Icons.error_outline, color: theme.colorScheme.error),
+                tooltip: 'Download Failed - Retry',
+                iconSize: 24,
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  print("Retry button pressed for ID: $downloadId");
+                  lessonProv.startDownload(lesson);
+                },
+              );
+          }
+        },
+      ),
+    );
   }
 
-
-  Widget _buildLessonList(List<Lesson> lessons, {required bool isVideoTab}) {
-     final theme = Theme.of(context);
-     final l10n = AppLocalizations.of(context)!;
-
-     if (lessons.isEmpty) {
-         return Center(
-           child: Text(
-              isVideoTab ? l10n.noOtherVideosInChapter : l10n.noOtherContentInChapter,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurface.withOpacity(0.7)),
-           ),
-         );
-     }
-
-     return ListView.builder(
-         itemCount: lessons.length,
-         itemBuilder: (context, index) {
-             final lesson = lessons[index];
-             IconData lessonIcon;
-             Color iconColor;
-             String itemTypeDescription;
-
-             switch (lesson.lessonType) {
-                case LessonType.video:
-                  lessonIcon = Icons.play_circle_outline_rounded;
-                  iconColor = theme.colorScheme.error;
-                  itemTypeDescription = l10n.videoItemType;
-                  break;
-                case LessonType.document:
-                  lessonIcon = Icons.description_outlined;
-                  iconColor = theme.colorScheme.secondary;
-                  itemTypeDescription = l10n.documentItemType;
-                  break;
-                case LessonType.quiz:
-                  lessonIcon = Icons.quiz_outlined;
-                  iconColor = theme.colorScheme.tertiary;
-                   itemTypeDescription = l10n.quizItemType;
-                  break;
-                case LessonType.text:
-                  lessonIcon = Icons.notes_outlined;
-                  iconColor = theme.colorScheme.primary;
-                   itemTypeDescription = l10n.textItemType;
-                  break;
-                default:
-                  lessonIcon = Icons.extension_outlined;
-                  iconColor = theme.colorScheme.onSurface.withOpacity(0.5);
-                  itemTypeDescription = l10n.unknownItemType ?? 'Unknown Type';
-             }
-
-             // Check if this lesson is the one we attempted to play locally
-             final bool isAttemptedLocalVideo = isVideoTab && lesson.videoUrl != null && lesson.videoUrl == (_currentLesson?.videoUrl ?? 'none');
-
-
-             return Card(
-               // Highlight the video that corresponds to the one we *tried* to play locally
-               color: isAttemptedLocalVideo ? theme.colorScheme.primaryContainer.withOpacity(0.5) : null,
-               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-               elevation: 1.0,
-               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-               child: ListTile(
-                 leading: Icon(lessonIcon, color: iconColor),
-                 title: Text(
-                   lesson.title ?? 'Untitled',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                       fontWeight: isAttemptedLocalVideo ? FontWeight.bold : FontWeight.w500,
-                       color: isAttemptedLocalVideo ? theme.colorScheme.onPrimaryContainer : null,
-                    )
-                 ),
-                 subtitle: Text(
-                   lesson.summary != null && lesson.summary!.isNotEmpty ? lesson.summary! : itemTypeDescription,
-                   maxLines: 1,
-                   overflow: TextOverflow.ellipsis,
-                   style: theme.textTheme.bodySmall?.copyWith(
-                      color: isAttemptedLocalVideo ? theme.colorScheme.onPrimaryContainer.withOpacity(0.7) : null,
-                   ),
-                 ),
-                 trailing: isVideoTab && lesson.duration != null && lesson.duration!.isNotEmpty
-                    ? Text(lesson.duration!, style: theme.textTheme.bodySmall?.copyWith(color: isAttemptedLocalVideo ? theme.colorScheme.onPrimaryContainer : null))
-                    : null,
-                 onTap: () {
-                   if (lesson.lessonType == LessonType.video) {
-                      if (isAttemptedLocalVideo) {
-                         print("Tapped the currently playing/attempted video lesson: ${lesson.title}");
-                          // If the video failed, maybe tapping it again triggers the retry button on the main screen?
-                          if (videoError) {
-                            initializeVideo(widget.videoPath); // Retry playing the local file
-                          }
-                      } else {
-                         print("Tapped a different video lesson: ${lesson.title}. Playing other downloaded videos from this list requires additional logic (access to downloaded path).");
-                         _showSnackbar(l10n.cannotPlayOtherVideoHere ?? 'Cannot play other videos from this list.');
-                       }
-                   } else {
-                      // Handle taps for non-video lessons (notes, documents, quizzes etc.)
-                       print("Tapped non-video lesson: ${lesson.title}. Implementing display/launch logic.");
-                       if (lesson.lessonType == LessonType.text && lesson.summary != null && lesson.summary!.isNotEmpty) {
-                          showDialog(
-                            context: context,
-                            builder: (dCtx) => AlertDialog(
-                              backgroundColor: theme.dialogBackgroundColor,
-                              title: Text(lesson.title, style: theme.textTheme.titleLarge),
-                              content: SingleChildScrollView(child: Text(lesson.summary ?? l10n.noTextContent, style: theme.textTheme.bodyLarge)),
-                              actions: [
-                                TextButton(
-                                  child: Text(l10n.closeButtonText, style: TextStyle(color: theme.colorScheme.primary)),
-                                  onPressed: () => Navigator.of(dCtx).pop(),
-                                ),
-                              ],
-                            ),
-                          );
-                       } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
-                           // Replicate or call a shared function for launching URLs
-                            final urlToLaunch = lesson.attachmentUrl!;
-                            // Example: Call a utility function like launchExternalUrl(context, urlToLaunch, lesson.title);
-                           _showSnackbar("${lesson.lessonType.toString().split('.').last}: ${lesson.title} - URL: $urlToLaunch");
-                       }
-                        else if (lesson.lessonType == LessonType.quiz) {
-                           _showSnackbar("${lesson.lessonType.toString().split('.').last}: ${lesson.title} (${l10n.notImplementedMessage})");
-                       }
-                         else {
-                           _showSnackbar(l10n.noLaunchableContent(lesson.title));
-                         }
-                   }
-                 },
-               ),
-             );
-         },
-     );
+  Widget _buildLessonItem(BuildContext context, Lesson lesson, int index, LessonProvider lessonProv) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+      elevation: 2.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        leading: Icon(
+          Icons.play_circle_outline_rounded,
+          color: theme.colorScheme.error,
+          size: 36,
+        ),
+        title: Text(
+          lesson.title,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w500,
+            color: _currentlyPlayingIndex == index
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface,
+          ),
+        ),
+        subtitle: lesson.duration != null && lesson.duration!.isNotEmpty
+            ? Text(
+                lesson.duration!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                ),
+              )
+            : null,
+        trailing: _buildDownloadButton(context, lesson, lessonProv),
+        onTap: () {
+          setState(() {
+            _currentlyPlayingIndex = index;
+          });
+        },
+      ),
+    );
   }
-
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final lessonProvider = Provider.of<LessonProvider>(context);
 
-     double? videoContainerHeight;
-     // Calculate height only if controller exists AND is initialized
-     if (_controller != null && _controller!.value.isInitialized) {
-        videoContainerHeight = MediaQuery.of(context).size.width / _controller!.value.aspectRatio;
-     } else {
-        // Default height when loading or error occurs
-        videoContainerHeight = MediaQuery.of(context).size.width * (9/16); // Assume 16:9 aspect ratio if not initialized
-     }
-
-
-    return WillPopScope(
-      onWillPop: _onWillPop,
-      child: Scaffold(
-        appBar: _isFullscreen
-            ? null
-            : AppBar(
-                title: Text(widget.videoTitle,
-                    style: theme.textTheme.titleLarge?.copyWith(color: theme.colorScheme.onPrimary)),
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
-              ),
-        body: isLoading
-            ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
-            : videoError
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                           Icon(Icons.error_outline, color: theme.colorScheme.error, size: 50),
-                           const SizedBox(height: 16),
-                           Text(
-                            '${l10n.videoPlaybackError}: $errorMessage', // Show concise error message
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.error),
-                          ),
-                          const SizedBox(height: 20),
-                          // Show retry button
-                          ElevatedButton(
-                             onPressed: isLoading ? null : () => initializeVideo(widget.videoPath), // Disable if already loading
-                             child: Text(l10n.retry),
-                          ),
-                          // Add option to play original online if available
-                          if (widget.originalVideoUrl != null && widget.originalVideoUrl!.isNotEmpty)
-                             const SizedBox(height: 10),
-                          if (widget.originalVideoUrl != null && widget.originalVideoUrl!.isNotEmpty)
-                            TextButton.icon(
-                               icon: Icon(Icons.open_in_browser, color: theme.colorScheme.primary),
-                               label: Text(l10n.playOriginalOnline ?? 'Play Original Online'), // Assuming new key
-                               onPressed: isLoading ? null : () => _launchOriginalUrl(context), // Disable if loading
-                            ),
-                        ],
-                      ),
-                    ),
-                  )
-                // Only build the video player section if the controller is initialized
-                : (_controller != null && _controller!.value.isInitialized)
-                    ? Column(
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.videoTitle),
+        backgroundColor: theme.colorScheme.primary,
+        elevation: 10,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(30),
+            bottomRight: Radius.circular(30),
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          Container(
+            height: MediaQuery.of(context).size.height / 2,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: videoError
+                  ? Center(child: Text('Error: $errorMessage'))
+                  : isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : Column(
                           children: [
-                             // Video player container
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              width: MediaQuery.of(context).size.width,
-                              height: _isFullscreen ? MediaQuery.of(context).size.height : videoContainerHeight!,
-                              child: Center(
-                                child: AspectRatio(
-                                  aspectRatio: _controller!.value.aspectRatio,
-                                  child: Stack(
-                                    alignment: Alignment.bottomCenter,
-                                    children: [
-                                      VideoPlayer(_controller!),
-
-                                      VideoControlsOverlay(
-                                        controller: _controller!,
-                                      ),
-
-                                      Positioned(
-                                         bottom: 0, left: 0, right: 0,
-                                         child: VideoBottomControls(
-                                            controller: _controller!,
-                                            onMuteToggle: _toggleMute,
-                                            isMuted: _isMuted,
-                                            onSpeedChange: _changeSpeed,
-                                            currentSpeed: _playbackSpeed,
-                                            onZoomToggle: _toggleFullscreen,
-                                         ),
-                                      ),
-
-                                      Positioned(
-                                         bottom: 40, // Adjust based on bottom control height
-                                         left: 0, right: 0,
-                                         child: VideoProgressIndicator(_controller!,
-                                             allowScrubbing: true,
-                                             colors: VideoProgressColors(
-                                                playedColor: theme.colorScheme.primary,
-                                                bufferedColor: theme.colorScheme.primary.withOpacity(0.3),
-                                                backgroundColor: theme.colorScheme.onSurface.withOpacity(0.1),
-                                             ),
-                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                            const SizedBox(height: 50),
+                            _buildSpeedDropdown(),
+                            const SizedBox(height: 16),
+                            Expanded(
+                              child: Video(
+                                controller: controller,
+                                controls: AdaptiveVideoControls,
                               ),
                             ),
-                            if (!_isFullscreen)
-                              Expanded(
-                                child: Column(
-                                  children: [
-                                    TabBar(
-                                      controller: _tabController,
-                                      labelColor: theme.colorScheme.primary,
-                                      unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.6),
-                                      indicatorColor: theme.colorScheme.primary,
-                                      tabs: [
-                                        Tab(text: l10n.videoItemType),
-                                        Tab(text: l10n.otherItemsTabTitle ?? 'Other Content'),
-                                      ],
-                                    ),
-                                    Expanded(
-                                      child: TabBarView(
-                                        controller: _tabController,
-                                        children: [
-                                          _buildLessonList(videoLessons, isVideoTab: true),
-                                          _buildLessonList(otherLessons, isVideoTab: false),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                           ],
+                        ),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              color: theme.colorScheme.surface, // Lighter background
+              child: Column(
+                children: [
+                  _currentlyPlayingIndex != -1
+                      ? Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text(
+                            "Currently Playing: ${widget.lessons[_currentlyPlayingIndex].title}",
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
                         )
-                       : Center(child: Text(l10n.unexpectedError ?? 'An unexpected error occurred.')), // Assuming new key
+                      : const SizedBox(),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      itemCount: widget.lessons.length,
+                      itemBuilder: (context, index) {
+                        final lesson = widget.lessons[index];
+                        final videoUrl = lesson.videoUrl;
+                        if (videoUrl == null || videoUrl.isEmpty) return const SizedBox();
+                        return _buildLessonItem(context, lesson, index, lessonProvider);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

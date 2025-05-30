@@ -35,7 +35,10 @@ dependencies:
   sqflite: ^2.3.0
   permission_handler: ^11.3.1  # For storage permissions if needed
   open_filex: ^4.4.0
-  video_player: ^2.9.2  
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
+  media_kit_libs_video: ^1.0.5 
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
