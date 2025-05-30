@@ -1,17 +1,13 @@
-// lib/screens/library/lesson_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-// No longer directly use youtube_explode_dart here for parsing,
-// as that logic is now internal to the provider's getDownloadId.
-// import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt;
 
-import '../../models/lesson.dart';
-import '../../models/section.dart';
-import '../../provider/lesson_provider.dart';
-import '../../utils/download_status.dart';
+import 'package:mgw_tutorial/models/lesson.dart';
+import 'package:mgw_tutorial/models/section.dart';
+import 'package:mgw_tutorial/provider/lesson_provider.dart';
+import 'package:mgw_tutorial/utils/download_status.dart';
 
 class LessonListScreen extends StatefulWidget {
   static const routeName = '/lesson-list';
@@ -38,14 +34,14 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       Provider.of<LessonProvider>(context, listen: false)
           .fetchLessonsForSection(widget.section.id);
     });
-    print("LessonListScreen init for section: ${widget.section.title} (ID: ${widget.section.id})");
+     print("LessonListScreen init for section: ${widget.section.title} (ID: ${widget.section.id})");
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
-    print("LessonListScreen dispose for section: ${widget.section.title}");
+     print("LessonListScreen dispose for section: ${widget.section.title}");
   }
 
   Future<void> _refreshLessons() async {
@@ -59,14 +55,11 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     final lessonProvider = Provider.of<LessonProvider>(context, listen: false);
 
     if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
-       // Get download ID using the provider's public getter
       final String? downloadId = lessonProvider.getDownloadId(lesson);
 
       if (downloadId != null) {
-         // Get the download status notifier from the provider
         final statusNotifier = lessonProvider.getDownloadStatusNotifier(downloadId);
         final status = statusNotifier.value;
-
 
         if (status == DownloadStatus.downloaded) {
           final filePath = await lessonProvider.getDownloadedFilePath(lesson);
@@ -78,7 +71,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
             if (result.type != ResultType.done && mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text("${l10n.couldNotOpenFileError}${result.message}"),
+                  content: Text("${l10n.couldNotOpenFileError}${result.message}"), // Assuming "couldNotOpenFileError" exists
                   backgroundColor: theme.colorScheme.errorContainer,
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -86,8 +79,8 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
             }
             return;
           } else {
-            print("Download status was downloaded ($downloadId), but file path not found/invalid.");
-             if (mounted) {
+             print("Download status was downloaded ($downloadId), but file path not found/invalid.");
+              if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(l10n.couldNotFindDownloadedFileError),
@@ -130,7 +123,6 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
           }
         }
       }
-       // Fallback: If not downloaded/downloading/failed or not a recognized downloadable video, launch the original URL
       _launchUrl(context, lesson.videoUrl, lesson.title);
     } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
       _launchUrl(context, lesson.attachmentUrl, lesson.title);
@@ -138,7 +130,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("${l10n.quizItemType}: ${lesson.title} (${l10n.notImplementedMessage})"),
+            content: Text("${l10n.quizItemType}: ${lesson.title} (${l10n.notImplementedMessage})"), // Assuming these keys exist
             backgroundColor: theme.colorScheme.secondaryContainer,
             behavior: SnackBarBehavior.floating,
           ),
@@ -151,10 +143,10 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
           builder: (dCtx) => AlertDialog(
             backgroundColor: theme.dialogBackgroundColor,
             title: Text(lesson.title, style: theme.textTheme.titleLarge),
-            content: SingleChildScrollView(child: Text(lesson.summary ?? l10n.noTextContent, style: theme.textTheme.bodyLarge)),
+            content: SingleChildScrollView(child: Text(lesson.summary ?? l10n.noTextContent, style: theme.textTheme.bodyLarge)), // Assuming "noTextContent" exists
             actions: [
               TextButton(
-                child: Text(l10n.closeButtonText, style: TextStyle(color: theme.colorScheme.primary)),
+                child: Text(l10n.closeButtonText, style: TextStyle(color: theme.colorScheme.primary)), // Assuming "closeButtonText" exists
                 onPressed: () => Navigator.of(dCtx).pop(),
               ),
             ],
@@ -165,7 +157,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.noLaunchableContent(lesson.title)),
+            content: Text(l10n.noLaunchableContent(lesson.title)), // Assuming "noLaunchableContent" exists
             backgroundColor: theme.colorScheme.secondaryContainer,
             behavior: SnackBarBehavior.floating,
           ),
@@ -181,7 +173,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.itemNotAvailable(itemName)),
+            content: Text(l10n.itemNotAvailable(itemName)), // Assuming "itemNotAvailable" exists
             backgroundColor: theme.colorScheme.secondaryContainer,
             behavior: SnackBarBehavior.floating,
           ),
@@ -193,13 +185,13 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     final Uri uri = Uri.parse(urlString);
     try {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        print("Cannot launch URL $urlString externally, trying in-app.");
+         print("Cannot launch URL $urlString externally, trying in-app.");
         if (!await launchUrl(uri, mode: LaunchMode.inAppWebView)) {
            print("Cannot launch URL $urlString with any method.");
-            if (mounted) {
+           if (mounted) {
              ScaffoldMessenger.of(context).showSnackBar(
                SnackBar(
-                 content: Text(l10n.couldNotLaunchItem(urlString)),
+                 content: Text(l10n.couldNotLaunchItem(urlString)), // Assuming "couldNotLaunchItem" exists
                  backgroundColor: theme.colorScheme.errorContainer,
                  behavior: SnackBarBehavior.floating,
                ),
@@ -209,14 +201,14 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
            print("Launched URL $urlString in-app.");
         }
       } else {
-        print("Launched URL $urlString externally.");
+         print("Launched URL $urlString externally.");
       }
     } catch (e) {
       print("Error launching URL $urlString: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("${l10n.couldNotLaunchItem(urlString)}: ${e.toString()}"),
+            content: Text("${l10n.couldNotLaunchItem(urlString)}: ${e.toString()}"), // Assuming "couldNotLaunchItem" exists
             backgroundColor: theme.colorScheme.errorContainer,
             behavior: SnackBarBehavior.floating,
           ),
@@ -230,9 +222,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     final l10n = AppLocalizations.of(context)!;
     print("Building download button for lesson: ${lesson.title}, Type: ${lesson.lessonType}, Video URL: ${lesson.videoUrl}, Provider: ${lesson.videoProvider}");
 
-    // Get download ID using the provider's public getter
     final String? downloadId = lessonProv.getDownloadId(lesson);
-
 
     if (downloadId == null) {
        if (lesson.lessonType == LessonType.video) {
@@ -256,7 +246,6 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       width: 40,
       height: 40,
       child: ValueListenableBuilder<DownloadStatus>(
-        // Get the notifier from the provider
         valueListenable: lessonProv.getDownloadStatusNotifier(downloadId),
         builder: (context, status, child) {
           switch (status) {
@@ -274,7 +263,6 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
               );
             case DownloadStatus.downloading:
               return ValueListenableBuilder<double>(
-                 // Get the notifier from the provider
                 valueListenable: lessonProv.getDownloadProgressNotifier(downloadId),
                 builder: (context, progress, _) {
                   final progressText = progress > 0 && progress < 1 ? "${(progress * 100).toInt()}%" : "";
@@ -317,8 +305,8 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
               );
             case DownloadStatus.downloaded:
               return IconButton(
-                icon: Icon(Icons.check_circle, color: theme.colorScheme.primary),
-                tooltip: l10n.downloadedVideoTooltip,
+                icon: Icon(Icons.play_circle_fill, color: theme.colorScheme.primary), // Play icon
+                tooltip: l10n.downloadedVideoTooltip, // Using existing tooltip key
                 iconSize: 24,
                 padding: EdgeInsets.zero,
                 onPressed: () async {
@@ -326,8 +314,8 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                   await _playOrLaunchContent(context, lesson);
                 },
                 onLongPress: () {
-                  print("Delete button long pressed for ID: $downloadId");
-                  lessonProv.deleteDownload(lesson, context);
+                   print("Delete button long pressed for ID: $downloadId");
+                   lessonProv.deleteDownload(lesson, context);
                 },
               );
             case DownloadStatus.failed:
@@ -358,36 +346,32 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       case LessonType.video:
         lessonIcon = Icons.play_circle_outline_rounded;
         iconColor = theme.colorScheme.error;
-        typeDescription = l10n.videoItemType;
+        typeDescription = l10n.videoItemType; // Assuming this key exists
         break;
       case LessonType.document:
         lessonIcon = Icons.description_outlined;
         iconColor = theme.colorScheme.secondary;
-        typeDescription = l10n.documentItemType;
+        typeDescription = l10n.documentItemType; // Assuming this key exists
         break;
       case LessonType.quiz:
         lessonIcon = Icons.quiz_outlined;
         iconColor = theme.colorScheme.tertiary;
-        typeDescription = l10n.quizItemType;
+        typeDescription = l10n.quizItemType; // Assuming this key exists
         break;
       case LessonType.text:
         lessonIcon = Icons.notes_outlined;
         iconColor = theme.colorScheme.primary;
-        typeDescription = l10n.textItemType;
+        typeDescription = l10n.textItemType; // Assuming this key exists
         break;
       default:
         lessonIcon = Icons.extension_outlined;
         iconColor = theme.colorScheme.onSurface.withOpacity(0.5);
-        typeDescription = l10n.unknownItemType;
+        typeDescription = l10n.unknownItemType; // Assuming this key exists
     }
 
-    // Get download ID using the provider's public getter.
-    // Use lesson ID as a fallback *key* for status tracking if videoId is null,
-    // *only* if it's a video lesson type.
     final String? downloadIdForStatus = (lesson.lessonType == LessonType.video)
         ? lessonProv.getDownloadId(lesson) ?? lesson.id.toString()
         : null;
-
 
     Widget deleteButton = const SizedBox.shrink();
     if (downloadIdForStatus != null) {
@@ -395,7 +379,6 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         width: 40,
         height: 40,
         child: ValueListenableBuilder<DownloadStatus>(
-          // Get notifier from the provider
           valueListenable: lessonProv.getDownloadStatusNotifier(downloadIdForStatus),
           builder: (context, status, child) {
             if (status == DownloadStatus.downloaded) {
@@ -405,7 +388,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                 iconSize: 24,
                 padding: EdgeInsets.zero,
                 onPressed: () {
-                  print("Delete button pressed for ID: $downloadIdForStatus");
+                   print("Delete button pressed for ID: $downloadIdForStatus");
                    lessonProv.deleteDownload(lesson, context);
                 },
               );
@@ -415,7 +398,6 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         ),
       );
     }
-
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
@@ -480,7 +462,6 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -509,14 +490,14 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                    Icon(Icons.error_outline, color: theme.colorScheme.error, size: 50),
                    const SizedBox(height: 16),
                    Text(
-                     l10n.failedToLoadLessonsError(error),
+                     l10n.failedToLoadLessonsError(error), // Assuming this key exists
                      textAlign: TextAlign.center,
                      style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
                    ),
                    const SizedBox(height: 20),
                    ElevatedButton.icon(
                      icon: const Icon(Icons.refresh),
-                     label: Text(l10n.refresh),
+                     label: Text(l10n.refresh), // Assuming this key exists
                      onPressed: _refreshLessons,
                    ),
                  ],
@@ -538,14 +519,14 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                   Icon(Icons.hourglass_empty_outlined, size: 60, color: theme.iconTheme.color?.withOpacity(0.5)),
                   const SizedBox(height: 16),
                   Text(
-                    l10n.noLessonsInChapter,
+                    l10n.noLessonsInChapter, // Assuming this key exists
                     textAlign: TextAlign.center,
                     style: theme.textTheme.titleMedium,
                   ),
                    const SizedBox(height: 20),
                    ElevatedButton.icon(
                      icon: const Icon(Icons.refresh),
-                     label: Text(l10n.refresh),
+                     label: Text(l10n.refresh), // Assuming this key exists
                      onPressed: _refreshLessons,
                    )
                 ],
@@ -565,10 +546,10 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
           unselectedLabelColor: theme.tabBarTheme.unselectedLabelColor ?? theme.colorScheme.onSurface.withOpacity(0.6),
           indicatorColor: theme.tabBarTheme.indicatorColor ?? theme.colorScheme.primary,
           tabs: [
-            Tab(text: l10n.videoItemType),
-            Tab(text: l10n.textItemType),
-            Tab(text: l10n.documentItemType),
-            Tab(text: l10n.quizItemType),
+            Tab(text: l10n.videoItemType), // Assuming this key exists
+            Tab(text: l10n.textItemType), // Assuming this key exists
+            Tab(text: l10n.documentItemType), // Assuming this key exists
+            Tab(text: l10n.quizItemType), // Assuming this key exists
           ],
         ),
       ),
@@ -579,10 +560,10 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         child: TabBarView(
           controller: _tabController,
           children: [
-            _buildTabContent(context, lessons, lessonProvider, LessonType.video, l10n.noVideosAvailable, Icons.video_library_outlined),
-            _buildTabContent(context, lessons, lessonProvider, LessonType.text, l10n.noTextLessonsAvailable, Icons.notes_outlined),
-            _buildTabContent(context, lessons, lessonProvider, LessonType.document, l10n.noDocumentsAvailable, Icons.description_outlined),
-            _buildTabContent(context, lessons, lessonProvider, LessonType.quiz, l10n.noQuizzesAvailable, Icons.quiz_outlined),
+            _buildTabContent(context, lessons, lessonProvider, LessonType.video, l10n.noVideosAvailable, Icons.video_library_outlined), // Assuming "noVideosAvailable" exists
+            _buildTabContent(context, lessons, lessonProvider, LessonType.text, l10n.noTextLessonsAvailable, Icons.notes_outlined), // Assuming "noTextLessonsAvailable" exists
+            _buildTabContent(context, lessons, lessonProvider, LessonType.document, l10n.noDocumentsAvailable, Icons.description_outlined), // Assuming "noDocumentsAvailable" exists
+            _buildTabContent(context, lessons, lessonProvider, LessonType.quiz, l10n.noQuizzesAvailable, Icons.quiz_outlined), // Assuming "noQuizzesAvailable" exists
           ],
         ),
       ),
