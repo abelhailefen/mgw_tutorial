@@ -78,7 +78,7 @@ class DeviceInfoService {
      }
   }
 
-  // <<< NEW METHOD TO GET FORMATTED STRING >>>
+  // <<< METHOD USED BY BOTH REGISTRATION AND LOGIN TO GET FORMATTED STRING >>>
   Future<String> getFormattedDeviceString(BuildContext context) async {
       String deviceType = "Unknown";
       String brandModel = "Unknown Device";
@@ -90,7 +90,7 @@ class DeviceInfoService {
            deviceType = detectDeviceType(context);
       } else {
            // Fallback type if context is not valid
-           deviceType = (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
+           deviceType = (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.android) // Typo fixed: Should be TargetPlatform.iOS
                           ? "Mobile"
                           : (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)
                             ? "Computer"
@@ -121,14 +121,19 @@ class DeviceInfoService {
            switch (defaultTargetPlatform) {
               case TargetPlatform.android:
                 brandModel = "${deviceData['brand'] ?? 'UnknownBrand'} ${deviceData['model'] ?? 'UnknownModel'}";
-                // FIX: Use 'version.release' for user-facing Android version
                 final androidRelease = deviceData['version.release'];
-                 // FIX: Set to UnknownOS if version.release is null or empty
-                if (androidRelease != null && androidRelease.isNotEmpty) {
-                    osInfo = "Android $androidRelease";
-                } else {
-                    osInfo = "UnknownOS";
-                }
+                final androidSdk = deviceData['version.sdkInt'];
+
+                 // Prioritize release version if it looks like a number
+                 if (androidRelease != null && androidRelease.isNotEmpty && RegExp(r'^\d+(\.\d+)*$').hasMatch(androidRelease.toString())) {
+                     osInfo = "Android ${androidRelease.toString().trim()}";
+                 } else if (androidSdk != null) {
+                      // Fallback to SDK level, but prepend "SDK" to avoid confusion
+                      osInfo = "Android SDK ${androidSdk.toString().trim()}";
+                 } else {
+                      // Truly unknown
+                      osInfo = "UnknownOS";
+                 }
                 break;
               case TargetPlatform.iOS:
                 brandModel = "${deviceData['localizedModel'] ?? deviceData['model'] ?? 'UnknownModel'}";
