@@ -391,5 +391,13 @@
   "errorLoadingData": "Error Loading Data",
   "retry": "Retry",
   "faqTitle": "FAQ",
-  "faqNoItems": "No FAQ items available at the moment."
+  "faqNoItems": "No FAQ items available at the moment.",
+  "videoPlaybackError": "Video playback error",
+  "otherItemsTabTitle": "Other Content",
+  "noOtherVideosInChapter": "No other videos found in this chapter.",
+  "noOtherContentInChapter": "No other content found in this chapter.",
+  "cannotPlayOtherVideoHere": "Cannot play other videos from this list.",
+  "noOnlineVideoUrlAvailable":" No online video URL available for this item.",
+  "playOriginalOnline": "Play Original Online",
+  "unexpectedError": "An unexpected error occurred: "
 }

@@ -1,3 +1,4 @@
+// lib/screens/library/lesson_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +9,7 @@ import 'package:mgw_tutorial/models/lesson.dart';
 import 'package:mgw_tutorial/models/section.dart';
 import 'package:mgw_tutorial/provider/lesson_provider.dart';
 import 'package:mgw_tutorial/utils/download_status.dart';
+import 'package:mgw_tutorial/screens/video_player_screen.dart'; // Import the screen
 
 class LessonListScreen extends StatefulWidget {
   static const routeName = '/lesson-list';
@@ -64,20 +66,23 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         if (status == DownloadStatus.downloaded) {
           final filePath = await lessonProvider.getDownloadedFilePath(lesson);
           if (filePath != null && filePath.isNotEmpty) {
-            print("Attempting to open downloaded file: $filePath for video ID $downloadId");
-            final result = await OpenFilex.open(filePath);
-            print("OpenFile result for $filePath: ${result.type}, ${result.message}");
+            print("Attempting to open downloaded file using internal player: $filePath for video ID $downloadId");
 
-            if (result.type != ResultType.done && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("${l10n.couldNotOpenFileError}${result.message}"), // Assuming "couldNotOpenFileError" exists
-                  backgroundColor: theme.colorScheme.errorContainer,
-                  behavior: SnackBarBehavior.floating,
+            final List<Lesson> allLessonsForSection = lessonProvider.lessonsForSection(widget.section.id);
+
+            if (mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (ctx) => VideoPlayerScreen(
+                    videoTitle: lesson.title,
+                    videoPath: filePath, // Pass downloaded path
+                    originalVideoUrl: lesson.videoUrl, // *** Pass original URL ***
+                    lessons: allLessonsForSection,
+                  ),
                 ),
               );
             }
-            return;
+            return; // Stop here if we navigate to the player
           } else {
              print("Download status was downloaded ($downloadId), but file path not found/invalid.");
               if (mounted) {
@@ -89,6 +94,8 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                   ),
                 );
               }
+              // Fallback to launching original URL if downloaded file is missing
+              _launchUrl(context, lesson.videoUrl, lesson.title);
           }
         } else if (status == DownloadStatus.downloading) {
           if (mounted) {
@@ -111,6 +118,8 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
               ),
             );
           }
+           // Fallback to launching original URL on download failure
+           _launchUrl(context, lesson.videoUrl, lesson.title);
         } else if (status == DownloadStatus.cancelled) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -121,16 +130,25 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
               ),
             );
           }
+           // Fallback to launching original URL on download cancelled
+           _launchUrl(context, lesson.videoUrl, lesson.title);
+        } else {
+            // If status is not handled above (e.g., notDownloaded), fallback to launching original URL
+            _launchUrl(context, lesson.videoUrl, lesson.title);
         }
+      } else {
+         // If downloadId is null, it means it's not a downloadable video type
+         // or something is wrong. Fallback to launching original URL.
+         _launchUrl(context, lesson.videoUrl, lesson.title);
       }
-      _launchUrl(context, lesson.videoUrl, lesson.title);
     } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
+      // For documents, still use external launch
       _launchUrl(context, lesson.attachmentUrl, lesson.title);
     } else if (lesson.lessonType == LessonType.quiz) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("${l10n.quizItemType}: ${lesson.title} (${l10n.notImplementedMessage})"), // Assuming these keys exist
+            content: Text("${l10n.quizItemType}: ${lesson.title} (${l10n.notImplementedMessage})"),
             backgroundColor: theme.colorScheme.secondaryContainer,
             behavior: SnackBarBehavior.floating,
           ),
@@ -143,10 +161,10 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
           builder: (dCtx) => AlertDialog(
             backgroundColor: theme.dialogBackgroundColor,
             title: Text(lesson.title, style: theme.textTheme.titleLarge),
-            content: SingleChildScrollView(child: Text(lesson.summary ?? l10n.noTextContent, style: theme.textTheme.bodyLarge)), // Assuming "noTextContent" exists
+            content: SingleChildScrollView(child: Text(lesson.summary ?? l10n.noTextContent, style: theme.textTheme.bodyLarge)),
             actions: [
               TextButton(
-                child: Text(l10n.closeButtonText, style: TextStyle(color: theme.colorScheme.primary)), // Assuming "closeButtonText" exists
+                child: Text(l10n.closeButtonText, style: TextStyle(color: theme.colorScheme.primary)),
                 onPressed: () => Navigator.of(dCtx).pop(),
               ),
             ],
@@ -157,7 +175,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.noLaunchableContent(lesson.title)), // Assuming "noLaunchableContent" exists
+            content: Text(l10n.noLaunchableContent(lesson.title)),
             backgroundColor: theme.colorScheme.secondaryContainer,
             behavior: SnackBarBehavior.floating,
           ),
@@ -173,7 +191,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.itemNotAvailable(itemName)), // Assuming "itemNotAvailable" exists
+            content: Text(l10n.itemNotAvailable(itemName)),
             backgroundColor: theme.colorScheme.secondaryContainer,
             behavior: SnackBarBehavior.floating,
           ),
@@ -191,7 +209,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
            if (mounted) {
              ScaffoldMessenger.of(context).showSnackBar(
                SnackBar(
-                 content: Text(l10n.couldNotLaunchItem(urlString)), // Assuming "couldNotLaunchItem" exists
+                 content: Text(l10n.couldNotLaunchItem(urlString)),
                  backgroundColor: theme.colorScheme.errorContainer,
                  behavior: SnackBarBehavior.floating,
                ),
@@ -208,7 +226,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("${l10n.couldNotLaunchItem(urlString)}: ${e.toString()}"), // Assuming "couldNotLaunchItem" exists
+            content: Text("${l10n.couldNotLaunchItem(urlString)}: ${e.toString()}"),
             backgroundColor: theme.colorScheme.errorContainer,
             behavior: SnackBarBehavior.floating,
           ),
@@ -305,18 +323,18 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
               );
             case DownloadStatus.downloaded:
               return IconButton(
-                icon: Icon(Icons.play_circle_fill, color: theme.colorScheme.primary), // Play icon
-                tooltip: l10n.downloadedVideoTooltip, // Using existing tooltip key
+                icon: Icon(Icons.play_circle_fill, color: theme.colorScheme.primary),
+                tooltip: l10n.downloadedVideoTooltip,
                 iconSize: 24,
                 padding: EdgeInsets.zero,
                 onPressed: () async {
                   print("Play button pressed for ID: $downloadId");
-                  await _playOrLaunchContent(context, lesson);
+                  await _playOrLaunchContent(context, lesson); // This navigates to VideoPlayerScreen
                 },
-                onLongPress: () {
+                 onLongPress: () {
                    print("Delete button long pressed for ID: $downloadId");
                    lessonProv.deleteDownload(lesson, context);
-                },
+                 },
               );
             case DownloadStatus.failed:
               return IconButton(
@@ -346,27 +364,27 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       case LessonType.video:
         lessonIcon = Icons.play_circle_outline_rounded;
         iconColor = theme.colorScheme.error;
-        typeDescription = l10n.videoItemType; // Assuming this key exists
+        typeDescription = l10n.videoItemType;
         break;
       case LessonType.document:
         lessonIcon = Icons.description_outlined;
         iconColor = theme.colorScheme.secondary;
-        typeDescription = l10n.documentItemType; // Assuming this key exists
+        typeDescription = l10n.documentItemType;
         break;
       case LessonType.quiz:
         lessonIcon = Icons.quiz_outlined;
         iconColor = theme.colorScheme.tertiary;
-        typeDescription = l10n.quizItemType; // Assuming this key exists
+        typeDescription = l10n.quizItemType;
         break;
       case LessonType.text:
         lessonIcon = Icons.notes_outlined;
         iconColor = theme.colorScheme.primary;
-        typeDescription = l10n.textItemType; // Assuming this key exists
+        typeDescription = l10n.textItemType;
         break;
       default:
         lessonIcon = Icons.extension_outlined;
         iconColor = theme.colorScheme.onSurface.withOpacity(0.5);
-        typeDescription = l10n.unknownItemType; // Assuming this key exists
+        typeDescription = l10n.unknownItemType;
     }
 
     final String? downloadIdForStatus = (lesson.lessonType == LessonType.video)
@@ -474,7 +492,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
      if (isLoading && lessons.isEmpty) {
        return Scaffold(
           appBar: AppBar(title: Text(widget.section.title, overflow: TextOverflow.ellipsis)),
-          body: const Center(child: CircularProgressIndicator()),
+          body: Center(child: CircularProgressIndicator(color: theme.colorScheme.primary)),
        );
      }
 
@@ -490,15 +508,15 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                    Icon(Icons.error_outline, color: theme.colorScheme.error, size: 50),
                    const SizedBox(height: 16),
                    Text(
-                     l10n.failedToLoadLessonsError(error), // Assuming this key exists
+                     l10n.failedToLoadLessonsError(error),
                      textAlign: TextAlign.center,
                      style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
                    ),
                    const SizedBox(height: 20),
                    ElevatedButton.icon(
                      icon: const Icon(Icons.refresh),
-                     label: Text(l10n.refresh), // Assuming this key exists
-                     onPressed: _refreshLessons,
+                     label: Text(l10n.refresh),
+                     onPressed: isLoading ? null : _refreshLessons,
                    ),
                  ],
                ),
@@ -507,7 +525,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         );
      }
 
-     if (lessons.isEmpty && !isLoading) {
+     if (lessons.isEmpty && !isLoading && error == null) {
        return Scaffold(
           appBar: AppBar(title: Text(widget.section.title, overflow: TextOverflow.ellipsis)),
           body: Center(
@@ -519,15 +537,15 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                   Icon(Icons.hourglass_empty_outlined, size: 60, color: theme.iconTheme.color?.withOpacity(0.5)),
                   const SizedBox(height: 16),
                   Text(
-                    l10n.noLessonsInChapter, // Assuming this key exists
+                    l10n.noLessonsInChapter,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.titleMedium,
                   ),
                    const SizedBox(height: 20),
                    ElevatedButton.icon(
                      icon: const Icon(Icons.refresh),
-                     label: Text(l10n.refresh), // Assuming this key exists
-                     onPressed: _refreshLessons,
+                     label: Text(l10n.refresh),
+                     onPressed: isLoading ? null : _refreshLessons,
                    )
                 ],
               ),
@@ -546,10 +564,10 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
           unselectedLabelColor: theme.tabBarTheme.unselectedLabelColor ?? theme.colorScheme.onSurface.withOpacity(0.6),
           indicatorColor: theme.tabBarTheme.indicatorColor ?? theme.colorScheme.primary,
           tabs: [
-            Tab(text: l10n.videoItemType), // Assuming this key exists
-            Tab(text: l10n.textItemType), // Assuming this key exists
-            Tab(text: l10n.documentItemType), // Assuming this key exists
-            Tab(text: l10n.quizItemType), // Assuming this key exists
+            Tab(text: l10n.videoItemType),
+            Tab(text: l10n.textItemType),
+            Tab(text: l10n.documentItemType),
+            Tab(text: l10n.quizItemType),
           ],
         ),
       ),
@@ -560,10 +578,10 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         child: TabBarView(
           controller: _tabController,
           children: [
-            _buildTabContent(context, lessons, lessonProvider, LessonType.video, l10n.noVideosAvailable, Icons.video_library_outlined), // Assuming "noVideosAvailable" exists
-            _buildTabContent(context, lessons, lessonProvider, LessonType.text, l10n.noTextLessonsAvailable, Icons.notes_outlined), // Assuming "noTextLessonsAvailable" exists
-            _buildTabContent(context, lessons, lessonProvider, LessonType.document, l10n.noDocumentsAvailable, Icons.description_outlined), // Assuming "noDocumentsAvailable" exists
-            _buildTabContent(context, lessons, lessonProvider, LessonType.quiz, l10n.noQuizzesAvailable, Icons.quiz_outlined), // Assuming "noQuizzesAvailable" exists
+            _buildTabContent(context, lessons, lessonProvider, LessonType.video, l10n.noVideosAvailable, Icons.video_library_outlined),
+            _buildTabContent(context, lessons, lessonProvider, LessonType.text, l10n.noTextLessonsAvailable, Icons.notes_outlined),
+            _buildTabContent(context, lessons, lessonProvider, LessonType.document, l10n.noDocumentsAvailable, Icons.description_outlined),
+            _buildTabContent(context, lessons, lessonProvider, LessonType.quiz, l10n.noQuizzesAvailable, Icons.quiz_outlined),
           ],
         ),
       ),

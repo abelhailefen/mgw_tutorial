@@ -391,5 +391,13 @@
   "errorLoadingData": "መጫን ላይ ስህተት",
   "retry": "እንደገና ይሞክሩ",
   "faqTitle": "FAQ",
-  "faqNoItems": "ምንም የተመዘገበ ጥያቄ የለም።"
+  "faqNoItems": "ምንም የተመዘገበ ጥያቄ የለም።",
+  "videoPlaybackError": "ቪዲዮ መጫን ላይ ስህተት።",
+  "otherItemsTabTitle": "ሌሎች ይዘቶች",
+  "noOtherVideosInChapter": "በዚህ ምዕራፍ ሌሎች ቪዲዮዎች የሉም።",
+  "noOtherContentInChapter": "በዚህ ምዕራፍ ሌሎች ይዘቶች የሉም።",
+  "cannotPlayOtherVideoHere": "ይህን ቪዲዮ እዚህ መጫን አልተቻለም።",
+  "noOnlineVideoUrlAvailable":" የቪዲዮው መረጃ በመስመር ላይ አልተገኘም።",
+  "playOriginalOnline": "መስመር ላይ ይጫኑ",
+  "unexpectedError": "ያልተጠበቀ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።"
 }

@@ -391,5 +391,8 @@
   "errorLoadingData": "መጫን ላይ ስህተት",
   "retry": "እንደገና ይሞክሩ",
   "faqTitle": "FAQ",
-  "faqNoItems": "ምንም የተመዘገበ ጥያቄ የለም።"
+  "faqNoItems": "ምንም የተመዘገበ ጥያቄ የለም።",
+  "noOnlineVideoUrlAvailable":" የቪዲዮው መረጃ በመስመር ላይ አልተገኘም።",
+  "playOriginalOnline": "መስመር ላይ ይጫኑ",
+  "unexpectedError": "ያልተጠበቀ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።"
 }
