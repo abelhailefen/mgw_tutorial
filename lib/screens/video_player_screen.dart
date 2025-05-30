@@ -522,10 +522,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                               ),
                           ],
                         )
-                      // If not loading, not error, and controller isn't initialized, something is wrong.
-                      // This state shouldn't ideally happen if initializeVideo is called in initState
-                      // and error/loading states are handled. Could show a different message.
-                      : Center(child: Text(l10n.unexpectedError ?? 'An unexpected error occurred.')), // Assuming new key
+                       : Center(child: Text(l10n.unexpectedError ?? 'An unexpected error occurred.')), // Assuming new key
       ),
     );
   }
