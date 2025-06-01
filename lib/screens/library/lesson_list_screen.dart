@@ -51,138 +51,153 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         .fetchLessonsForSection(widget.section.id, forceRefresh: true);
   }
 
-  Future<void> _playOrLaunchContent(BuildContext context, Lesson lesson) async {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final lessonProvider = Provider.of<LessonProvider>(context, listen: false);
+ Future<void> _playOrLaunchContent(BuildContext context, Lesson lesson) async {
+  final l10n = AppLocalizations.of(context)!;
+  final theme = Theme.of(context);
+  final lessonProvider = Provider.of<LessonProvider>(context, listen: false);
 
-    if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
-      final String? downloadId = lessonProvider.getDownloadId(lesson);
+  if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
+    final String? downloadId = lessonProvider.getDownloadId(lesson);
 
-      if (downloadId != null) {
-        final statusNotifier = lessonProvider.getDownloadStatusNotifier(downloadId);
-        final status = statusNotifier.value;
+    if (downloadId != null) {
+      final statusNotifier = lessonProvider.getDownloadStatusNotifier(downloadId);
+      final status = statusNotifier.value;
 
-        if (status == DownloadStatus.downloaded) {
-          final filePath = await lessonProvider.getDownloadedFilePath(lesson);
-          if (filePath != null && filePath.isNotEmpty) {
-            print("Attempting to open downloaded file using internal player: $filePath for video ID $downloadId");
+      if (status == DownloadStatus.downloaded) {
+        final filePath = await lessonProvider.getDownloadedFilePath(lesson);
+        if (filePath != null && filePath.isNotEmpty) {
+          print("Attempting to open downloaded file using internal player: $filePath for video ID $downloadId");
 
-            final List<Lesson> allLessonsForSection = lessonProvider.lessonsForSection(widget.section.id);
+          final List<Lesson> allLessonsForSection = lessonProvider.lessonsForSection(widget.section.id);
 
-            if (mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (ctx) => VideoPlayerScreen(
-                    videoTitle: lesson.title,
-                    videoPath: filePath, // Pass downloaded path
-                    originalVideoUrl: lesson.videoUrl, // *** Pass original URL ***
-                    lessons: allLessonsForSection,
-                  ),
-                ),
-              );
-            }
-            return; // Stop here if we navigate to the player
-          } else {
-             print("Download status was downloaded ($downloadId), but file path not found/invalid.");
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.couldNotFindDownloadedFileError),
-                    backgroundColor: theme.colorScheme.errorContainer,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-              // Fallback to launching original URL if downloaded file is missing
-              _launchUrl(context, lesson.videoUrl, lesson.title);
-          }
-        } else if (status == DownloadStatus.downloading) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l10n.videoIsDownloadingMessage),
-                backgroundColor: theme.colorScheme.secondaryContainer,
-                behavior: SnackBarBehavior.floating,
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (ctx) => VideoPlayerScreen(
+                  videoTitle: lesson.title,
+                  videoPath: filePath, // Pass downloaded path
+                  originalVideoUrl: lesson.videoUrl, // Pass original URL for fallback
+                  lessons: allLessonsForSection,
+                  isLocal: true, // Indicate local playback
+                ),
               ),
             );
           }
-          return;
-        } else if (status == DownloadStatus.failed) {
+          return; // Stop here if we navigate to the player
+        } else {
+          print("Download status was downloaded ($downloadId), but file path not found/invalid.");
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(l10n.videoDownloadFailedMessage),
+                content: Text(l10n.couldNotFindDownloadedFileError),
                 backgroundColor: theme.colorScheme.errorContainer,
                 behavior: SnackBarBehavior.floating,
               ),
             );
           }
-           // Fallback to launching original URL on download failure
-           _launchUrl(context, lesson.videoUrl, lesson.title);
-        } else if (status == DownloadStatus.cancelled) {
+          // Fallback to online streaming
+          final allLessonsForSection = lessonProvider.lessonsForSection(widget.section.id);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l10n.videoDownloadCancelledMessage),
-                backgroundColor: theme.colorScheme.secondaryContainer,
-                behavior: SnackBarBehavior.floating,
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (ctx) => VideoPlayerScreen(
+                  videoTitle: lesson.title,
+                  videoPath: '', // Empty path for online
+                  originalVideoUrl: lesson.videoUrl, // Use YouTube URL
+                  lessons: allLessonsForSection,
+                  isLocal: false, // Stream online
+                ),
               ),
             );
           }
-           // Fallback to launching original URL on download cancelled
-           _launchUrl(context, lesson.videoUrl, lesson.title);
-        } else {
-            // If status is not handled above (e.g., notDownloaded), fallback to launching original URL
-            _launchUrl(context, lesson.videoUrl, lesson.title);
         }
+      } else if (status == DownloadStatus.downloading) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.videoIsDownloadingMessage),
+              backgroundColor: theme.colorScheme.secondaryContainer,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
       } else {
-         // If downloadId is null, it means it's not a downloadable video type
-         // or something is wrong. Fallback to launching original URL.
-         _launchUrl(context, lesson.videoUrl, lesson.title);
-      }
-    } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
-      // For documents, still use external launch
-      _launchUrl(context, lesson.attachmentUrl, lesson.title);
-    } else if (lesson.lessonType == LessonType.quiz) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("${l10n.quizItemType}: ${lesson.title} (${l10n.notImplementedMessage})"),
-            backgroundColor: theme.colorScheme.secondaryContainer,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } else if (lesson.lessonType == LessonType.text && lesson.summary != null && lesson.summary!.isNotEmpty) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (dCtx) => AlertDialog(
-            backgroundColor: theme.dialogBackgroundColor,
-            title: Text(lesson.title, style: theme.textTheme.titleLarge),
-            content: SingleChildScrollView(child: Text(lesson.summary ?? l10n.noTextContent, style: theme.textTheme.bodyLarge)),
-            actions: [
-              TextButton(
-                child: Text(l10n.closeButtonText, style: TextStyle(color: theme.colorScheme.primary)),
-                onPressed: () => Navigator.of(dCtx).pop(),
+        // For other statuses (notDownloaded, failed, cancelled), stream online
+        final allLessonsForSection = lessonProvider.lessonsForSection(widget.section.id);
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (ctx) => VideoPlayerScreen(
+                videoTitle: lesson.title,
+                videoPath: '', // Empty path for online
+                originalVideoUrl: lesson.videoUrl, // Use YouTube URL
+                lessons: allLessonsForSection,
+                isLocal: false, // Stream online
               ),
-            ],
-          ),
-        );
+            ),
+          );
+        }
       }
     } else {
+      // If downloadId is null, stream online
+      final allLessonsForSection = lessonProvider.lessonsForSection(widget.section.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.noLaunchableContent(lesson.title)),
-            backgroundColor: theme.colorScheme.secondaryContainer,
-            behavior: SnackBarBehavior.floating,
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (ctx) => VideoPlayerScreen(
+              videoTitle: lesson.title,
+              videoPath: '', // Empty path for online
+              originalVideoUrl: lesson.videoUrl, // Use YouTube URL
+              lessons: allLessonsForSection,
+              isLocal: false, // Stream online
+            ),
           ),
         );
       }
     }
+  } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
+    // For documents, still use external launch
+    _launchUrl(context, lesson.attachmentUrl, lesson.title);
+  } else if (lesson.lessonType == LessonType.quiz) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("${l10n.quizItemType}: ${lesson.title} (${l10n.notImplementedMessage})"),
+          backgroundColor: theme.colorScheme.secondaryContainer,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  } else if (lesson.lessonType == LessonType.text && lesson.summary != null && lesson.summary!.isNotEmpty) {
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (dCtx) => AlertDialog(
+          backgroundColor: theme.dialogBackgroundColor,
+          title: Text(lesson.title, style: theme.textTheme.titleLarge),
+          content: SingleChildScrollView(child: Text(lesson.summary ?? l10n.noTextContent, style: theme.textTheme.bodyLarge)),
+          actions: [
+            TextButton(
+              child: Text(l10n.closeButtonText, style: TextStyle(color: theme.colorScheme.primary)),
+              onPressed: () => Navigator.of(dCtx).pop(),
+            ),
+          ],
+        ),
+      );
+    }
+  } else {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.noLaunchableContent(lesson.title)),
+          backgroundColor: theme.colorScheme.secondaryContainer,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
+}
 
   Future<void> _launchUrl(BuildContext context, String? urlString, String itemName) async {
     final l10n = AppLocalizations.of(context)!;
@@ -353,98 +368,117 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildLessonItem(BuildContext context, Lesson lesson, LessonProvider lessonProv) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    IconData lessonIcon;
-    Color iconColor;
-    String typeDescription;
+ Widget _buildLessonItem(BuildContext context, Lesson lesson, LessonProvider lessonProv) {
+  final theme = Theme.of(context);
+  final l10n = AppLocalizations.of(context)!;
+  IconData lessonIcon;
+  Color iconColor;
+  String typeDescription;
 
-    switch (lesson.lessonType) {
-      case LessonType.video:
-        lessonIcon = Icons.play_circle_outline_rounded;
-        iconColor = theme.colorScheme.error;
-        typeDescription = l10n.videoItemType;
-        break;
-      case LessonType.document:
-        lessonIcon = Icons.description_outlined;
-        iconColor = theme.colorScheme.secondary;
-        typeDescription = l10n.documentItemType;
-        break;
-      case LessonType.quiz:
-        lessonIcon = Icons.quiz_outlined;
-        iconColor = theme.colorScheme.tertiary;
-        typeDescription = l10n.quizItemType;
-        break;
-      case LessonType.text:
-        lessonIcon = Icons.notes_outlined;
-        iconColor = theme.colorScheme.primary;
-        typeDescription = l10n.textItemType;
-        break;
-      default:
-        lessonIcon = Icons.extension_outlined;
-        iconColor = theme.colorScheme.onSurface.withOpacity(0.5);
-        typeDescription = l10n.unknownItemType;
-    }
+  switch (lesson.lessonType) {
+    case LessonType.video:
+      lessonIcon = Icons.play_circle_outline_rounded;
+      iconColor = theme.colorScheme.error;
+      typeDescription = l10n.videoItemType;
+      break;
+    case LessonType.document:
+      lessonIcon = Icons.description_outlined;
+      iconColor = theme.colorScheme.secondary;
+      typeDescription = l10n.documentItemType;
+      break;
+    case LessonType.quiz:
+      lessonIcon = Icons.quiz_outlined;
+      iconColor = theme.colorScheme.tertiary;
+      typeDescription = l10n.quizItemType;
+      break;
+    case LessonType.text:
+      lessonIcon = Icons.notes_outlined;
+      iconColor = theme.colorScheme.primary;
+      typeDescription = l10n.textItemType;
+      break;
+    default:
+      lessonIcon = Icons.extension_outlined;
+      iconColor = theme.colorScheme.onSurface.withOpacity(0.5);
+      typeDescription = l10n.unknownItemType;
+  }
 
-    final String? downloadIdForStatus = (lesson.lessonType == LessonType.video)
-        ? lessonProv.getDownloadId(lesson) ?? lesson.id.toString()
-        : null;
+  final String? downloadIdForStatus = (lesson.lessonType == LessonType.video)
+      ? lessonProv.getDownloadId(lesson) ?? lesson.id.toString()
+      : null;
 
-    Widget deleteButton = const SizedBox.shrink();
-    if (downloadIdForStatus != null) {
-      deleteButton = SizedBox(
-        width: 40,
-        height: 40,
-        child: ValueListenableBuilder<DownloadStatus>(
-          valueListenable: lessonProv.getDownloadStatusNotifier(downloadIdForStatus),
-          builder: (context, status, child) {
-            if (status == DownloadStatus.downloaded) {
-              return IconButton(
-                icon: Icon(Icons.delete_outline, color: theme.colorScheme.onSurface.withOpacity(0.6)),
-                tooltip: l10n.deleteDownloadedFileTooltip,
-                iconSize: 24,
-                padding: EdgeInsets.zero,
-                onPressed: () {
-                   print("Delete button pressed for ID: $downloadIdForStatus");
-                   lessonProv.deleteDownload(lesson, context);
-                },
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
-      );
-    }
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-      elevation: 2.0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        leading: Icon(lessonIcon, color: iconColor, size: 36),
-        title: Text(lesson.title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500)),
-        subtitle: lesson.summary != null && lesson.summary!.isNotEmpty
-            ? Text(lesson.summary!, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall)
-            : Text(typeDescription, style: theme.textTheme.bodySmall),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (lesson.lessonType == LessonType.video && lesson.duration != null && lesson.duration!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: Text(lesson.duration!, style: theme.textTheme.bodySmall),
-              ),
-            if(lesson.lessonType == LessonType.video)
-              _buildDownloadButton(context, lesson, lessonProv),
-            deleteButton,
-          ],
-        ),
-        onTap: () async => await _playOrLaunchContent(context, lesson),
+  Widget deleteButton = const SizedBox.shrink();
+  if (downloadIdForStatus != null) {
+    deleteButton = SizedBox(
+      width: 40,
+      height: 40,
+      child: ValueListenableBuilder<DownloadStatus>(
+        valueListenable: lessonProv.getDownloadStatusNotifier(downloadIdForStatus),
+        builder: (context, status, child) {
+          if (status == DownloadStatus.downloaded) {
+            return IconButton(
+              icon: Icon(Icons.delete_outline, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+              tooltip: l10n.deleteDownloadedFileTooltip,
+              iconSize: 24,
+              padding: EdgeInsets.zero,
+              onPressed: () {
+                print("Delete button pressed for ID: $downloadIdForStatus");
+                lessonProv.deleteDownload(lesson, context);
+              },
+            );
+          }
+          return const SizedBox.shrink();
+        },
       ),
     );
   }
+
+  return Card(
+    margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+    elevation: 2.0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+    child: ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      leading: IconButton(
+        icon: Icon(lessonIcon, color: iconColor, size: 36),
+        onPressed: lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty
+            ? () {
+                // Navigate to VideoPlayerScreen for online streaming
+                final allLessonsForSection = lessonProv.lessonsForSection(widget.section.id);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (ctx) => VideoPlayerScreen(
+                      videoTitle: lesson.title,
+                      videoPath: '', // Empty path for online streaming
+                      originalVideoUrl: lesson.videoUrl!, // Pass YouTube URL
+                      lessons: allLessonsForSection,
+                      isLocal: false, // Indicate online playback
+                    ),
+                  ),
+                );
+              }
+            : null,
+      ),
+      title: Text(lesson.title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500)),
+      subtitle: lesson.summary != null && lesson.summary!.isNotEmpty
+          ? Text(lesson.summary!, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall)
+          : Text(typeDescription, style: theme.textTheme.bodySmall),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (lesson.lessonType == LessonType.video && lesson.duration != null && lesson.duration!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Text(lesson.duration!, style: theme.textTheme.bodySmall),
+            ),
+          if (lesson.lessonType == LessonType.video)
+            _buildDownloadButton(context, lesson, lessonProv),
+          deleteButton,
+        ],
+      ),
+      onTap: () async => await _playOrLaunchContent(context, lesson),
+    ),
+  );
+}
 
   Widget _buildTabContent(BuildContext context, List<Lesson> lessons, LessonProvider lessonProv, LessonType filterType, String noContentMessage, IconData emptyIcon) {
     final theme = Theme.of(context);

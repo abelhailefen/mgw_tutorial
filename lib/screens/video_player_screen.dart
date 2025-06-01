@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:media_kit_video/media_kit_video.dart' as media_kit;
 import 'package:mgw_tutorial/models/lesson.dart';
 import 'package:mgw_tutorial/provider/lesson_provider.dart';
 import 'package:mgw_tutorial/utils/download_status.dart';
 import 'package:provider/provider.dart';
+import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'dart:io';
 
 class VideoPlayerScreen extends StatefulWidget {
@@ -12,6 +13,7 @@ class VideoPlayerScreen extends StatefulWidget {
   final String videoPath;
   final List<Lesson> lessons;
   final String? originalVideoUrl;
+  final bool isLocal;
 
   const VideoPlayerScreen({
     super.key,
@@ -19,6 +21,7 @@ class VideoPlayerScreen extends StatefulWidget {
     required this.videoPath,
     required this.lessons,
     this.originalVideoUrl,
+    this.isLocal = false,
   });
 
   @override
@@ -26,33 +29,67 @@ class VideoPlayerScreen extends StatefulWidget {
 }
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  late final player = Player();
-  late final controller = VideoController(player);
+  late final player = Player(
+    configuration: const PlayerConfiguration(
+      bufferSize: 32 * 1024 * 1024,
+      vo: 'mediakitvideo',
+      logLevel: MPVLogLevel.debug,
+    ),
+  );
+  late final controller = media_kit.VideoController(
+    player,
+    configuration: const media_kit.VideoControllerConfiguration(
+      enableHardwareAcceleration: false,
+    ),
+  );
 
   int _currentlyPlayingIndex = -1;
   final Map<String, Future<bool>> _fileStatuses = {};
   final Set<String> _downloadingFiles = {};
   final Map<String, double> _downloadProgress = {};
-  bool isLoading = true;
-  bool videoError = false;
-  String errorMessage = '';
-  String selectedSpeed = '1.0';
-  bool _isLocal = true;
+  bool _isLoading = true;
+  bool _videoError = false;
+  String _errorMessage = '';
+  String _selectedSpeed = '1.0';
+  Size _videoSize = const Size(16, 9);
+  bool _isOpening = false;
 
   @override
   void initState() {
     super.initState();
     _initializeFileStatuses();
+    player.streams.width.listen((width) {
+      if (width != null && width > 0 && mounted) {
+        player.streams.height.listen((height) {
+          if (height != null && height > 0 && mounted) {
+            setState(() {
+              _videoSize = Size(width.toDouble(), height.toDouble());
+            });
+            print("Updated video size: $_videoSize");
+          }
+        });
+      }
+    });
+    player.streams.error.listen((error) {
+      if (error != null && mounted) {
+        setState(() {
+          _videoError = true;
+          _errorMessage = 'Playback error: $error';
+          _isLoading = false;
+        });
+        _showSnackBar(_errorMessage);
+      }
+    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    initializeVideo();
+    _initializeVideo(isLocal: widget.isLocal);
   }
 
   void _initializeFileStatuses() {
-    for (var lesson in widget.lessons) {
+    for (Lesson lesson in widget.lessons) {
       final videoUrl = lesson.videoUrl;
       if (videoUrl != null && videoUrl.isNotEmpty) {
         _checkFileStatus(videoUrl);
@@ -61,56 +98,115 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   void _changePlaybackSpeed(double speed) {
+    if (!mounted) return;
     setState(() {
-      selectedSpeed = speed.toString();
+      _selectedSpeed = speed.toString();
       player.setRate(speed);
     });
   }
 
-  Future<void> initializeVideo({bool isLocal = true}) async {
+  Future<void> _initializeVideo({required bool isLocal}) async {
+    if (!mounted) return;
     setState(() {
-      isLoading = true;
-      videoError = false;
-      errorMessage = '';
-      _isLocal = isLocal;
+      _isLoading = true;
+      _videoError = false;
+      _errorMessage = '';
     });
 
-    String uri = isLocal
-        ? File(widget.videoPath).uri.toString()
-        : widget.originalVideoUrl ?? '';
-
-    if (!isLocal && (uri.isEmpty || widget.originalVideoUrl == null)) {
-      setState(() {
-        videoError = true;
-        errorMessage = 'No online URL available for fallback';
-        isLoading = false;
-      });
-      _showSnackbar(errorMessage);
-      return;
-    }
-
+    String uri = '';
+    print("Initializing video: isLocal=$isLocal, url=${widget.originalVideoUrl}");
     try {
-      await player.open(Media(uri), play: true);
+      if (isLocal) {
+        uri = File(widget.videoPath).uri.toString();
+        print("Local video URI: $uri");
+      } else {
+        if (widget.originalVideoUrl == null || widget.originalVideoUrl!.isEmpty) {
+          if (!mounted) return;
+          setState(() {
+            _videoError = true;
+            _errorMessage = 'No online URL available for streaming';
+            _isLoading = false;
+          });
+          _showSnackBar(_errorMessage);
+          return;
+        }
+
+        try {
+          final explode = YoutubeExplode();
+          // Use VideoId to parse the URL robustly
+          final videoId = VideoId(widget.originalVideoUrl!);
+          if (videoId.value.isEmpty) {
+            throw Exception('Could not extract video ID from URL');
+          }
+          print("Fetching stream manifest for video ID: ${videoId.value}");
+          final streamManifest = await explode.videos.streamsClient.getManifest(videoId).timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw Exception('Timed out fetching YouTube stream'),
+          );
+          print("Stream manifest fetched successfully");
+          final mp4VideoStreams = streamManifest.videoOnly.where((stream) => stream.container.name == 'mp4').toList();
+          if (mp4VideoStreams.isEmpty) {
+            print("No video-only MP4 streams found, trying muxed streams");
+            final muxedStreams = streamManifest.muxed.where((stream) => stream.container.name == 'mp4').toList();
+            if (muxedStreams.isEmpty) {
+              print("No MP4 streams found, trying any stream");
+              final allStreams = streamManifest.video;
+              if (allStreams.isEmpty) {
+                throw Exception('No suitable streams found');
+              }
+              final videoStream = allStreams.reduce((a, b) => a.bitrate.bitsPerSecond > b.bitrate.bitsPerSecond ? a : b);
+              uri = videoStream.url.toString();
+            } else {
+              final videoStream = muxedStreams.reduce((a, b) => a.bitrate.bitsPerSecond > b.bitrate.bitsPerSecond ? a : b);
+              uri = videoStream.url.toString();
+            }
+          } else {
+            final videoStream = mp4VideoStreams.reduce((a, b) => a.bitrate.bitsPerSecond > b.bitrate.bitsPerSecond ? a : b);
+            uri = videoStream.url.toString();
+          }
+          explode.close();
+          print("Extracted streamable URL: $uri");
+        } catch (e) {
+          print("Error fetching YouTube stream: $e");
+          if (!mounted) return;
+          setState(() {
+            _videoError = true;
+            _errorMessage = 'Failed to fetch YouTube stream: $e';
+            _isLoading = false;
+          });
+          _showSnackBar(_errorMessage);
+          return;
+        }
+      }
+
+      print("Opening media: $uri");
+      await player.open(Media(uri), play: true).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('Timed out loading video'),
+      );
+      if (!mounted) return;
       setState(() {
-        isLoading = false;
+        _isLoading = false;
       });
       print("Playing ${isLocal ? 'local' : 'online'} video: $uri");
     } catch (e) {
+      print("Error playing video: $e");
       if (isLocal && widget.originalVideoUrl != null) {
         print("Local playback failed: $e. Falling back to online URL: ${widget.originalVideoUrl}");
-        await initializeVideo(isLocal: false);
+        await _initializeVideo(isLocal: false);
       } else {
+        if (!mounted) return;
         setState(() {
-          videoError = true;
-          errorMessage = e.toString();
-          isLoading = false;
+          _videoError = true;
+          _errorMessage = e.toString();
+          _isLoading = false;
         });
-        _showSnackbar("Error playing video: $errorMessage");
+        _showSnackBar("Error playing video: $_errorMessage");
       }
     }
   }
 
-  void _showSnackbar(String message) {
+  void _showSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -126,6 +222,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   void dispose() {
     player.dispose();
     super.dispose();
+    print("VideoPlayerScreen disposed");
   }
 
   void _checkFileStatus(String url) {
@@ -149,10 +246,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     }
   }
 
-  Future<void> _openFile(List<Lesson> lessons, String title, String url) async {
-    setState(() {
-      player.stop();
-    });
+  Future<void> _openFile(List<Lesson> lessons, String title, String url, bool isLocal) async {
+    if (_isOpening) return;
+    _isOpening = true;
+    print("Opening file: title=$title, url=$url, isLocal=$isLocal");
+    player.stop();
     final lessonProvider = Provider.of<LessonProvider>(context, listen: false);
     final lesson = lessons.firstWhere(
       (l) => l.videoUrl == url,
@@ -166,40 +264,58 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ),
     );
     final downloadId = lessonProvider.getDownloadId(lesson);
-    if (downloadId == null || !mounted) return;
-
-    final filePath = await lessonProvider.getDownloadedFilePath(lesson);
-    if (filePath == null) {
-      _showSnackbar("Failed to get file path for $title");
+    if (downloadId == null && isLocal) {
+      _showSnackBar("No downloaded file available for $title");
+      _isOpening = false;
       return;
     }
 
+    String filePath = '';
+    if (isLocal) {
+      filePath = await lessonProvider.getDownloadedFilePath(lesson) ?? '';
+      if (filePath.isEmpty) {
+        _showSnackBar("Failed to get file path for $title");
+        _isOpening = false;
+        return;
+      }
+    }
+
+    if (!mounted) {
+      _isOpening = false;
+      return;
+    }
     setState(() {
       _currentlyPlayingIndex = lessons.indexWhere((l) => l.videoUrl == url);
     });
 
-    Navigator.push(
+    await Future.delayed(Duration.zero);
+    if (!mounted) {
+      _isOpening = false;
+      return;
+    }
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => VideoPlayerScreen(
-          videoPath: filePath,
+          videoPath: isLocal ? filePath : '',
           videoTitle: title,
           lessons: lessons,
           originalVideoUrl: url,
+          isLocal: isLocal,
         ),
       ),
     );
+    _isOpening = false;
   }
 
   Widget _buildSpeedDropdown() {
     return DropdownButton<String>(
-      value: selectedSpeed,
+      value: _selectedSpeed,
       onChanged: (String? newValue) {
         double speed = double.parse(newValue!);
         _changePlaybackSpeed(speed);
       },
-      items: ['0.5', '1.0', '1.25', '1.5', '2.0']
-          .map<DropdownMenuItem<String>>((String value) {
+      items: ['0.5', '1.0', '1.25', '1.5', '2.0'].map<DropdownMenuItem<String>>((String value) {
         return DropdownMenuItem<String>(
           value: value,
           child: Text(
@@ -303,7 +419,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 padding: EdgeInsets.zero,
                 onPressed: () async {
                   print("Play button pressed for ID: $downloadId");
-                  await _openFile(widget.lessons, lesson.title, lesson.videoUrl!);
+                  await _openFile(widget.lessons, lesson.title, lesson.videoUrl!, true);
                 },
                 onLongPress: () {
                   print("Delete button long pressed for ID: $downloadId");
@@ -335,10 +451,27 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        leading: Icon(
-          Icons.play_circle_outline_rounded,
-          color: theme.colorScheme.error,
-          size: 36,
+        leading: IconButton(
+          icon: Icon(
+            Icons.play_circle_outline_rounded,
+            color: theme.colorScheme.error,
+            size: 36,
+          ),
+          onPressed: lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty
+              ? () async {
+                  final downloadId = lessonProv.getDownloadId(lesson);
+                  bool isLocal = false;
+                  String filePath = '';
+                  if (downloadId != null) {
+                    final status = lessonProv.getDownloadStatusNotifier(downloadId).value;
+                    if (status == DownloadStatus.downloaded) {
+                      filePath = await lessonProv.getDownloadedFilePath(lesson) ?? '';
+                      isLocal = filePath.isNotEmpty;
+                    }
+                  }
+                  await _openFile(widget.lessons, lesson.title, lesson.videoUrl!, isLocal);
+                }
+              : null,
         ),
         title: Text(
           lesson.title,
@@ -359,6 +492,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             : null,
         trailing: _buildDownloadButton(context, lesson, lessonProv),
         onTap: () {
+          if (!mounted) return;
           setState(() {
             _currentlyPlayingIndex = index;
           });
@@ -399,10 +533,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               ],
             ),
             child: AspectRatio(
-              aspectRatio: 16 / 9,
-              child: videoError
-                  ? Center(child: Text('Error: $errorMessage'))
-                  : isLoading
+              aspectRatio: _videoSize.width / _videoSize.height,
+              child: _videoError
+                  ? Center(child: Text('Error: $_errorMessage'))
+                  : _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : Column(
                           children: [
@@ -410,9 +544,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                             _buildSpeedDropdown(),
                             const SizedBox(height: 16),
                             Expanded(
-                              child: Video(
+                              child: media_kit.Video(
                                 controller: controller,
-                                controls: AdaptiveVideoControls,
+                                controls: media_kit.AdaptiveVideoControls,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.contain,
                               ),
                             ),
                           ],
@@ -421,7 +558,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           ),
           Expanded(
             child: Container(
-              color: theme.colorScheme.surface, // Lighter background
+              color: theme.colorScheme.surface,
               child: Column(
                 children: [
                   _currentlyPlayingIndex != -1
