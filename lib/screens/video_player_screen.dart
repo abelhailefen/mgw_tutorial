@@ -308,24 +308,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     _isOpening = false;
   }
 
-  Widget _buildSpeedDropdown() {
-    return DropdownButton<String>(
-      value: _selectedSpeed,
-      onChanged: (String? newValue) {
-        double speed = double.parse(newValue!);
-        _changePlaybackSpeed(speed);
-      },
-      items: ['0.5', '1.0', '1.25', '1.5', '2.0'].map<DropdownMenuItem<String>>((String value) {
-        return DropdownMenuItem<String>(
-          value: value,
-          child: Text(
-            'Speed: $value',
-            style: const TextStyle(color: Colors.black),
-          ),
-        );
-      }).toList(),
-    );
-  }
+  
 
   Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider lessonProv) {
     final theme = Theme.of(context);
@@ -540,8 +523,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       ? const Center(child: CircularProgressIndicator())
                       : Column(
                           children: [
-                            const SizedBox(height: 50),
-                            _buildSpeedDropdown(),
+                          
                             const SizedBox(height: 16),
                             Expanded(
                               child: media_kit.Video(
