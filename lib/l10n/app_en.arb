@@ -1,6 +1,12 @@
 {
   "@@locale": "en",
-  "@@last_modified": "2025-05-26T16:45:00+03:00",
+  "@@last_modified": "2025-06-02T11:40:00+03:00",
+  "downloadDocumentTooltip": "Download PDF",
+  "downloadedDocumentTooltip": "Open downloaded PDF",
+  "notesItemType": "Notes",
+  "examsItemType": "Exams",
+  "noNotesAvailable": "No notes available for this section",
+  "noExamsAvailable": "No exams available for this section",
   "appTitle": "MGW Tutorial",
   "home": "Home",
   "library": "Library",
@@ -399,5 +405,9 @@
   "cannotPlayOtherVideoHere": "Cannot play other videos from this list.",
   "noOnlineVideoUrlAvailable":" No online video URL available for this item.",
   "playOriginalOnline": "Play Original Online",
-  "unexpectedError": "An unexpected error occurred: "
+  "unexpectedError": "An unexpected error occurred: ",
+  "loginFailedNoUserData": "Login failed: No user data returned by the server. Please try again or contact support.",
+  "playDownloadedVideoTooltip": "Play downloaded video",
+  "openDownloadedDocumentTooltip": "Open downloaded document"
+
 }

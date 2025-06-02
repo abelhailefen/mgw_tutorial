@@ -1,19 +1,18 @@
-// lib/provider/lesson_provider.dart
 import 'dart:convert';
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' show SocketException;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../constants/color.dart'; // Import AppColors
 
 import '../models/lesson.dart';
 import '../models/section.dart';
-import '../services/media_service.dart'; // Import MediaService
+import '../services/media_service.dart';
 import '../utils/download_status.dart';
-import '../services/database_helper.dart'; // Import DatabaseHelper
-
+import '../services/database_helper.dart';
 
 class LessonProvider with ChangeNotifier {
   final Map<int, List<Lesson>> _lessonsBySectionId = {};
@@ -26,27 +25,26 @@ class LessonProvider with ChangeNotifier {
 
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-
-  ValueNotifier<double> getDownloadProgressNotifier(String videoId) {
-    return MediaService.getDownloadProgress(videoId);
+  ValueNotifier<double> getDownloadProgressNotifier(String downloadId) {
+    return MediaService.getDownloadProgress(downloadId);
   }
 
-  ValueNotifier<DownloadStatus> getDownloadStatusNotifier(String videoId) {
-    return MediaService.getDownloadStatus(videoId);
+  ValueNotifier<DownloadStatus> getDownloadStatusNotifier(String downloadId) {
+    return MediaService.getDownloadStatus(downloadId);
   }
 
-  // Made public (removed _) so it can be accessed from the UI screen
   String? getDownloadId(Lesson lesson) {
     if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
-      // Only attempt to parse YouTube ID if it's a YouTube URL
       if (lesson.videoUrl!.contains('youtu.be/') || lesson.videoUrl!.contains('youtube.com/')) {
-         try {
-            return VideoId.parseVideoId(lesson.videoUrl!);
-         } catch (e) {
-            print("Failed to parse YouTube ID from URL: ${lesson.videoUrl}, Error: $e");
-            return null;
-         }
+        try {
+          return VideoId.parseVideoId(lesson.videoUrl!);
+        } catch (e) {
+          print("Failed to parse YouTube ID from URL: ${lesson.videoUrl}, Error: $e");
+          return null;
+        }
       }
+    } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
+      return lesson.id.toString();
     }
     return null;
   }
@@ -57,27 +55,25 @@ class LessonProvider with ChangeNotifier {
 
   static const String _networkErrorMessage = "Sorry, there seems to be a network error. Please check your connection and try again.";
   static const String _timeoutErrorMessage = "The request timed out. Please check your connection or try again later.";
-  static const String _unexpectedErrorMessage = "An unexpected error occurred while fetching lessons. Please try again later.";
-  static const String _failedToLoadLessonsMessage = "Failed to load lessons for this chapter. Please try again.";
+  static const String _unexpectedErrorMessage = "An unexpected error occurred while fetching lessons. Please try again.";
+  static const String _failedToLoadLessonsLabel = "Failed to load lessons for this section.";
   static const String _apiBaseUrl = "https://lessonservice.amtprinting19.com/api";
 
   Future<void> fetchLessonsForSection(int sectionId, {bool forceRefresh = false}) async {
-    // First, try to load from DB immediately for this section
     if (!_lessonsBySectionId.containsKey(sectionId) || (_lessonsBySectionId[sectionId]?.isEmpty ?? true)) {
-       print("Attempting to load lessons for section $sectionId from DB...");
-       await _loadLessonsFromDb(sectionId);
-       if (_lessonsBySectionId.containsKey(sectionId) && _lessonsBySectionId[sectionId]!.isNotEmpty) {
-         print("Loaded ${_lessonsBySectionId[sectionId]!.length} lessons for section $sectionId from DB.");
-         await _checkExistingDownloads(_lessonsBySectionId[sectionId]!);
-         notifyListeners();
-       } else {
-          print("No lessons found in DB for section $sectionId.");
-       }
+      print("Attempting to load lessons for section $sectionId from DB...");
+      await _loadLessonsFromDb(sectionId);
+      if (_lessonsBySectionId.containsKey(sectionId) && _lessonsBySectionId[sectionId]!.isNotEmpty) {
+        print("Loaded ${_lessonsBySectionId[sectionId]!.length} lessons for section $sectionId from DB.");
+        await _checkExistingDownloads(_lessonsBySectionId[sectionId]!);
+        notifyListeners();
+      } else {
+        print("No lessons found in DB for section $sectionId.");
+      }
     }
 
-    // Check if we should SKIP the network fetch
     if (!forceRefresh && (_lessonsBySectionId[sectionId]?.isNotEmpty ?? false)) {
-      print("Skipping network fetch for section $sectionId as non-empty data is available and not forcing refresh.");
+      print("Skipping network fetch for section $sectionId as non-empty data is available.");
       _isLoadingForSectionId[sectionId] = false;
       return;
     }
@@ -87,7 +83,6 @@ class LessonProvider with ChangeNotifier {
       _errorForSectionId[sectionId] = null;
     }
     notifyListeners();
-
 
     final url = Uri.parse('$_apiBaseUrl/lessons/section/$sectionId');
     print("Fetching lessons for section $sectionId from network: $url (Force Refresh: $forceRefresh)");
@@ -110,13 +105,12 @@ class LessonProvider with ChangeNotifier {
           _errorForSectionId[sectionId] = null;
 
           await _checkExistingDownloads(fetchedLessons);
-
         } else {
           _errorForSectionId[sectionId] = 'Failed to load lessons: Unexpected API response format.';
-           print(_errorForSectionId[sectionId]);
+          print(_errorForSectionId[sectionId]);
         }
       } else {
-         _handleHttpErrorResponse(response, sectionId, _failedToLoadLessonsMessage);
+        _handleHttpErrorResponse(response, sectionId, _failedToLoadLessonsLabel);
       }
     } on TimeoutException catch (e) {
       print("TimeoutException fetching lessons for section $sectionId: $e");
@@ -137,13 +131,13 @@ class LessonProvider with ChangeNotifier {
     }
   }
 
-   Future<void> _loadLessonsFromDb(int sectionId) async {
+  Future<void> _loadLessonsFromDb(int sectionId) async {
     try {
       final List<Map<String, dynamic>> lessonMaps = await _dbHelper.query(
         'lessons',
         where: 'sectionId = ?',
         whereArgs: [sectionId],
-         orderBy: "'order' ASC",
+        orderBy: "'order' ASC",
       );
       final loadedLessons = lessonMaps.map((map) => Lesson.fromMap(map)).toList();
       _lessonsBySectionId[sectionId] = loadedLessons;
@@ -152,29 +146,28 @@ class LessonProvider with ChangeNotifier {
     }
   }
 
-   Future<void> _saveLessonsToDb(int sectionId, List<Lesson> lessonsToSave) async {
-     if (lessonsToSave.isEmpty) {
-       print("No lessons to save to DB for section $sectionId.");
-       return;
-     }
-     try {
-       print("Clearing existing lessons for section $sectionId from DB...");
-       await _dbHelper.deleteLessonsForSection(sectionId);
-       print("Saving ${lessonsToSave.length} lessons for section $sectionId to DB...");
-       for (final lesson in lessonsToSave) {
-         await _dbHelper.upsert('lessons', lesson.toMap());
-       }
-       print("Lessons for section $sectionId saved to DB successfully.");
-     } catch (e) {
-       print("Error saving lessons for section $sectionId to DB: $e");
-     }
-   }
-
+  Future<void> _saveLessonsToDb(int sectionId, List<Lesson> lessonsToSave) async {
+    if (lessonsToSave.isEmpty) {
+      print("No lessons to save to DB for section $sectionId.");
+      return;
+    }
+    try {
+      print("Clearing existing lessons for section $sectionId from DB...");
+      await _dbHelper.deleteLessonsForSection(sectionId);
+      print("Saving ${lessonsToSave.length} lessons for section $sectionId to DB...");
+      for (final lesson in lessonsToSave) {
+        await _dbHelper.upsert('lessons', lesson.toMap());
+      }
+      print("Lessons for section $sectionId saved to DB successfully.");
+    } catch (e) {
+      print("Error saving lessons for section $sectionId to DB: $e");
+    }
+  }
 
   Future<void> _checkExistingDownloads(List<Lesson> lessons) async {
     print("Checking existing downloads for ${lessons.length} lessons...");
     for (final lesson in lessons) {
-      final downloadId = getDownloadId(lesson); // Use the now public getter
+      final downloadId = getDownloadId(lesson);
       if (downloadId != null) {
         await MediaService.isFileDownloaded(downloadId);
       }
@@ -182,42 +175,50 @@ class LessonProvider with ChangeNotifier {
   }
 
   Future<void> startDownload(Lesson lesson) async {
-    final downloadId = getDownloadId(lesson); // Use the now public getter
-    if (downloadId == null || lesson.videoUrl == null || lesson.videoUrl!.isEmpty) {
-      print("Cannot download lesson: Not a supported video type or missing URL.");
-      if (lesson.lessonType == LessonType.video) {
-         final fallBackId = lesson.id.toString();
-         final statusNotifier = MediaService.getDownloadStatus(fallBackId);
-         final progressNotifier = MediaService.getDownloadProgress(fallBackId);
-         statusNotifier.value = DownloadStatus.failed;
-         progressNotifier.value = 0.0;
-         print("Download status set to failed for lesson ID: $fallBackId due to invalid URL or not YouTube.");
-      }
+    final downloadId = getDownloadId(lesson);
+    if (downloadId == null) {
+      print("Cannot download lesson: Invalid lesson type or missing URL.");
+      final fallBackId = lesson.id.toString();
+      final statusNotifier = MediaService.getDownloadStatus(fallBackId);
+      final progressNotifier = MediaService.getDownloadProgress(fallBackId);
+      statusNotifier.value = DownloadStatus.failed;
+      progressNotifier.value = 0.0;
+      print("Download status set to failed for lesson ID: $fallBackId due to invalid URL or type.");
       return;
     }
 
     print("LessonProvider: Requesting download for ${lesson.title} ($downloadId)");
-    await MediaService.downloadVideoFile(
-      videoId: downloadId,
-      url: lesson.videoUrl!,
-      title: lesson.title,
-    );
+    if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
+      await MediaService.downloadVideoFile(
+        videoId: downloadId,
+        url: lesson.videoUrl!,
+        title: lesson.title,
+      );
+    } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
+      print("Downloading PDF with URL: ${lesson.attachmentUrl}");
+      await MediaService.downloadPDFFile(
+        pdfId: downloadId,
+        url: lesson.attachmentUrl!,
+        title: lesson.title,
+      );
+    }
+    notifyListeners();
   }
 
   Future<String?> getDownloadedFilePath(Lesson lesson) async {
-    final downloadId = getDownloadId(lesson); // Use the now public getter
+    final downloadId = getDownloadId(lesson);
     if (downloadId == null) return null;
     return await MediaService.getSecurePath(downloadId);
   }
 
   Future<void> deleteDownload(Lesson lesson, BuildContext context) async {
-    final downloadId = getDownloadId(lesson); // Use the now public getter
-    if (downloadId == null || lesson.videoUrl == null || lesson.videoUrl!.isEmpty) {
+    final downloadId = getDownloadId(lesson);
+    if (downloadId == null) {
       print("Cannot delete, invalid lesson or URL for deletion: ${lesson.title}");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.couldNotDeleteFileError),
-          backgroundColor: Theme.of(context).colorScheme.error,
+          backgroundColor: AppColors.errorContainer,
         ),
       );
       return;
@@ -225,13 +226,15 @@ class LessonProvider with ChangeNotifier {
 
     print("LessonProvider: Requesting deletion for ${lesson.title} ($downloadId)");
     await MediaService.deleteFile(downloadId, context);
+    notifyListeners();
   }
 
   void cancelDownload(Lesson lesson) {
-    final downloadId = getDownloadId(lesson); // Use the now public getter
+    final downloadId = getDownloadId(lesson);
     if (downloadId != null) {
       print("LessonProvider: Cancelling download for ${lesson.title} ($downloadId)");
       MediaService.cancelDownload(downloadId);
+      notifyListeners();
     }
   }
 
@@ -256,8 +259,6 @@ class LessonProvider with ChangeNotifier {
   @override
   void dispose() {
     print("LessonProvider dispose called");
-    // Consider MediaService disposal if needed
-    // MediaService.dispose();
     super.dispose();
   }
 }

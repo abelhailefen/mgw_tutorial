@@ -1,21 +1,24 @@
-// lib/models/auth_response.dart
-import 'package:mgw_tutorial/models/user.dart'; 
+import 'package:mgw_tutorial/models/user.dart';
 
 class AuthResponse {
-  final User user;
-  final String? token; // Token is nullable because the API doesn't send it yet
+  final User? user; // Make user nullable
+  final String? token;
+  final String? message; // Add message to capture API response
+  final int? code; // Add code to capture API response
 
   AuthResponse({
-    required this.user,
-    this.token, // Token is optional in the constructor
+    this.user, // User is optional
+    this.token,
+    this.message,
+    this.code,
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
-    
     return AuthResponse(
-      user: User.fromJson(json['user'] as Map<String, dynamic>),
-      
+      user: json['user'] != null ? User.fromJson(json['user'] as Map<String, dynamic>) : null,
       token: json['token'] as String?,
+      message: json['message'] as String?,
+      code: json['code'] as int?,
     );
   }
 }

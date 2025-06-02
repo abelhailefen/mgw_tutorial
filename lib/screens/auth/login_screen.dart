@@ -222,127 +222,112 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    final l10n = AppLocalizations.of(context)!;
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final theme = Theme.of(context);
-    authProvider.clearError();
+  final l10n = AppLocalizations.of(context)!;
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  final theme = Theme.of(context);
+  authProvider.clearError();
 
-    if (!_formKey.currentState!.validate()) {
-        return;
-    }
+  if (!_formKey.currentState!.validate()) {
+    return;
+  }
 
-    // Use the _deviceInfoString state variable directly now
-    String currentDeviceInfo = _deviceInfoString;
+  String currentDeviceInfo = _deviceInfoString;
 
-    // Add a check similar to registration screen's submit logic
-    if (currentDeviceInfo == 'Fetching device info...' || currentDeviceInfo.contains("Failed to get details")) {
-        print("Device info not ready or has error before login attempt, trying to refetch.");
-         // Re-fetch using the service method if it's still the initial placeholder or an error string
-        final refetchedInfo = await _deviceInfoService.getFormattedDeviceString(context);
-        if (mounted) {
-           setState(() => _deviceInfoString = refetchedInfo);
-            currentDeviceInfo = _deviceInfoString; // Use the refetched value
-           // Check again after refetch
-           if (_deviceInfoString == 'Fetching device info...' || _deviceInfoString.contains("Failed to get details")) {
-               print("Device info still not ready or has error after refetch attempt before login.");
-                if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(
-                               // FIX: Use an existing or generic localized string
-                               l10n.deviceInfoProceedingDefault, // Using a fallback key
-                               style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
-                            ),
-                            backgroundColor: theme.colorScheme.secondaryContainer,
-                            behavior: SnackBarBehavior.floating,
-                        ),
-                    );
-                }
-                 // Optionally prevent login here if device info is critical, or proceed with error string
-                 // For now, we proceed with the error string in currentDeviceInfo
-           }
-        } else {
-            // If not mounted after refetch, cannot proceed safely
-            return;
-        }
-    }
-
-
-    String rawPhoneInput = _phoneController.text.trim();
-    String loginPhoneNumber;
-
-    if (rawPhoneInput.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(l10n.phoneNumberValidationErrorRequired, style: TextStyle(color: theme.colorScheme.onErrorContainer)),
-                backgroundColor: theme.colorScheme.errorContainer,
-                behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-        return;
-    }
-    loginPhoneNumber = authProvider.normalizePhoneNumberToE164(rawPhoneInput);
-
-    if (!RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(loginPhoneNumber)) {
-       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(
-               content: Text(
-                   l10n.phoneNumberValidationErrorInvalid,
-                   style: TextStyle(color: theme.colorScheme.onErrorContainer),
-               ),
-               backgroundColor: theme.colorScheme.errorContainer,
-               behavior: SnackBarBehavior.floating,
-           ),
-         );
-       }
-       return;
-    }
-
-
-    final String password = _passwordController.text;
-
-    print("Attempting login with Phone: $loginPhoneNumber, Password: [HIDDEN], Device: $currentDeviceInfo");
-
-    bool success = await authProvider.login(
-      phoneNumber: loginPhoneNumber,
-      password: password,
-      deviceInfo: currentDeviceInfo, // Pass the formatted string from state
-    );
-
+  if (currentDeviceInfo == 'Fetching device info...' || currentDeviceInfo.contains("Failed to get details")) {
+    print("Device info not ready or has error before login attempt, trying to refetch.");
+    final refetchedInfo = await _deviceInfoService.getFormattedDeviceString(context);
     if (mounted) {
-      if (success) {
-        // Login was successful based on credentials and possibly device check.
-        // Navigation or pending status message will now be handled by the listener (_authListener).
+      setState(() => _deviceInfoString = refetchedInfo);
+      currentDeviceInfo = _deviceInfoString;
+      if (_deviceInfoString == 'Fetching device info...' || _deviceInfoString.contains("Failed to get details")) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              l10n.loginSuccessMessage, // This confirms credentials worked
-              style: TextStyle(color: theme.colorScheme.onPrimary),
+              l10n.deviceInfoProceedingDefault,
+              style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
             ),
-            backgroundColor: theme.colorScheme.primary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-         // Do NOT navigate here directly. The listener watches authProvider state.
-      } else {
-        // Login failed (wrong credentials or device mismatch from backend)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              // This is where "You are not registered with this device" comes from
-              authProvider.apiError?.message ?? l10n.signInFailedErrorGeneral,
-              style: TextStyle(color: theme.colorScheme.onErrorContainer),
-            ),
-            backgroundColor: theme.colorScheme.errorContainer,
+            backgroundColor: theme.colorScheme.secondaryContainer,
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
+    } else {
+      return;
     }
   }
+
+  String rawPhoneInput = _phoneController.text.trim();
+  String loginPhoneNumber;
+
+  if (rawPhoneInput.isEmpty) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.phoneNumberValidationErrorRequired,
+            style: TextStyle(color: theme.colorScheme.onErrorContainer),
+          ),
+          backgroundColor: theme.colorScheme.errorContainer,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+    return;
+  }
+  loginPhoneNumber = authProvider.normalizePhoneNumberToE164(rawPhoneInput);
+
+  if (!RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(loginPhoneNumber)) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.phoneNumberValidationErrorInvalid,
+            style: TextStyle(color: theme.colorScheme.onErrorContainer),
+          ),
+          backgroundColor: theme.colorScheme.errorContainer,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+    return;
+  }
+
+  final String password = _passwordController.text;
+
+  print("Attempting login with Phone: $loginPhoneNumber, Password: [HIDDEN], Device: $currentDeviceInfo");
+
+  bool success = await authProvider.login(
+    phoneNumber: loginPhoneNumber,
+    password: password,
+    deviceInfo: currentDeviceInfo,
+  );
+
+  if (mounted) {
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.loginSuccessMessage,
+            style: TextStyle(color: theme.colorScheme.onPrimary),
+          ),
+          backgroundColor: theme.colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authProvider.apiError?.message ?? l10n.loginFailedNoUserData,
+            style: TextStyle(color: theme.colorScheme.onErrorContainer),
+          ),
+          backgroundColor: theme.colorScheme.errorContainer,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+}
 
   String _getLanguageDisplayName(String langCode, AppLocalizations l10n) {
     switch (langCode) {

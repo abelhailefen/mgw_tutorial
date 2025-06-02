@@ -1,4 +1,3 @@
-// lib/services/media_service.dart
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -18,17 +17,17 @@ class MediaService {
   static final Map<String, CancelToken> _cancelTokens = {};
 
   // Get or create status notifier
-  static ValueNotifier<DownloadStatus> getDownloadStatus(String videoId) {
+  static ValueNotifier<DownloadStatus> getDownloadStatus(String id) {
     return _statusNotifiers.putIfAbsent(
-      videoId,
+      id,
       () => ValueNotifier<DownloadStatus>(DownloadStatus.notDownloaded),
     );
   }
 
   // Get or create progress notifier
-  static ValueNotifier<double> getDownloadProgress(String videoId) {
+  static ValueNotifier<double> getDownloadProgress(String id) {
     return _progressNotifiers.putIfAbsent(
-      videoId,
+      id,
       () => ValueNotifier<double>(0.0),
     );
   }
@@ -139,14 +138,71 @@ class MediaService {
     }
   }
 
+  // Download a PDF file
+  static Future<bool> downloadPDFFile({
+    required String pdfId,
+    required String url,
+    required String title,
+    CancelToken? cancelToken,
+  }) async {
+    if (url.isEmpty) {
+      print("Error: Empty PDF URL for $title");
+      _updateStatus(pdfId, DownloadStatus.failed);
+      return false;
+    }
+
+    final statusNotifier = getDownloadStatus(pdfId);
+    final progressNotifier = getDownloadProgress(pdfId);
+    final cancelToken = CancelToken();
+    _cancelTokens[pdfId] = cancelToken;
+
+    try {
+      statusNotifier.value = DownloadStatus.downloading;
+      progressNotifier.value = 0.0;
+
+      final pdfFilePath = await _getFilePath(pdfId, 'pdf');
+
+      await _dio.download(
+        url,
+        pdfFilePath,
+        cancelToken: cancelToken,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            final progress = received / total;
+            progressNotifier.value = progress;
+          }
+        },
+      );
+
+      await _secureStorage.write(key: pdfId, value: pdfFilePath);
+      statusNotifier.value = DownloadStatus.downloaded;
+      progressNotifier.value = 1.0;
+      print("PDF downloaded successfully for ID $pdfId: $pdfFilePath");
+      return true;
+    } catch (e) {
+      if (e is DioException && e.type == DioExceptionType.cancel) {
+        statusNotifier.value = DownloadStatus.cancelled;
+        progressNotifier.value = 0.0;
+        print("Download cancelled for ID $pdfId");
+      } else {
+        statusNotifier.value = DownloadStatus.failed;
+        progressNotifier.value = 0.0;
+        print("Error downloading PDF for ID $pdfId: $e");
+      }
+      return false;
+    } finally {
+      _cancelTokens.remove(pdfId);
+    }
+  }
+
   // Cancel a download
-  static void cancelDownload(String videoId) {
-    final cancelToken = _cancelTokens[videoId];
+  static void cancelDownload(String id) {
+    final cancelToken = _cancelTokens[id];
     if (cancelToken != null && !cancelToken.isCancelled) {
       cancelToken.cancel('Download cancelled by user');
-      _updateStatus(videoId, DownloadStatus.cancelled);
-      _updateProgress(videoId, 0.0);
-      _cancelTokens.remove(videoId);
+      _updateStatus(id, DownloadStatus.cancelled);
+      _updateProgress(id, 0.0);
+      _cancelTokens.remove(id);
     }
   }
 
@@ -226,16 +282,16 @@ class MediaService {
   }
 
   // Helper to update status
-  static void _updateStatus(String videoId, DownloadStatus status) {
-    final notifier = getDownloadStatus(videoId);
+  static void _updateStatus(String id, DownloadStatus status) {
+    final notifier = getDownloadStatus(id);
     if (notifier.value != status) {
       notifier.value = status;
     }
   }
 
   // Helper to update progress
-  static void _updateProgress(String videoId, double progress) {
-    final notifier = getDownloadProgress(videoId);
+  static void _updateProgress(String id, double progress) {
+    final notifier = getDownloadProgress(id);
     if (notifier.value != progress) {
       notifier.value = progress;
     }

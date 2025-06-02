@@ -399,5 +399,6 @@
   "cannotPlayOtherVideoHere": "ይህን ቪዲዮ እዚህ መጫን አልተቻለም።",
   "noOnlineVideoUrlAvailable":" የቪዲዮው መረጃ በመስመር ላይ አልተገኘም።",
   "playOriginalOnline": "መስመር ላይ ይጫኑ",
-  "unexpectedError": "ያልተጠበቀ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።"
+  "unexpectedError": "ያልተጠበቀ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።",
+  "loginFailedNoUserData": "Login failed: No user data returned by the server. Please try again or contact support."
 }

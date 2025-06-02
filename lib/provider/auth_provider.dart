@@ -104,82 +104,138 @@ class AuthProvider with ChangeNotifier {
     return cleanedNumber;
   }
 
-  Future<bool> login({
-    required String phoneNumber,
-    required String password,
-    required String deviceInfo,
-  }) async {
-     await logout(clearDb: true);
+Future<bool> login({
+  required String phoneNumber,
+  required String password,
+  required String deviceInfo,
+}) async {
+  if (_currentUser != null) {
+    await _dbHelper.deleteLoggedInUser(); // Direct call, no compute
+  }
 
-    _isLoading = true;
-    _apiError = null;
-    notifyListeners();
+  _isLoading = true;
+  _apiError = null;
 
-    final normalizedPhoneNumber = normalizePhoneNumberToE164(phoneNumber);
-    final url = Uri.parse('$_apiBaseUrl/api/auth/login');
-    final loginPayload = User(
-      firstName: '',
-      lastName: '',
-      phone: normalizedPhoneNumber,
-      password: password,
-      device: deviceInfo,
-    );
+  final normalizedPhoneNumber = normalizePhoneNumberToE164(phoneNumber);
+  final url = Uri.parse('$_apiBaseUrl/api/auth/login');
+  final loginPayload = User(
+    firstName: '',
+    lastName: '',
+    phone: normalizedPhoneNumber,
+    password: password,
+    device: deviceInfo,
+  );
 
-    try {
-      final body = json.encode(loginPayload.toJsonForLogin());
-      final response = await http
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: body,
-          )
-          .timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) {
+  try {
+    final body = json.encode(loginPayload.toJsonForLogin());
+    final response = await http
+        .post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: body,
+        )
+        .timeout(const Duration(seconds: 10));
+
+    print("AuthProvider: Login response - Status: ${response.statusCode}, Body: ${response.body}");
+
+    if (response.statusCode == 200) {
+      if (response.body.isEmpty) {
+        print("AuthProvider: Login failed - Empty response body.");
+        _apiError = ApiError(message: "Login failed: Server returned empty response.");
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      try {
         final data = json.decode(response.body);
+        if (data == null || data is! Map<String, dynamic>) {
+          print("AuthProvider: Login failed - Invalid JSON response: $data");
+          _apiError = ApiError(message: "Login failed: Invalid server response format.");
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
+
         final authResponse = AuthResponse.fromJson(data);
+        if (authResponse.user == null) {
+          print("AuthProvider: Login failed - No user data in response: ${authResponse.message}");
+          _apiError = ApiError(
+            message: authResponse.message ?? "Login failed: No user data returned by server.",
+          );
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
 
         _currentUser = authResponse.user;
-
         print("Login successful: User ID=${_currentUser?.id}.");
 
-        if (_currentUser != null && _currentUser!.id != null) {
-            await _dbHelper.saveLoggedInUser(_currentUser!);
+        if (_currentUser != null && _currentUser!.id != null && _currentUser!.id != 0) {
+          try {
+            await _dbHelper.saveLoggedInUser(_currentUser!); // Direct call
             print("AuthProvider: Login session successfully saved to database (User ID ${_currentUser!.id}).");
+          } catch (e) {
+            print("AuthProvider: Failed to save user session to database: $e");
+            _apiError = ApiError(message: "Login successful but failed to save session locally.");
+            _isLoading = false;
+            notifyListeners();
+            return false;
+          }
         } else {
-             print("AuthProvider: Login succeeded but no user/ID returned. Cannot establish logged-in state.");
-             _apiError = ApiError(message: "Login successful but user data missing from API response.");
-             await logout(clearDb: true);
-             _isLoading = false;
-             notifyListeners();
-             return false;
+          print("AuthProvider: Login succeeded but invalid user ID. Cannot establish logged-in state.");
+          _apiError = ApiError(message: "Login successful but invalid user data.");
+          await _dbHelper.deleteLoggedInUser(); // Direct call
+          _isLoading = false;
+          notifyListeners();
+          return false;
         }
 
         _isLoading = false;
         notifyListeners();
         return true;
-      } else {
-        _handleErrorResponse(response, _invalidCredentialsMessage, isLogin: true);
+      } catch (e) {
+        print("AuthProvider: Error parsing login response: $e");
+        _apiError = ApiError(message: "Login failed: Invalid server response format.");
         _isLoading = false;
         notifyListeners();
         return false;
       }
-    } on TimeoutException catch (e) {
-      _handleCatchError(e, 'Login timed out.');
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    } on SocketException catch (e) {
-      _handleCatchError(e, 'Login failed: network error.');
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    } catch (error) {
-      _handleCatchError(error, 'Login failed unexpectedly.');
+    } else {
+      _handleErrorResponse(response, _invalidCredentialsMessage, isLogin: true);
       _isLoading = false;
       notifyListeners();
       return false;
     }
+  } on TimeoutException catch (e) {
+    _handleCatchError(e, 'Login timed out.');
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  } on SocketException catch (e) {
+    _handleCatchError(e, 'Login failed: network error.');
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  } catch (error) {
+    print("AuthProvider: Unexpected error during login: $error");
+    _apiError = ApiError(message: "Login failed: Unexpected error occurred.");
+    _isLoading = false;
+    notifyListeners();
+    return false;
   }
+}
+
+// Isolate functions for database operations
+static Future<void> _saveLoggedInUserIsolate(Map<String, dynamic> params) async {
+  final user = params['user'] as User;
+  final dbHelper = params['dbHelper'] as DatabaseHelper;
+  await dbHelper.saveLoggedInUser(user);
+}
+
+static Future<void> _deleteLoggedInUserIsolate(DatabaseHelper dbHelper) async {
+  await dbHelper.deleteLoggedInUser();
+}
 
   Future<void> logout({bool clearDb = true}) async {
     _currentUser = null;
