@@ -1,12 +1,12 @@
 // lib/screens/registration/registration_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform; // <<< ADD THIS IMPORT
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 // ... other imports
 import 'package:mgw_tutorial/provider/auth_provider.dart';
-// import 'package:mgw_tutorial/provider/department_provider.dart'; // <<< REMOVE THIS IMPORT
+// import 'package:mgw_tutorial/provider/department_provider.dart'; // REMOVED
 import 'package:mgw_tutorial/services/device_info.dart';
 import 'package:mgw_tutorial/models/user.dart';
-// import 'package:mgw_tutorial/models/department.dart'; // <<< REMOVE THIS IMPORT
+// import 'package:mgw_tutorial/models/department.dart'; // REMOVED
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:mgw_tutorial/widgets/phone_form_field.dart';
 import 'package:mgw_tutorial/widgets/password_form_field.dart';
@@ -28,8 +28,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // Department? _selectedDepartment; // <<< REMOVE THIS LINE
-  String? _selectedCategory; // <<< ADD THIS LINE to hold 'Natural' or 'Social'
+  // Department? _selectedDepartment; // REMOVED
+  String? _selectedCategory;
   String? _selectedInstitution;
   String? _selectedGender;
   String? _selectedYear;
@@ -38,12 +38,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _isPasswordVisible = false;
 
   final DeviceInfoService _deviceInfoService = DeviceInfoService();
-  String _deviceInfoString = 'Fetching device info...';
+  String _deviceInfoString = 'Fetching device info...'; // Will store the final formatted string
   bool _isDeviceInfoFetchedInitially = false;
 
   bool _hasAttemptedSubmit = false;
 
-  // <<< DEFINE THE STATIC CATEGORY OPTIONS
   final List<String> _categories = ['Natural', 'Social'];
 
   final List<String> _institutions = [
@@ -58,56 +57,51 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeDeviceInfo();
-      // Provider.of<DepartmentProvider>(context, listen: false).fetchDepartments(); // <<< REMOVE THIS LINE
+      // Provider.of<DepartmentProvider>(context, listen: false).fetchDepartments(); // REMOVED
     });
   }
 
   Future<void> _initializeDeviceInfo() async {
     if (!mounted) return;
-    await _getDeviceInfoInternal();
+    // Fetch raw data and type, then format the string
+    final deviceData = await _deviceInfoService.getDeviceData();
+    // Pass nullable context safely
+    final deviceType = _deviceInfoService.detectDeviceType(mounted ? context : null);
+
+    // >>> ASSEMBLE THE DEVICE INFO STRING USING THE SPECIFIC FORMAT <<<
+    // '$brand $board $model $deviceId $deviceType' - This must match the format used in LoginScreen exactly.
+    // Use null-aware operators and provide fallbacks for fields that may not exist on all platforms.
+    String brand = deviceData['brand']?.toString() ?? deviceData['manufacturer']?.toString() ?? 'UnknownBrand';
+    String board = deviceData['board']?.toString() ?? 'UnknownBoard'; // Primarily Android
+    String model = deviceData['model']?.toString() ?? deviceData['localizedModel']?.toString() ?? deviceData['prettyName']?.toString() ?? 'UnknownModel'; // Use various sources
+    String deviceId = deviceData['id']?.toString() ?? deviceData['deviceId']?.toString() ?? deviceData['utsname.machine:']?.toString() ?? deviceData['systemGUID']?.toString() ?? deviceData['machineId']?.toString() ?? 'UnknownId'; // Use various sources
+
+    String finalDeviceInfo = '$brand $board $model $deviceId $deviceType'.trim();
+
     if (mounted) {
       setState(() {
+        _deviceInfoString = finalDeviceInfo;
         _isDeviceInfoFetchedInitially = true;
       });
+      print("RegistrationScreen Device Info Initialized: $_deviceInfoString");
+
+      // Optional: Show a warning if device info couldn't be fully retrieved
+       if (_deviceInfoString.contains("Unknown") || _deviceInfoString.contains("Failed to get details")) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                   "Could not retrieve full device information. This might affect login on other devices.", // Hardcoded fallback
+                  style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+                ),
+                backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+       }
     }
   }
 
-  Future<String> _getDeviceInfoInternal() async {
-    if (!mounted) return "Mobile - Default, UnknownOS";
-
-    final deviceData = await _deviceInfoService.getDeviceData();
-    String brand = deviceData['brand'] ?? deviceData['name'] ?? 'UnknownBrand';
-    String model = deviceData['model'] ?? deviceData['localizedModel'] ?? 'UnknownModel';
-    String os = deviceData['systemName'] ?? deviceData['platform'] ?? 'UnknownOS';
-    String deviceType = "Unknown";
-
-    if (mounted && ModalRoute.of(context) != null && ModalRoute.of(context)!.isActive) {
-        try {
-           deviceType = _deviceInfoService.detectDeviceType(context);
-        } catch (e) {
-            print("Error detecting device type in RegistrationScreen _getDeviceInfoInternal: $e. Using platform default.");
-            deviceType = (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
-                         ? "Mobile"
-                         : (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)
-                           ? "Computer"
-                           : "Web Browser";
-        }
-    } else {
-        deviceType = (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)
-                         ? "Mobile"
-                         : (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)
-                           ? "Computer"
-                           : "Web Browser";
-        print("Context not active for MediaQuery in RegistrationScreen _getDeviceInfoInternal, using platform default for deviceType: $deviceType");
-    }
-
-    String finalDeviceInfo = '$deviceType - $brand $model, $os';
-    if (mounted) {
-      _deviceInfoString = finalDeviceInfo;
-      print("Device Info for Registration Updated: $_deviceInfoString");
-    }
-    return finalDeviceInfo;
-  }
 
   @override
   void dispose() {
@@ -133,24 +127,42 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     setState(() { _hasAttemptedSubmit = true; });
     if (!_formKey.currentState!.validate()) return;
 
-    String currentDeviceInfo = _deviceInfoString;
-    if (!_isDeviceInfoFetchedInitially || currentDeviceInfo == 'Fetching device info...' || currentDeviceInfo.contains("Unknown")) {
-        currentDeviceInfo = await _getDeviceInfoInternal();
-        if(mounted) setState(() => _deviceInfoString = currentDeviceInfo);
-        if (currentDeviceInfo == 'Fetching device info...' || currentDeviceInfo.contains("Unknown")) {
-            if(mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text("Device info issue. Using default.", style: TextStyle(color: theme.colorScheme.onSecondaryContainer)),
-                backgroundColor: theme.colorScheme.secondaryContainer,
-                behavior: SnackBarBehavior.floating,
-              ));
-            }
-            currentDeviceInfo = "Mobile - Generic Registration, UnknownOS";
-            if(mounted) setState(() => _deviceInfoString = currentDeviceInfo);
-        }
-    }
+     // Re-fetch device info if it's not ready or failed
+     String currentDeviceInfo = _deviceInfoString;
+     if (!_isDeviceInfoFetchedInitially || currentDeviceInfo == 'Fetching device info...' || currentDeviceInfo.contains("Unknown") || currentDeviceInfo.contains("Failed to get details")) {
+        print("Device info not ready/failed before registration submit, trying to refetch.");
+         // Fetch raw data and type, then format the string
+        final deviceData = await _deviceInfoService.getDeviceData();
+        // Pass nullable context safely
+        final deviceType = _deviceInfoService.detectDeviceType(mounted ? context : null);
 
-    // <<< UPDATE NULL CHECK FOR CATEGORY
+        // >>> ASSEMBLE THE DEVICE INFO STRING USING THE SPECIFIC FORMAT <<<
+        // '$brand $board $model $deviceId $deviceType' - This must match the format used in LoginScreen exactly.
+        // Use null-aware operators and provide fallbacks for fields that may not exist on all platforms.
+        String brand = deviceData['brand']?.toString() ?? deviceData['manufacturer']?.toString() ?? 'UnknownBrand';
+        String board = deviceData['board']?.toString() ?? 'UnknownBoard'; // Primarily Android
+        String model = deviceData['model']?.toString() ?? deviceData['localizedModel']?.toString() ?? deviceData['prettyName']?.toString() ?? 'UnknownModel'; // Use various sources
+        String deviceId = deviceData['id']?.toString() ?? deviceData['deviceId']?.toString() ?? deviceData['utsname.machine:']?.toString() ?? deviceData['systemGUID']?.toString() ?? deviceData['machineId']?.toString() ?? 'UnknownId'; // Use various sources
+
+        currentDeviceInfo = '$brand $board $model $deviceId $deviceType'.trim();
+
+        if(mounted) {
+            setState(() => _deviceInfoString = currentDeviceInfo); // Update state if successful
+            // If refetch still results in unknown/failed, show a warning but proceed
+            if (currentDeviceInfo.contains("Unknown") || currentDeviceInfo.contains("Failed to get details")) {
+               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                 content: Text("Device info issue. Using partial info for registration.", style: TextStyle(color: theme.colorScheme.onSecondaryContainer)), // Hardcoded fallback
+                 backgroundColor: theme.colorScheme.secondaryContainer,
+                 behavior: SnackBarBehavior.floating,
+               ));
+             }
+        } else {
+             print("_submitForm refetch finished but RegistrationScreen was already disposed.");
+             return; // Don't proceed if screen disposed during async call
+        }
+     }
+
+
     if (_selectedCategory == null) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.pleaseSelectDepartmentError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,)); return; }
     if (_selectedInstitution == null) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.pleaseSelectInstitutionError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,)); return; }
     if (_selectedYear == null) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.pleaseSelectYearError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,)); return; }
@@ -160,36 +172,37 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     String rawPhoneInput = _phoneController.text.trim();
     String? finalPhoneNumberForUser;
 
-    if (rawPhoneInput.startsWith('0') && rawPhoneInput.length == 10) {
-        finalPhoneNumberForUser = '+251${rawPhoneInput.substring(1)}';
-    } else if (rawPhoneInput.length == 9 && int.tryParse(rawPhoneInput) != null && !rawPhoneInput.startsWith('+')  && !rawPhoneInput.startsWith('0')) {
-        finalPhoneNumberForUser = '+251$rawPhoneInput';
-    } else if (rawPhoneInput.startsWith('+251') && rawPhoneInput.length == 13) {
-        finalPhoneNumberForUser = rawPhoneInput;
-    } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.invalidPhoneNumberFormatError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,));
-        return;
+     // Use AuthProvider's normalization logic for consistency
+    finalPhoneNumberForUser = authProvider.normalizePhoneNumberToE164(rawPhoneInput);
+
+    // Basic validation check after normalization
+    if (!RegExp(r'^\+[1-9]\d{6,14}$').hasMatch(finalPhoneNumberForUser ?? '')) { // Check against normalized phone
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.invalidPhoneNumberFormatError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,));
+      return;
     }
 
+
+    // Pass the assembled device info string
     final User registrationPayload = User(
       firstName: _studentNameController.text.trim(),
       lastName: _fatherNameController.text.trim(),
       phone: finalPhoneNumberForUser!,
       password: _passwordController.text,
       grade: _selectedYear!,
-      // <<< UPDATE CATEGORY FIELD TO USE _selectedCategory
-      category: _selectedCategory!, // Use the selected static category
+      category: _selectedCategory!,
       school: _selectedInstitution!,
       gender: _selectedGender!,
-      device: currentDeviceInfo,
-      status: "pending",
-      allCourses: false,
-      enrolledAll: false,
-      region: "Not Specified",
+      device: currentDeviceInfo, // Use the assembled string
+      status: "pending", // Assuming this is the initial status
+      allCourses: false, // Default value
+      enrolledAll: false, // Default value
+      region: "Not Specified", // Default value or collect from user
+       // serviceType and enrolledCourseIds likely not for registration payload
     );
 
+     // Pass the payload object to AuthProvider
     bool userRegistrationSuccess = await authProvider.registerUserFull(
-        registrationData: registrationPayload,
+        registrationData: registrationPayload, // Pass the User object
     );
 
     if (!mounted) return;
@@ -202,6 +215,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+      // Navigate to LoginScreen after successful registration
       Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
           (Route<dynamic> route) => false,
@@ -221,11 +235,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    // Allow submit if device info is fetched, even if it contains "Unknown" or "Failed"
     bool canAttemptSubmit = _isDeviceInfoFetchedInitially;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.signUpTitle), // Changed from getRegisteredTitle
+        title: Text(l10n.signUpTitle),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -244,19 +259,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               PasswordFormField(controller: _passwordController, isPasswordVisible: _isPasswordVisible, onToggleVisibility: _togglePasswordVisibility, l10n: l10n),
               const SizedBox(height: 20),
 
-              Text(l10n.departmentLabel, style: theme.textTheme.titleMedium), // Keeping label as 'Department' based on the request
+              Text(l10n.departmentLabel, style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
-              // <<< REPLACE CONSUMER AND DEPARTMENT DROPDOWN WITH STATIC STRING DROPDOWN
               DropdownButtonFormField<String>(
-                // Reusing existing l10n key for hint text
                 decoration: InputDecoration(hintText: l10n.selectDepartmentHint, contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0)),
-                value: _selectedCategory, // Use the new state variable
+                value: _selectedCategory,
                 isExpanded: true,
-                items: _categories.map((String category) => DropdownMenuItem<String>(value: category, child: Text(category))).toList(), // Use the static list
-                onChanged: (String? newValue) => setState(() => _selectedCategory = newValue), // Update the new state variable
-                validator: (value) => value == null ? l10n.pleaseSelectDepartmentError : null, // Reusing existing l10n key for error
+                items: _categories.map((String category) => DropdownMenuItem<String>(value: category, child: Text(category))).toList(),
+                onChanged: (String? newValue) => setState(() => _selectedCategory = newValue),
+                validator: (value) => value == null ? l10n.pleaseSelectDepartmentError : null,
               ),
-              // <<< END REPLACEMENT
               const SizedBox(height: 20),
 
               Text(l10n.institutionLabel, style: theme.textTheme.titleMedium),
@@ -328,11 +340,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         );
                 },
               ),
+               // Show initializing message if device info isn't ready
                if (!canAttemptSubmit && !Provider.of<AuthProvider>(context, listen: false).isLoading)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
-                    "Initializing...",
+                     _deviceInfoString.contains("Failed to get details") || _deviceInfoString.contains("Unknown")
+                                    ? "Device info failed. Try again." // Hardcoded fallback
+                                    : "Initializing device info...", // Hardcoded fallback
                     textAlign: TextAlign.center,
                     style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
                   ),

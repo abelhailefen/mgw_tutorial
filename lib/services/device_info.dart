@@ -2,13 +2,12 @@
 import 'dart:async';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart'; // For BuildContext in detectDeviceType and getFormattedDeviceString
-import 'package:flutter/services.dart'; // For PlatformException
+import 'package:flutter/material.dart'; // Needed for BuildContext/MediaQuery in detectDeviceType
+import 'package:flutter/services.dart'; // Needed for PlatformException
 
 class DeviceInfoService {
   static final DeviceInfoPlugin deviceInfoPlugin = DeviceInfoPlugin();
 
-  // Original method to get the detailed map (keep if needed elsewhere)
   Future<Map<String, dynamic>> getDeviceData() async {
     Map<String, dynamic> deviceData = {};
 
@@ -25,51 +24,50 @@ class DeviceInfoService {
             _readWindowsDeviceInfo(await deviceInfoPlugin.windowsInfo),
           TargetPlatform.macOS =>
             _readMacOsDeviceInfo(await deviceInfoPlugin.macOsInfo),
-          TargetPlatform.linux =>
+           TargetPlatform.linux => // Added back Linux for completeness
             _readLinuxDeviceInfo(await deviceInfoPlugin.linuxInfo),
-          // Added Fuchsia for completeness
-          TargetPlatform.fuchsia =>
-            <String, dynamic>{'Error:': 'Fuchsia platform info not directly supported by device_info_plus'},
-          // Default case for any other unexpected platforms
+          // Fuchsia or other platforms will fall here
           _ => <String, dynamic> {
-              'Error:': 'Platform not supported'
+              'Error:': 'Platform not fully supported by device_info_plus'
             },
         };
       }
-    } on PlatformException catch (e) {
-      deviceData = <String, dynamic> {'Error:': 'Failed to get platform version details: ${e.message}'};
-    } catch (e) {
-       deviceData = <String, dynamic> {'Error:': 'An unexpected error occurred getting device info: $e'};
+    } on PlatformException catch (e) { // Catch exception object for logging
+      print("DeviceInfoService PlatformException in getDeviceData: $e");
+      deviceData = <String, dynamic> {'Error:': 'Failed to get platform version details.'}; // Added "details"
+    } catch (e) { // Catch other unexpected errors
+       print("DeviceInfoService General Exception in getDeviceData: $e");
+       deviceData = <String, dynamic> {'Error:': 'An unexpected error occurred getting device info.'}; // Added "info"
     }
 
     return deviceData;
   }
 
-  String detectDeviceType(BuildContext context) {
-    // This method might be better placed outside if it only needs MediaQuery,
-    // or ensure context is always available when called.
-     // Safely check for context validity before using MediaQuery
-    if (!kIsWeb && context != null && ModalRoute.of(context) != null && ModalRoute.of(context)!.isActive) {
-         try {
-           final double screenWidth = MediaQuery.of(context).size.width;
-            if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-                if (screenWidth > 600) { // Arbitrary breakpoint for tablets
-                  return 'Tablet';
-                } else {
-                  return 'Mobile';
-                }
-            }
-         } catch (e) {
+   // Made BuildContext nullable and added mounted check for safety
+  String detectDeviceType(BuildContext? context) {
+     // Use MediaQuery only if context is provided and valid
+    if (!kIsWeb && context != null && context.mounted) {
+        try {
+             final double screenWidth = MediaQuery.of(context).size.width;
+             if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
+               if (screenWidth > 600) { // Standard breakpoint for tablets
+                 return 'Tablet';
+               } else {
+                 return 'Mobile';
+               }
+             }
+        } catch (e) {
+             print("DeviceInfoService Error using MediaQuery in detectDeviceType: $e");
              // Fallback below if MediaQuery fails
-             print("Error using MediaQuery in detectDeviceType: $e");
-         }
+        }
     }
 
-     // Fallback based on platform if MediaQuery not available or platform isn't mobile
+
+     // Fallback based on platform if context is not available or platform isn't mobile/tablet
       if (kIsWeb) {
        return 'Web Browser';
      } else if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-       // Default to Mobile if MediaQuery detection failed on these platforms
+       // Default to Mobile if MediaQuery failed on these platforms
        return 'Mobile';
      } else if (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux) {
        return 'Computer';
@@ -78,236 +76,105 @@ class DeviceInfoService {
      }
   }
 
-  // <<< METHOD USED BY BOTH REGISTRATION AND LOGIN TO GET FORMATTED STRING >>>
-  Future<String> getFormattedDeviceString(BuildContext context) async {
-      String deviceType = "Unknown";
-      String brandModel = "Unknown Device";
-      String osInfo = "Unknown OS";
-
-      // First, determine the device type (relies on context if possible)
-      // Ensure context is valid before passing it
-      if (context != null && ModalRoute.of(context) != null && ModalRoute.of(context)!.isActive) {
-           deviceType = detectDeviceType(context);
-      } else {
-           // Fallback type if context is not valid
-           deviceType = (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.android) // Typo fixed: Should be TargetPlatform.iOS
-                          ? "Mobile"
-                          : (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux)
-                            ? "Computer"
-                            : kIsWeb ? "Web Browser" : "Unknown";
-           print("Context not active for MediaQuery in getFormattedDeviceString, using platform default for deviceType: $deviceType");
-      }
-
-
-      // Then, get platform-specific details and format the string
-      try {
-         final deviceData = await getDeviceData(); // Use the existing method
-
-         // If deviceData contains an error from getDeviceData, report that
-         if (deviceData.containsKey('Error:')) {
-              String errorMsg = deviceData['Error:'] ?? 'Failed to get details';
-              return '$deviceType - $errorMsg';
-         }
-
-
-        // --- Construct the simple brand/model/OS string based on platform ---
-        if (kIsWeb) {
-           brandModel = deviceData['browserName'] ?? 'Web Browser';
-           osInfo = deviceData['platform'] ?? 'Unknown Platform';
-           if (deviceData.containsKey('vendor') && deviceData['vendor'] != null && deviceData['vendor'].isNotEmpty) {
-               brandModel += " (${deviceData['vendor']})";
-           }
-        } else {
-           switch (defaultTargetPlatform) {
-              case TargetPlatform.android:
-                brandModel = "${deviceData['brand'] ?? 'UnknownBrand'} ${deviceData['model'] ?? 'UnknownModel'}";
-                final androidRelease = deviceData['version.release'];
-                final androidSdk = deviceData['version.sdkInt'];
-
-                 // Prioritize release version if it looks like a number
-                 if (androidRelease != null && androidRelease.isNotEmpty && RegExp(r'^\d+(\.\d+)*$').hasMatch(androidRelease.toString())) {
-                     osInfo = "Android ${androidRelease.toString().trim()}";
-                 } else if (androidSdk != null) {
-                      // Fallback to SDK level, but prepend "SDK" to avoid confusion
-                      osInfo = "Android SDK ${androidSdk.toString().trim()}";
-                 } else {
-                      // Truly unknown
-                      osInfo = "UnknownOS";
-                 }
-                break;
-              case TargetPlatform.iOS:
-                brandModel = "${deviceData['localizedModel'] ?? deviceData['model'] ?? 'UnknownModel'}";
-                osInfo = "${deviceData['systemName'] ?? 'iOS'} ${deviceData['systemVersion'] ?? ''}".trim();
-                 if (deviceData.containsKey('utsname.machine:') && deviceData['utsname.machine:'] != null && !brandModel.contains(deviceData['utsname.machine:'])) {
-                     brandModel = "${deviceData['localizedModel'] ?? deviceData['model'] ?? 'UnknownModel'} (${deviceData['utsname.machine:']})";
-                 }
-                break;
-              case TargetPlatform.windows:
-                 brandModel = "${deviceData['computerName'] ?? 'Windows Computer'}";
-                 // Using major.minor.build for Windows version if available, otherwise generic Windows
-                 String winVersion = '';
-                 if (deviceData.containsKey('majorVersion') && deviceData['majorVersion'] != null) {
-                     winVersion = "${deviceData['majorVersion']}.${deviceData['minorVersion'] ?? '0'}";
-                     if (deviceData.containsKey('buildNumber') && deviceData['buildNumber'] != null) {
-                         winVersion += ".${deviceData['buildNumber']}";
-                     }
-                 }
-                 osInfo = winVersion.isNotEmpty ? "Windows $winVersion" : "Windows";
-                break;
-              case TargetPlatform.macOS:
-                 brandModel = "${deviceData['model'] ?? 'Mac'}";
-                 osInfo = "macOS ${deviceData['osRelease'] ?? ''}".trim();
-                break;
-               case TargetPlatform.linux:
-                  brandModel = deviceData['prettyName'] ?? 'Linux Computer';
-                  osInfo = deviceData['version'] ?? '';
-                  if (osInfo.isEmpty) osInfo = deviceData['id'] ?? 'Linux';
-                  osInfo = "Linux ${osInfo}".trim();
-                  break;
-               case TargetPlatform.fuchsia:
-              // Default case for any other platforms
-              default:
-                 brandModel = "Unknown Native Device"; // Or be more specific if possible
-                 osInfo = "Unknown Native OS";
-                 break;
-           }
-        }
-        // --- End of simple string construction ---
-
-         // Combine into the final simple string
-         String finalDeviceInfo = '$deviceType - $brandModel, $osInfo';
-
-         // Cap the length to be safe for typical database columns (e.g., 255 chars)
-         if (finalDeviceInfo.length > 250) { // Arbitrary limit, adjust if needed
-             finalDeviceInfo = finalDeviceInfo.substring(0, 250) + "...";
-         }
-         print("Generated Simple Device Info String: $finalDeviceInfo");
-         return finalDeviceInfo;
-
-      } on PlatformException catch (e) {
-         print("PlatformException getting device info in service: $e");
-         // If getting detailed info fails, use a generic string based on the detected type
-         String finalDeviceInfo = '$deviceType - Failed to get details: ${e.message}';
-          if (finalDeviceInfo.length > 250) {
-              finalDeviceInfo = finalDeviceInfo.substring(0, 250) + "...";
-          }
-          print("Generated Error Device Info String: $finalDeviceInfo");
-         return finalDeviceInfo;
-      } catch (e) {
-         print("General error getting device info in service: $e");
-         // If any other error occurs, use a generic string
-         String finalDeviceInfo = '$deviceType - Failed to get details: $e';
-          if (finalDeviceInfo.length > 250) {
-              finalDeviceInfo = finalDeviceInfo.substring(0, 250) + "...";
-          }
-          print("Generated General Error Device Info String: $finalDeviceInfo");
-         return finalDeviceInfo;
-      }
-  }
-
 
   Map<String, dynamic> _readAndroidBuildData(AndroidDeviceInfo build) {
-    return <String, dynamic>{
+    return <String, dynamic> {
       'board': build.board,
       'brand': build.brand,
-      'device': build.device,
+      'device': build.device, // This is the hardware device name, not the user-set name
       'fingerprint': build.fingerprint,
       'hardware': build.hardware,
       'host': build.host,
-      'id': build.id,
+      'id': build.id, // Android OS Build ID (like "SQ1A.211205.008") - this is probably what 'deviceId' in the target string meant for Android
       'manufacturer': build.manufacturer,
-      'model': build.model,
+      'model': build.model, // Marketing model name (like "Pixel 5")
       'product': build.product,
       'isPhysicalDevice': build.isPhysicalDevice,
-      'version.sdkInt': build.version.sdkInt,
-      'version.release': build.version.release, // Keep release version
-      'version.codename': build.version.codename,
-      'version.baseOS': build.version.baseOS,
-      'version.previewSdkInt': build.version.previewSdkInt,
-      'version.incremental': build.version.incremental,
-      'supported32BitAbis': build.supported32BitAbis,
-      'supported64BitAbis': build.supported64BitAbis,
-      'supportedAbis': build.supportedAbis,
-      'display': build.display,
-      'bootloader': build.bootloader,
+      'version.sdkInt': build.version.sdkInt, // Added back version info
+      'version.release': build.version.release, // Added back version info
     };
   }
 
   Map<String, dynamic> _readIosDeviceInfo(IosDeviceInfo data) {
-    return <String, dynamic>{
-      'name': data.name,
-      'systemName': data.systemName,
-      'systemVersion': data.systemVersion,
-      'model': data.model, // e.g., "iPhone", "iPad"
-      'localizedModel': data.localizedModel, // e.g., "iPhone 13 Pro"
-      'identifierForVendor': data.identifierForVendor,
+    return <String, dynamic> {
+      'name': data.name, // User-set device name (e.g., "John's iPhone") - NOT good for consistent ID
+      'systemName': data.systemName, // iOS
+      'systemVersion': data.systemVersion, // 15.0
+      'model': data.model, // iPhone, iPad, etc.
+      // 'modelName': data.modelName, // <<< REMOVED: This getter does not exist in device_info_plus IosDeviceInfo
+      'localizedModel': data.localizedModel, // iPhone 13 Pro, iPad Air (5th generation) - Use this for marketing name
+      'identifierForVendor': data.identifierForVendor, // UUID - good for internal app tracking, not external display
       'isPhysicalDevice': data.isPhysicalDevice,
-      'utsname.sysname:': data.utsname.sysname,
-      'utsname.nodename:': data.utsname.nodename,
-      'utsname.release:': data.utsname.release,
-      'utsname.version:': data.utsname.version,
-      'utsname.machine:': data.utsname.machine, // e.g., "iPhone13,2"
+      'utsname.sysname:': data.utsname.sysname, // Darwin
+      'utsname.nodename:': data.utsname.nodename, // hostname
+      'utsname.release:': data.utsname.release, // 21.1.0
+      'utsname.version:': data.utsname.version, // Darwin Kernel Version 21.1.0:Tues Oct 26 10:35:59 PDT 2021; root:xnu-8019.41.2~1/RELEASE_ARM64_T8101
+      'utsname.machine:': data.utsname.machine, // iPhone13,2 - Technical hardware identifier - Good candidate for 'deviceId'
     };
   }
 
   Map<String, dynamic> _readWebBrowserInfo(WebBrowserInfo data) {
-    return <String, dynamic>{
-      'browserName': data.browserName.name, // Using .name for enum
+    return <String, dynamic> {
+      'browserName': data.browserName.name, // chrome, firefox, safari
       'appCodeName': data.appCodeName,
       'appName': data.appName,
-      'appVersion': data.appVersion,
+      'appVersion': data.appVersion, // Contains browser version and often OS info
       'deviceMemory': data.deviceMemory, // May be null
       'language': data.language,
-      'languages': data.languages, // List of languages
-      'platform': data.platform,
-      'userAgent': data.userAgent, // Useful for more detailed browser info
-      'vendor': data.vendor,
-      'hardwareConcurrency': data.hardwareConcurrency, // May be null
+      'platform': data.platform, // Win32, MacIntel, Linux x86_64
+      'userAgent': data.userAgent, // Detailed string
+      'vendor': data.vendor, // Google Inc.
+      // No direct equivalent for board/id/deviceId
     };
   }
 
   Map<String, dynamic> _readMacOsDeviceInfo(MacOsDeviceInfo data) {
-    return <String, dynamic>{
-      'computerName': data.computerName,
+    return <String, dynamic> {
+      'computerName': data.computerName, // User-set name
       'hostName': data.hostName,
       'arch': data.arch,
-      'model': data.model,
+      'model': data.model, // Macmini9,1 (Technical identifier)
       'kernelVersion': data.kernelVersion,
-      'osRelease': data.osRelease,
-      'systemGUID': data.systemGUID, // May be null
+      'osRelease': data.osRelease, // 21.5.0 (macOS version)
+      'systemGUID': data.systemGUID, // UUID - could potentially map to 'deviceId' if needed
+       // No direct equivalent for brand/board/id (Android build ID)
     };
   }
 
-  Map<String, dynamic> _readWindowsDeviceInfo(WindowsDeviceInfo data) {
-    // Removed potentially problematic fields like suiteMask, productType, servicePackMajor/Minor
+   Map<String, dynamic> _readLinuxDeviceInfo(LinuxDeviceInfo data) {
     return <String, dynamic>{
-      'numberOfCores': data.numberOfCores,
-      'computerName': data.computerName,
-      'systemMemoryInMegabytes': data.systemMemoryInMegabytes,
-      'userName': data.userName,
-      'deviceId': data.deviceId,
-      'productId': data.productId,
-      'majorVersion': data.majorVersion,
-      'minorVersion': data.minorVersion,
-      'buildNumber': data.buildNumber,
-      'platformId': data.platformId,
-      'csdVersion': data.csdVersion,
-    };
-  }
-
-  Map<String, dynamic> _readLinuxDeviceInfo(LinuxDeviceInfo data) {
-    return <String, dynamic>{
-      'name': data.name,
-      'version': data.version,
-      'id': data.id,
-      'idLike': data.idLike,
+      'name': data.name, // User-set hostname?
+      'version': data.version, // Specific version string
+      'id': data.id, // Distribution ID (e.g. "ubuntu")
+      'idLike': data.idLike, // Parent distribution IDs
       'versionCodename': data.versionCodename,
-      'versionId': data.versionId,
-      'prettyName': data.prettyName,
+      'versionId': data.versionId, // Version number (e.g. "22.04")
+      'prettyName': data.prettyName, // e.g. "Ubuntu 22.04.1 LTS"
       'buildId': data.buildId,
       'variant': data.variant,
       'variantId': data.variantId,
-      'machineId': data.machineId, // May be null
+      'machineId': data.machineId, // UUID - could potentially map to 'deviceId' if needed
+       // No direct equivalent for brand/board
     };
   }
+
+
+  Map<String, dynamic> _readWindowsDeviceInfo(WindowsDeviceInfo data) {
+    return <String, dynamic> {
+      'numberOfCores': data.numberOfCores,
+      'computerName': data.computerName, // User-set name
+      'systemMemoryInMegabytes': data.systemMemoryInMegabytes,
+      'userName': data.userName, // User name
+       'deviceId': data.deviceId, // UUID - could map to 'deviceId'
+       'productId': data.productId, // Windows Product ID
+       'majorVersion': data.majorVersion, // 10
+       'minorVersion': data.minorVersion, // 0
+       'buildNumber': data.buildNumber, // 19045
+       'platformId': data.platformId, // 2
+       'csdVersion': data.csdVersion, // "" or service pack info
+       // No direct equivalent for brand/board/id (Android build ID)
+    };
+  }
+
+  // Removed the incorrect _getDeviceInfo and deviceName state variables
 }
