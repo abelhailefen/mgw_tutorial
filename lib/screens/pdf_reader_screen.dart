@@ -9,11 +9,13 @@ import 'package:mgw_tutorial/constants/color.dart';
 class PdfReaderScreen extends StatefulWidget {
   final String pdfUrl;
   final String title;
+  final bool isLocal;
 
   const PdfReaderScreen({
     super.key,
     required this.pdfUrl,
     required this.title,
+    this.isLocal = false,
   });
 
   @override
@@ -40,39 +42,68 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         _errorMessage = null;
       });
 
-      // Delete existing file if retrying
       if (_pdfFile != null) {
-        await _pdfFile!.delete();
+        try {
+          await _pdfFile!.delete();
+        } catch (e) {
+          debugPrint("Could not delete previous PDF file: $e");
+        }
         _pdfFile = null;
       }
 
-      // Fetch PDF from URL
-      final response = await http.get(Uri.parse(widget.pdfUrl));
-
-      if (response.statusCode == 200) {
-        // Use path_provider's temporary directory
-        final tempDir = await getTemporaryDirectory();
-        final tempFile = File('${tempDir.path}/${widget.title.replaceAll(RegExp(r'[^\w\s]'), '')}.pdf');
-
-        // Write PDF content to file
-        await tempFile.writeAsBytes(response.bodyBytes);
-
-        setState(() {
-          _pdfFile = tempFile;
-          _isLoading = false;
-        });
+      if (widget.isLocal) {
+        final file = File(widget.pdfUrl);
+        if (await file.exists()) {
+          setState(() {
+            _pdfFile = file;
+            _isLoading = false;
+          });
+        } else {
+          throw FileSystemException("Downloaded PDF not found at path: ${widget.pdfUrl}");
+        }
       } else {
-        throw HttpException('Failed to load PDF: ${response.statusCode}');
+        const String baseUrl = "https://lessonservice.amtprinting19.com";
+        final String fullUrl = widget.pdfUrl.startsWith("http")
+            ? widget.pdfUrl
+            : "$baseUrl${widget.pdfUrl}";
+
+        final response = await http.get(Uri.parse(fullUrl));
+
+        if (response.statusCode == 200) {
+          if (response.bodyBytes.isEmpty) {
+            throw FileSystemException("Downloaded PDF is empty.");
+          }
+
+          final tempDir = await getTemporaryDirectory();
+          final safeFileName = widget.title.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');
+          final tempFile = File('${tempDir.path}/$safeFileName.pdf');
+
+          try {
+            await tempFile.writeAsBytes(response.bodyBytes);
+          } catch (e) {
+            throw FileSystemException("Unable to write PDF file: $e");
+          }
+
+          setState(() {
+            _pdfFile = tempFile;
+            _isLoading = false;
+          });
+        } else {
+          throw HttpException('Failed to load PDF: ${response.statusCode}');
+        }
       }
     } catch (e) {
       String errorMsg;
       if (e is http.ClientException) {
         errorMsg = 'Network error: Please check your internet connection.';
-      } else if (e is IOException) {
-        errorMsg = 'File error: Unable to save the PDF.';
-      } else {
+      } else if (e is FileSystemException) {
+        errorMsg = 'File error: Unable to save or open the PDF.';
+      } else if (e is HttpException) {
         errorMsg = 'Error loading PDF: $e';
+      } else {
+        errorMsg = 'Unexpected error: $e';
       }
+
       setState(() {
         _isLoading = false;
         _errorMessage = errorMsg;
@@ -81,11 +112,10 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   }
 
   @override
-  void dispose() async {
-    // Clean up the temporary file asynchronously
+  void dispose() {
     if (_pdfFile != null) {
       try {
-        await _pdfFile!.delete();
+        _pdfFile!.delete();
       } catch (e) {
         debugPrint('Error deleting PDF file: $e');
       }
@@ -140,11 +170,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              color: AppColors.error,
-              size: 48,
-            ),
+            Icon(Icons.error_outline, color: AppColors.error, size: 48),
             const SizedBox(height: 16),
             Text(
               _errorMessage!,
@@ -179,7 +205,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         },
         onPageChanged: (page, total) {
           setState(() {
-            _currentPage = page! + 1; // flutter_pdfview uses 0-based index
+            _currentPage = (page ?? 0) + 1;
           });
         },
         onError: (error) {

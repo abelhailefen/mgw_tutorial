@@ -196,11 +196,18 @@ class LessonProvider with ChangeNotifier {
       );
     } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
       print("Downloading PDF with URL: ${lesson.attachmentUrl}");
+      const String baseUrl = "https://lessonservice.amtprinting19.com"; // Or whatever your base URL is
+
+final fullUrl = lesson.attachmentUrl!.startsWith("http")
+    ? lesson.attachmentUrl!
+    : "$baseUrl${lesson.attachmentUrl!}";
+
       await MediaService.downloadPDFFile(
-        pdfId: downloadId,
-        url: lesson.attachmentUrl!,
-        title: lesson.title,
-      );
+      pdfId: downloadId,
+      url: fullUrl,
+      title: lesson.title,
+     );
+
     }
     notifyListeners();
   }

@@ -170,6 +170,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                   builder: (ctx) => PdfReaderScreen(
                     pdfUrl: filePath,
                     title: lesson.title,
+                    isLocal: true,
                   ),
                 ),
               );
