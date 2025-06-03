@@ -413,5 +413,11 @@
   "errorLoadingExams": "Failed to load exams. Please try again.",
   "downloadExamTooltip": "Download Exam",
   "cancelDownloadTooltip": "Cancel Download",
-  "deleteExamTooltip": "Delete Exam"
+  "deleteExamTooltip": "Delete Exam",
+  "documentIsDownloadingMessage": "Document is currently downloading...",
+  "quizIsDownloadingMessage": "Exam is currently downloading...",
+  "couldNotOpenDownloadedFileError": "Could not open downloaded file",
+  "downloadQuizTooltip": "Download exam",
+  "openDownloadedQuizTooltip": "Open downloaded exam",
+  "fileDownloadedTooltip": "File downloaded"
 }
