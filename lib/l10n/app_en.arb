@@ -419,5 +419,6 @@
   "couldNotOpenDownloadedFileError": "Could not open downloaded file",
   "downloadQuizTooltip": "Download exam",
   "openDownloadedQuizTooltip": "Open downloaded exam",
-  "fileDownloadedTooltip": "File downloaded"
+  "fileDownloadedTooltip": "File downloaded",
+  "couldNotLoadItem": "Could not load {itemUrl}"
 }

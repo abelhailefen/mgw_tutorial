@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import '../constants/color.dart';
 import '../models/lesson.dart';
 import '../services/media_service.dart';

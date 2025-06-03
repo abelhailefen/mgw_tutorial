@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 // ... other imports
 import 'package:mgw_tutorial/provider/auth_provider.dart';
-// import 'package:mgw_tutorial/provider/department_provider.dart'; // REMOVED
+
 import 'package:mgw_tutorial/services/device_info.dart';
 import 'package:mgw_tutorial/models/user.dart';
-// import 'package:mgw_tutorial/models/department.dart'; // REMOVED
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import 'package:mgw_tutorial/widgets/phone_form_field.dart';
 import 'package:mgw_tutorial/widgets/password_form_field.dart';
 import 'package:mgw_tutorial/screens/auth/login_screen.dart';

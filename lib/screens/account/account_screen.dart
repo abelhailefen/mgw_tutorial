@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:mgw_tutorial/screens/auth/login_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import 'package:mgw_tutorial/widgets/password_form_field.dart';
 import 'package:mgw_tutorial/widgets/phone_form_field.dart';
 

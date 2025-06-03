@@ -11,7 +11,7 @@ import 'package:mgw_tutorial/widgets/discussion/post_content_view.dart';
 import 'package:mgw_tutorial/widgets/discussion/comment_item_view.dart';
 import 'package:mgw_tutorial/widgets/discussion/edit_input_field.dart';
 import 'package:mgw_tutorial/widgets/discussion/shared_discussion_input_field.dart'; 
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import 'package:mgw_tutorial/widgets/discussion/reply_item_view.dart' show InputMode; 
 import 'package:intl/intl.dart';
 

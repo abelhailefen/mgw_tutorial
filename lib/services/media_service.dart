@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 
 import '../utils/download_status.dart';
 

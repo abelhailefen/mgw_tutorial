@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/faq_provider.dart';
 import 'package:mgw_tutorial/models/faq.dart'; 
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 
 class FaqScreen extends StatefulWidget { 
   static const String routeName = '/faq';

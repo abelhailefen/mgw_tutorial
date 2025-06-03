@@ -7,7 +7,7 @@ import 'package:mgw_tutorial/provider/discussion_provider.dart';
 import 'package:mgw_tutorial/screens/sidebar/post_detail_screen.dart';
 import 'package:intl/intl.dart';
 import 'create_post_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // For localization
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 
 class DiscussionGroupScreen extends StatefulWidget {
   static const routeName = '/discussion-group';

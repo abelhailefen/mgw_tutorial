@@ -44,7 +44,7 @@ import 'package:mgw_tutorial/models/section.dart';
 import 'package:mgw_tutorial/models/semester.dart';
 
 // Localization
-import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // Generated file
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mgw_tutorial/l10n/ti_material_localizations.dart';
 
@@ -250,7 +250,7 @@ class MyApp extends StatelessWidget {
           labelStyle: finalTypographyLight.bodyMedium?.copyWith(color: lightColorScheme.onSurface.withOpacity(0.7)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 4.0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
           margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 0),
@@ -335,7 +335,7 @@ class MyApp extends StatelessWidget {
           labelStyle: finalTypographyDark.bodyMedium?.copyWith(color: darkColorScheme.onSurface.withOpacity(0.7)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 4.0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
           margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 0),

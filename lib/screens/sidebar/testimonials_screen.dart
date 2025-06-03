@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/testimonial_provider.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:mgw_tutorial/models/testimonial.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import 'package:mgw_tutorial/widgets/testimonials/create_testimonial_dialog.dart';
 import 'package:mgw_tutorial/widgets/testimonials/testimonial_list.dart';
 
