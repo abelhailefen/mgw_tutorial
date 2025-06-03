@@ -10,7 +10,7 @@ import 'package:mgw_tutorial/provider/lesson_provider.dart';
 import 'package:mgw_tutorial/utils/download_status.dart';
 import 'package:mgw_tutorial/screens/video_player_screen.dart';
 import 'package:mgw_tutorial/screens/pdf_reader_screen.dart';
-import 'package:mgw_tutorial/constants/color.dart';
+import 'package:mgw_tutorial/constants/color.dart'; // Ensure this imports the corrected AppColors
 
 class LessonListScreen extends StatefulWidget {
   static const routeName = '/lesson-list';
@@ -56,6 +56,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final lessonProvider = Provider.of<LessonProvider>(context, listen: false);
+     final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Get current brightness
 
     if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
       final String? downloadId = lessonProvider.getDownloadId(lesson);
@@ -90,8 +91,9 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(l10n.couldNotFindDownloadedFileError),
+                   // Use common error color
                   backgroundColor: AppColors.errorContainer,
+                  content: Text(l10n.couldNotFindDownloadedFileError),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
@@ -116,8 +118,9 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
+                 // Use conditional color
+                backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
                 content: Text(l10n.videoIsDownloadingMessage),
-                backgroundColor: AppColors.secondaryContainerLight,
                 behavior: SnackBarBehavior.floating,
               ),
             );
@@ -181,8 +184,9 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(l10n.couldNotFindDownloadedFileError),
+                   // Use common error color
                   backgroundColor: AppColors.errorContainer,
+                  content: Text(l10n.couldNotFindDownloadedFileError),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
@@ -206,12 +210,14 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         showDialog(
           context: context,
           builder: (dCtx) => AlertDialog(
-            backgroundColor: AppColors.surfaceLight,
-            title: Text(lesson.title, style: theme.textTheme.titleLarge),
-            content: SingleChildScrollView(child: Text(lesson.summary ?? l10n.noTextContent, style: theme.textTheme.bodyLarge)),
+             // Use conditional color
+            backgroundColor: isDarkMode ? AppColors.surfaceDark : AppColors.surfaceLight,
+            title: Text(lesson.title, style: theme.textTheme.titleLarge), // text theme should handle color
+            content: SingleChildScrollView(child: Text(lesson.summary ?? l10n.noTextContent, style: theme.textTheme.bodyLarge)), // text theme should handle color
             actions: [
               TextButton(
-                child: Text(l10n.closeButtonText, style: TextStyle(color: AppColors.primaryLight)),
+                 // Use conditional color
+                child: Text(l10n.closeButtonText, style: TextStyle(color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight)),
                 onPressed: () => Navigator.of(dCtx).pop(),
               ),
             ],
@@ -222,8 +228,9 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+             // Use conditional color
+            backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
             content: Text("${l10n.quizItemType}: ${lesson.title} (${l10n.notImplementedMessage})"),
-            backgroundColor: AppColors.secondaryContainerLight,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -232,8 +239,9 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+             // Use conditional color
+            backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
             content: Text(l10n.noLaunchableContent(lesson.title)),
-            backgroundColor: AppColors.secondaryContainerLight,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -243,12 +251,15 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
 
   Future<void> _launchUrl(BuildContext context, String? urlString, String itemName) async {
     final l10n = AppLocalizations.of(context)!;
+     final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Get current brightness
+
     if (urlString == null || urlString.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+             // Use conditional color
+            backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
             content: Text(l10n.itemNotAvailable(itemName)),
-            backgroundColor: AppColors.secondaryContainerLight,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -265,8 +276,9 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(l10n.couldNotLaunchItem(urlString)),
+                 // Use common error color
                 backgroundColor: AppColors.errorContainer,
+                content: Text(l10n.couldNotLaunchItem(urlString)),
                 behavior: SnackBarBehavior.floating,
               ),
             );
@@ -282,8 +294,9 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("${l10n.couldNotLaunchItem(urlString)}: ${e.toString()}"),
+             // Use common error color
             backgroundColor: AppColors.errorContainer,
+            content: Text("${l10n.couldNotLaunchItem(urlString)}: ${e.toString()}"),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -296,6 +309,7 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
   final l10n = AppLocalizations.of(context)!;
   final isVideo = lesson.lessonType == LessonType.video;
   final isDocument = lesson.lessonType == LessonType.document;
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Get current brightness
   print("Building download button for lesson: ${lesson.title}, Type: ${lesson.lessonType}, Video URL: ${lesson.videoUrl}, Attachment URL: ${lesson.attachmentUrl}");
 
   // Use the correct download ID based on the lesson type if available
@@ -310,7 +324,8 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
         child: Center(
           child: Icon(
             Icons.cloud_off_outlined,
-            color: AppColors.iconLight.withOpacity(0.3),
+             // Use conditional color
+            color: (isDarkMode ? AppColors.iconDark : AppColors.iconLight).withOpacity(0.3),
             size: 24,
           ),
         ),
@@ -331,7 +346,8 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
           case DownloadStatus.notDownloaded:
           case DownloadStatus.cancelled:
             return IconButton(
-              icon: Icon(Icons.download_for_offline_outlined, color: AppColors.secondaryLight),
+               // Use conditional color
+              icon: Icon(Icons.download_for_offline_outlined, color: isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight),
               tooltip: isVideo ? l10n.downloadVideoTooltip : l10n.downloadDocumentTooltip,
               iconSize: 24,
               padding: EdgeInsets.zero,
@@ -354,14 +370,16 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
                       child: CircularProgressIndicator(
                         value: progress > 0 ? progress : null,
                         strokeWidth: 3.0,
-                        backgroundColor: AppColors.onSurfaceLight.withOpacity(0.1),
-                        color: AppColors.primaryLight,
+                        // Use conditional color for background
+                        backgroundColor: (isDarkMode ? AppColors.onSurfaceDark : AppColors.onSurfaceLight).withOpacity(0.1),
+                        // Use conditional color for progress
+                        color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight,
                       ),
                     ),
                     if (progressText.isNotEmpty)
                       Text(
                         progressText,
-                        style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
+                        style: theme.textTheme.bodySmall?.copyWith(fontSize: 10), // Text color should inherit from theme
                       ),
                     Positioned(
                       right: 0,
@@ -374,6 +392,7 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
                         child: Icon(
                           Icons.cancel,
                           size: 16,
+                           // Use common error color
                           color: AppColors.error,
                         ),
                       ),
@@ -383,12 +402,12 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
               },
             );
           case DownloadStatus.downloaded:
-            // --- MODIFIED CODE START ---
             return IconButton(
               icon: Icon(
                 // Check if it's a video to show play icon
                 isVideo ? Icons.play_circle_outline_rounded : Icons.description,
-                color: AppColors.primaryLight // Or choose a different color if desired, e.g., AppColors.error for video
+                 // Use conditional color
+                color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight // Or secondary(context), or icon(context)
               ),
               // Update tooltip for clarity
               tooltip: isVideo ? l10n.playDownloadedVideoTooltip : l10n.openDownloadedDocumentTooltip,
@@ -403,9 +422,9 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
                 lessonProv.deleteDownload(lesson, context);
               },
             );
-            // --- MODIFIED CODE END ---
           case DownloadStatus.failed:
             return IconButton(
+               // Use common error color
               icon: Icon(Icons.error_outline, color: AppColors.error),
               tooltip: isVideo ? l10n.downloadFailedTooltip : l10n.downloadFailedTooltip, // Tooltips are the same for failed state
               iconSize: 24,
@@ -424,6 +443,8 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
   Widget _buildLessonItem(BuildContext context, Lesson lesson, LessonProvider lessonProv) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Get current brightness
+
     IconData lessonIcon;
     Color iconColor;
     String typeDescription;
@@ -431,32 +452,37 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
     switch (lesson.lessonType) {
       case LessonType.video:
         lessonIcon = Icons.play_circle_outline_rounded;
+        // Use common error color
         iconColor = AppColors.error;
         typeDescription = l10n.videoItemType;
         break;
       case LessonType.document:
         lessonIcon = Icons.description_outlined;
-        iconColor = AppColors.secondaryLight;
+        // Use conditional color
+        iconColor = isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight;
         typeDescription = l10n.documentItemType;
         break;
       case LessonType.quiz:
         lessonIcon = Icons.quiz_outlined;
-        iconColor = AppColors.secondaryLight;
+        // Use conditional color
+        iconColor = isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight;
         typeDescription = l10n.quizItemType;
         break;
       case LessonType.text:
         lessonIcon = Icons.notes_outlined;
-        iconColor = AppColors.primaryLight;
+        // Use conditional color
+        iconColor = isDarkMode ? AppColors.primaryDark : AppColors.primaryLight;
         typeDescription = l10n.textItemType;
         break;
       default:
         lessonIcon = Icons.extension_outlined;
-        iconColor = AppColors.onSurfaceLight.withOpacity(0.5);
+        // Use conditional color
+        iconColor = (isDarkMode ? AppColors.onSurfaceDark : AppColors.onSurfaceLight).withOpacity(0.5);
         typeDescription = l10n.unknownItemType;
     }
 
     final String? downloadIdForStatus = (lesson.lessonType == LessonType.video || lesson.lessonType == LessonType.document)
-        ? lessonProv.getDownloadId(lesson) ?? lesson.id.toString()
+        ? lessonProv.getDownloadId(lesson) ?? lesson.id.toString() // Fallback ID might be problematic if not managed by provider
         : null;
 
     Widget deleteButton = const SizedBox.shrink();
@@ -469,7 +495,8 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
           builder: (context, status, child) {
             if (status == DownloadStatus.downloaded) {
               return IconButton(
-                icon: Icon(Icons.delete_outline, color: AppColors.iconLight.withOpacity(0.6)),
+                // Use conditional color
+                icon: Icon(Icons.delete_outline, color: (isDarkMode ? AppColors.iconDark : AppColors.iconLight).withOpacity(0.6)),
                 tooltip: l10n.deleteDownloadedFileTooltip,
                 iconSize: 24,
                 padding: EdgeInsets.zero,
@@ -489,7 +516,8 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
       margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
       elevation: 2.0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-      color: AppColors.cardBackgroundLight,
+       // Use conditional color for card background
+      color: isDarkMode ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         leading: IconButton(
@@ -511,6 +539,7 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
                 }
               : null,
         ),
+        // Text colors should ideally come from theme.textTheme which respects the surface color
         title: Text(lesson.title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500)),
         subtitle: lesson.summary != null && lesson.summary!.isNotEmpty
             ? Text(lesson.summary!, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall)
@@ -519,6 +548,7 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
           mainAxisSize: MainAxisSize.min,
           children: [
             if (lesson.lessonType == LessonType.video && lesson.duration != null && lesson.duration!.isNotEmpty)
+               // Text colors should ideally come from theme.textTheme
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: Text(lesson.duration!, style: theme.textTheme.bodySmall),
@@ -536,6 +566,8 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
   Widget _buildTabContent(BuildContext context, List<Lesson> lessons, LessonProvider lessonProv, LessonType filterType, String noContentMessage, IconData emptyIcon, {bool isNotesTab = false}) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Get current brightness
+
     final filteredLessons = isNotesTab
         ? lessons.where((l) => l.lessonType == LessonType.text || l.lessonType == LessonType.document).toList()
         : lessons.where((l) => l.lessonType == filterType).toList();
@@ -543,7 +575,9 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
     final String? errorInitial = lessonProv.errorForSection(widget.section.id);
 
     if (isLoadingInitial && lessons.isEmpty) {
-      return Center(child: CircularProgressIndicator(color: AppColors.primaryLight));
+      return Center(
+         // Use conditional color
+        child: CircularProgressIndicator(color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight));
     }
 
     if (errorInitial != null && lessons.isEmpty) {
@@ -551,12 +585,14 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+             // Use common error color
             Icon(Icons.error_outline, color: AppColors.error, size: 50),
             const SizedBox(height: 16),
             Text(
               l10n.failedToLoadLessonsError(errorInitial),
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.onSurfaceLight.withOpacity(0.7)),
+               // Use conditional color
+              style: TextStyle(color: (isDarkMode ? AppColors.onSurfaceDark : AppColors.onSurfaceLight).withOpacity(0.7)),
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
@@ -564,8 +600,9 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
               label: Text(l10n.refresh),
               onPressed: isLoadingInitial ? null : _refreshLessons,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryLight,
-                foregroundColor: AppColors.onPrimaryLight,
+                 // Use conditional colors
+                backgroundColor: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight,
+                foregroundColor: isDarkMode ? AppColors.onPrimaryDark : AppColors.onPrimaryLight,
               ),
             ),
           ],
@@ -578,12 +615,14 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(emptyIcon, size: 60, color: AppColors.iconLight.withOpacity(0.5)),
+             // Use conditional color
+            Icon(emptyIcon, size: 60, color: (isDarkMode ? AppColors.iconDark : AppColors.iconLight).withOpacity(0.5)),
             const SizedBox(height: 16),
             Text(
               noContentMessage,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceLight.withOpacity(0.7)),
+              // Use conditional color, applying to a theme style
+              style: theme.textTheme.titleMedium?.copyWith(color: (isDarkMode ? AppColors.onSurfaceDark : AppColors.onSurfaceLight).withOpacity(0.7)),
             ),
           ],
         ),
@@ -605,22 +644,39 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
     final List<Lesson> lessons = lessonProvider.lessonsForSection(widget.section.id);
     final bool isLoading = lessonProvider.isLoadingForSection(widget.section.id);
     final String? error = lessonProvider.errorForSection(widget.section.id);
+     final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Get current brightness
+
+    // Use conditional background color for the main Scaffold and AppBar in various states
+    final dynamicAppBarBackground = isDarkMode ? AppColors.appBarBackgroundDark : AppColors.appBarBackgroundLight;
+    final dynamicScaffoldBackground = isDarkMode ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final dynamicPrimaryColor = isDarkMode ? AppColors.primaryDark : AppColors.primaryLight;
+    final dynamicOnPrimaryColor = isDarkMode ? AppColors.onPrimaryDark : AppColors.onPrimaryLight;
+    final dynamicOnSurfaceColor = isDarkMode ? AppColors.onSurfaceDark : AppColors.onSurfaceLight;
+
 
     if (isLoading && lessons.isEmpty) {
       return Scaffold(
+         // Use conditional color
+        backgroundColor: dynamicScaffoldBackground,
         appBar: AppBar(
-          title: Text(widget.section.title, overflow: TextOverflow.ellipsis),
-          backgroundColor: AppColors.appBarBackgroundLight,
+          title: Text(widget.section.title, overflow: TextOverflow.ellipsis), // Text color inherits from AppBar theme
+           // Use conditional color
+          backgroundColor: dynamicAppBarBackground,
         ),
-        body: Center(child: CircularProgressIndicator(color: AppColors.primaryLight)),
+        body: Center(
+           // Use conditional color
+          child: CircularProgressIndicator(color: dynamicPrimaryColor)),
       );
     }
 
     if (error != null && lessons.isEmpty) {
       return Scaffold(
+         // Use conditional color
+        backgroundColor: dynamicScaffoldBackground,
         appBar: AppBar(
-          title: Text(widget.section.title, overflow: TextOverflow.ellipsis),
-          backgroundColor: AppColors.appBarBackgroundLight,
+          title: Text(widget.section.title, overflow: TextOverflow.ellipsis), // Text color inherits from AppBar theme
+           // Use conditional color
+          backgroundColor: dynamicAppBarBackground,
         ),
         body: Center(
           child: Padding(
@@ -628,12 +684,14 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                 // Use common error color
                 Icon(Icons.error_outline, color: AppColors.error, size: 50),
                 const SizedBox(height: 16),
                 Text(
                   l10n.failedToLoadLessonsError(error),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.onSurfaceLight.withOpacity(0.7)),
+                  // Use conditional color
+                  style: TextStyle(color: dynamicOnSurfaceColor.withOpacity(0.7)),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
@@ -641,8 +699,9 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
                   label: Text(l10n.refresh),
                   onPressed: isLoading ? null : _refreshLessons,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryLight,
-                    foregroundColor: AppColors.onPrimaryLight,
+                     // Use conditional colors
+                    backgroundColor: dynamicPrimaryColor,
+                    foregroundColor: dynamicOnPrimaryColor,
                   ),
                 ),
               ],
@@ -654,9 +713,12 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
 
     if (lessons.isEmpty && !isLoading && error == null) {
       return Scaffold(
+         // Use conditional color
+        backgroundColor: dynamicScaffoldBackground,
         appBar: AppBar(
-          title: Text(widget.section.title, overflow: TextOverflow.ellipsis),
-          backgroundColor: AppColors.appBarBackgroundLight,
+          title: Text(widget.section.title, overflow: TextOverflow.ellipsis), // Text color inherits from AppBar theme
+           // Use conditional color
+          backgroundColor: dynamicAppBarBackground,
         ),
         body: Center(
           child: Padding(
@@ -664,12 +726,14 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.hourglass_empty_outlined, size: 60, color: AppColors.iconLight.withOpacity(0.5)),
+                 // Use conditional color for icon
+                Icon(Icons.hourglass_empty_outlined, size: 60, color: (isDarkMode ? AppColors.iconDark : AppColors.iconLight).withOpacity(0.5)),
                 const SizedBox(height: 16),
                 Text(
                   l10n.noLessonsInChapter,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium,
+                   // Use conditional color for text, applying to a theme style
+                  style: theme.textTheme.titleMedium?.copyWith(color: dynamicOnSurfaceColor),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
@@ -677,8 +741,9 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
                   label: Text(l10n.refresh),
                   onPressed: isLoading ? null : _refreshLessons,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryLight,
-                    foregroundColor: AppColors.onPrimaryLight,
+                     // Use conditional colors
+                    backgroundColor: dynamicPrimaryColor,
+                    foregroundColor: dynamicOnPrimaryColor,
                   ),
                 ),
               ],
@@ -689,26 +754,31 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
     }
 
     return Scaffold(
+       // Use conditional color for main Scaffold background
+      backgroundColor: dynamicScaffoldBackground,
       appBar: AppBar(
-        title: Text(widget.section.title, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18)),
-        backgroundColor: AppColors.appBarBackgroundLight,
+        title: Text(widget.section.title, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18)), // Text color inherits from AppBar theme
+        // Use conditional color for AppBar background
+        backgroundColor: dynamicAppBarBackground,
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          labelColor: AppColors.primaryLight,
-          unselectedLabelColor: AppColors.onSurfaceLight.withOpacity(0.6),
-          indicatorColor: AppColors.primaryLight,
+          // Use conditional colors for TabBar
+          labelColor: dynamicPrimaryColor,
+          unselectedLabelColor: dynamicOnSurfaceColor.withOpacity(0.6),
+          indicatorColor: dynamicPrimaryColor,
           tabs: [
             Tab(text: l10n.videoItemType),
-            Tab(text: l10n.notesItemType), // Renamed from textItemType
-            Tab(text: l10n.examsItemType), // Renamed from quizItemType
+            Tab(text: l10n.notesItemType),
+            Tab(text: l10n.examsItemType),
           ],
         ),
       ),
       body: RefreshIndicator(
         onRefresh: lessonProvider.isLoadingForSection(widget.section.id) ? () async {} : _refreshLessons,
-        color: AppColors.primaryLight,
-        backgroundColor: AppColors.surfaceLight,
+        // Use conditional colors for RefreshIndicator
+        color: dynamicPrimaryColor,
+        backgroundColor: isDarkMode ? AppColors.surfaceDark : AppColors.surfaceLight, // Use conditional surface color
         child: TabBarView(
           controller: _tabController,
           children: [
