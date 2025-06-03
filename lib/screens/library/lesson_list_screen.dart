@@ -774,20 +774,46 @@ Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider 
           ],
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: lessonProvider.isLoadingForSection(widget.section.id) ? () async {} : _refreshLessons,
-        // Use conditional colors for RefreshIndicator
-        color: dynamicPrimaryColor,
-        backgroundColor: isDarkMode ? AppColors.surfaceDark : AppColors.surfaceLight, // Use conditional surface color
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildTabContent(context, lessons, lessonProvider, LessonType.video, l10n.noVideosAvailable, Icons.video_library_outlined),
-            _buildTabContent(context, lessons, lessonProvider, LessonType.text, l10n.noNotesAvailable, Icons.notes_outlined, isNotesTab: true),
-            _buildTabContent(context, lessons, lessonProvider, LessonType.quiz, l10n.noExamsAvailable, Icons.quiz_outlined),
-          ],
-        ),
+     body: TabBarView(
+  controller: _tabController,
+  children: [
+    RefreshIndicator(
+      onRefresh: _refreshLessons,
+      child: _buildTabContent(
+        context,
+        lessons,
+        lessonProvider,
+        LessonType.video,
+        l10n.noVideosAvailable,
+        Icons.video_library_outlined,
       ),
+    ),
+    RefreshIndicator(
+      onRefresh: _refreshLessons,
+      child: _buildTabContent(
+        context,
+        lessons,
+        lessonProvider,
+        LessonType.text,
+        l10n.noNotesAvailable,
+        Icons.notes_outlined,
+        isNotesTab: true,
+      ),
+    ),
+    RefreshIndicator(
+      onRefresh: _refreshLessons,
+      child: _buildTabContent(
+        context,
+        lessons,
+        lessonProvider,
+        LessonType.quiz,
+        l10n.noExamsAvailable,
+        Icons.quiz_outlined,
+      ),
+    ),
+  ],
+),
+
     );
   }
 }

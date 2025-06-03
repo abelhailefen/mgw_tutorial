@@ -34,25 +34,33 @@ class Lesson {
     required this.updatedAt,
   });
 
-  LessonType get lessonType {
-    switch (lessonTypeString?.toLowerCase()) {
-      case 'video':
-        return LessonType.video;
-      case 'document':
-      case 'pdf':
-      case 'article':
-        return LessonType.document;
-      case 'quiz':
-      case 'exam':
-        return LessonType.quiz;
-      case 'text':
-        return LessonType.text;
-      default:
-        if (videoUrl != null && videoUrl!.isNotEmpty) return LessonType.video;
-        if (attachmentUrl != null && attachmentUrl!.isNotEmpty) return LessonType.document;
-        return LessonType.unknown;
-    }
+LessonType get lessonType {
+  final type = lessonTypeString?.toLowerCase();
+  final attachmentType = attachmentTypeString?.toLowerCase();
+
+  if (type == 'video') return LessonType.video;
+  if (type == 'quiz' || type == 'exam') return LessonType.quiz;
+
+  // Handle HTML attachments as quizzes
+  if (type == 'attachment' && attachmentType == 'html') return LessonType.quiz;
+
+  // PDFs and others are treated as documents
+  if (type == 'attachment' &&
+      (attachmentType == 'pdf' || attachmentType == 'epub' || attachmentType == 'doc' || attachmentType == 'article')) {
+    return LessonType.document;
   }
+
+  if (type == 'text') return LessonType.text;
+
+  // Fallbacks
+  if (videoUrl != null && videoUrl!.isNotEmpty) return LessonType.video;
+  if (attachmentType == 'html') return LessonType.quiz;
+  if (attachmentUrl != null && attachmentUrl!.isNotEmpty) return LessonType.document;
+
+  return LessonType.unknown;
+}
+
+
 
   AttachmentType get attachmentType {
     switch (attachmentTypeString?.toLowerCase()) {
