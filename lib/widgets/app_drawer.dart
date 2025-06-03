@@ -1,9 +1,8 @@
-// lib/widgets/app_drawer.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // <<< FOR Provider.of
-import 'package:url_launcher/url_launcher.dart'; // <<< FOR launchUrl, LaunchMode
-import 'package:share_plus/share_plus.dart'; // <<< FOR Share
-import 'package:flutter_gen/gen_l10n/app_localizations.dart'; // <<< FOR AppLocalizations
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 // Import Providers
 import 'package:mgw_tutorial/provider/locale_provider.dart';
@@ -21,20 +20,17 @@ import 'package:mgw_tutorial/screens/sidebar/about_us_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/settings_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/discussion_group_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/testimonials_screen.dart';
-import 'package:mgw_tutorial/screens/sidebar/my_courses_screen.dart'; // <<< IMPORTED MyCoursesScreen
-
+import 'package:mgw_tutorial/screens/sidebar/my_courses_screen.dart';
+import 'package:mgw_tutorial/screens/sidebar/my_exams_screen.dart'; // Added MyExamsScreen
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
-  // Moved these inside the class or make them static if truly global constants
-  // For simplicity, keeping them as instance members for now.
   final String _telegramChannelUrl = "https://t.me/YourTelegramChannelNameOrLink";
   final String _appShareMessage = "Check out MGW Tutorial, a great app for learning! ";
   final String _contactEmail = "support@mgwtutorial.com";
   final String _contactPhoneNumber = "+251900000000";
   final String _websiteUrl = "https://www.zsecreteducation.com";
-
 
   Future<void> _launchUrl(BuildContext context, String urlString, {bool isMail = false, bool isTel = false}) async {
     final l10n = AppLocalizations.of(context)!;
@@ -66,7 +62,7 @@ class AppDrawer extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final box = context.findRenderObject() as RenderBox?;
     await Share.share(
-      _appShareMessage, // Use instance member
+      _appShareMessage,
       subject: l10n.shareAppSubject,
       sharePositionOrigin: box != null ? box.localToGlobal(Offset.zero) & box.size : null,
     );
@@ -87,28 +83,28 @@ class AppDrawer extends StatelessWidget {
               ListTile(
                 leading: Icon(Icons.email_outlined, color: theme.listTileTheme.iconColor),
                 title: Text(l10n.contactViaEmail, style: TextStyle(color: theme.listTileTheme.textColor)),
-                subtitle: Text(_contactEmail, style: TextStyle(color: theme.listTileTheme.textColor?.withOpacity(0.7))), // Use instance member
+                subtitle: Text(_contactEmail, style: TextStyle(color: theme.listTileTheme.textColor?.withOpacity(0.7))),
                 onTap: () {
                   Navigator.of(bCtx).pop();
-                  _launchUrl(context, _contactEmail, isMail: true); // Use instance member
+                  _launchUrl(context, _contactEmail, isMail: true);
                 },
               ),
-              if (_contactPhoneNumber.isNotEmpty) // Use instance member
+              if (_contactPhoneNumber.isNotEmpty)
                 ListTile(
                   leading: Icon(Icons.phone_outlined, color: theme.listTileTheme.iconColor),
                   title: Text(l10n.callUs, style: TextStyle(color: theme.listTileTheme.textColor)),
-                  subtitle: Text(_contactPhoneNumber, style: TextStyle(color: theme.listTileTheme.textColor?.withOpacity(0.7))), // Use instance member
+                  subtitle: Text(_contactPhoneNumber, style: TextStyle(color: theme.listTileTheme.textColor?.withOpacity(0.7))),
                   onTap: () {
                     Navigator.of(bCtx).pop();
-                    _launchUrl(context, _contactPhoneNumber, isTel: true); // Use instance member
+                    _launchUrl(context, _contactPhoneNumber, isTel: true);
                   },
                 ),
               ListTile(
                 leading: Icon(Icons.web_outlined, color: theme.listTileTheme.iconColor),
                 title: Text(l10n.visitOurWebsite, style: TextStyle(color: theme.listTileTheme.textColor)),
                 onTap: () {
-                   Navigator.of(bCtx).pop();
-                   _launchUrl(context, _websiteUrl); // Use instance member
+                  Navigator.of(bCtx).pop();
+                  _launchUrl(context, _websiteUrl);
                 },
               ),
             ],
@@ -245,14 +241,14 @@ class AppDrawer extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: <Widget>[
           UserAccountsDrawerHeader(
-             accountName: Text(userName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: headerTextColor)),
-             accountEmail: Text(userDetail, style: TextStyle(color: headerTextColor.withOpacity(0.85))),
-             currentAccountPicture: CircleAvatar(
-               backgroundImage: userImageUrl != null && userImageUrl.isNotEmpty ? NetworkImage(userImageUrl) : null,
-               backgroundColor: avatarBackgroundColor,
-               child: (userImageUrl == null || userImageUrl.isEmpty) ? Icon(Icons.person, size: 40, color: avatarIconColor) : null,
-             ),
-             decoration: BoxDecoration(color: headerBackgroundColor),
+            accountName: Text(userName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: headerTextColor)),
+            accountEmail: Text(userDetail, style: TextStyle(color: headerTextColor.withOpacity(0.85))),
+            currentAccountPicture: CircleAvatar(
+              backgroundImage: userImageUrl != null && userImageUrl.isNotEmpty ? NetworkImage(userImageUrl) : null,
+              backgroundColor: avatarBackgroundColor,
+              child: (userImageUrl == null || userImageUrl.isEmpty) ? Icon(Icons.person, size: 40, color: avatarIconColor) : null,
+            ),
+            decoration: BoxDecoration(color: headerBackgroundColor),
           ),
           _buildDrawerItem(
             theme: theme, icon: Icons.info_outline, text: l10n.aboutUs,
@@ -284,13 +280,19 @@ class AppDrawer extends StatelessWidget {
               onTap: () => _navigateTo(context, MyCoursesScreen.routeName),
             )
           else
-             _buildDrawerItem(
+            _buildDrawerItem(
               theme: theme, icon: Icons.app_registration,
               text: l10n.registerforcourses,
               onTap: () {
-                 Navigator.of(context).pop();
-                 _showNotImplemented(context, l10n.registerforcourses); // Changed to use the common method
+                Navigator.of(context).pop();
+                _showNotImplemented(context, l10n.registerforcourses);
               },
+            ),
+          if (authProvider.currentUser != null)
+            _buildDrawerItem(
+              theme: theme, icon: Icons.quiz_outlined,
+              text: l10n.myExams,
+              onTap: () => _navigateTo(context, MyExamsScreen.routeName),
             ),
           _buildDrawerItem(
             theme: theme, icon: Icons.assignment_turned_in_outlined, text: l10n.weeklyexam,
@@ -325,8 +327,8 @@ class AppDrawer extends StatelessWidget {
             theme: theme, icon: Icons.settings_outlined, text: l10n.settings,
             onTap: () => _navigateTo(context, SettingsScreen.routeName),
           ),
-           _buildDrawerItem( // <<< ADD FAQ ITEM HERE
-            theme: theme, icon: Icons.quiz_outlined, text: l10n.faqTitle, 
+          _buildDrawerItem(
+            theme: theme, icon: Icons.quiz_outlined, text: l10n.faqTitle,
             onTap: () => _navigateTo(context, FaqScreen.routeName),
           ),
           Divider(color: theme.dividerColor),

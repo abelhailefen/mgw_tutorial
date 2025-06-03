@@ -1,4 +1,3 @@
-// lib/models/lesson.dart
 import 'dart:convert';
 
 enum LessonType { video, document, quiz, text, unknown }
@@ -77,6 +76,14 @@ class Lesson {
     }
   }
 
+  // Getter for HTML URL for quizzes
+  String? get htmlUrl {
+    if (lessonType == LessonType.quiz && attachmentUrl != null && attachmentUrl!.isNotEmpty) {
+      return attachmentUrl;
+    }
+    return null;
+  }
+
   factory Lesson.fromJson(Map<String, dynamic> json) {
     String safeGetString(Map<String, dynamic> jsonMap, String key, {String defaultValue = ""}) {
       final value = jsonMap[key];
@@ -136,7 +143,6 @@ class Lesson {
       return null;
     }
 
-
     String? inferredVideoProvider = safeGetNullableString(json, 'video_provider') ?? safeGetNullableString(json, 'video_type');
     if (inferredVideoProvider == null && safeGetNullableString(json, 'video_url')?.toLowerCase().contains('youtube') == true) {
       inferredVideoProvider = 'youtube';
@@ -159,8 +165,6 @@ class Lesson {
     );
   }
 
-
-  // Added for DB
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -179,9 +183,8 @@ class Lesson {
     };
   }
 
-  // Added for DB
   factory Lesson.fromMap(Map<String, dynamic> map) {
-     DateTime parseSafeDateFromDb(dynamic dateValue, String fieldName) {
+    DateTime parseSafeDateFromDb(dynamic dateValue, String fieldName) {
       if (dateValue is String && dateValue.isNotEmpty) {
         try {
           return DateTime.parse(dateValue);

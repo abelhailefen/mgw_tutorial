@@ -195,6 +195,63 @@ class MediaService {
     }
   }
 
+  // Download an HTML file
+  static Future<bool> downloadHtmlFile({
+    required String htmlId,
+    required String url,
+    required String title,
+    CancelToken? cancelToken,
+  }) async {
+    if (url.isEmpty) {
+      print("Error: Empty HTML URL for $title");
+      _updateStatus(htmlId, DownloadStatus.failed);
+      return false;
+    }
+
+    final statusNotifier = getDownloadStatus(htmlId);
+    final progressNotifier = getDownloadProgress(htmlId);
+    final cancelToken = CancelToken();
+    _cancelTokens[htmlId] = cancelToken;
+
+    try {
+      statusNotifier.value = DownloadStatus.downloading;
+      progressNotifier.value = 0.0;
+
+      final htmlFilePath = await _getFilePath(htmlId, 'html');
+
+      await _dio.download(
+        url,
+        htmlFilePath,
+        cancelToken: cancelToken,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            final progress = received / total;
+            progressNotifier.value = progress;
+          }
+        },
+      );
+
+      await _secureStorage.write(key: htmlId, value: htmlFilePath);
+      statusNotifier.value = DownloadStatus.downloaded;
+      progressNotifier.value = 1.0;
+      print("HTML downloaded successfully for ID $htmlId: $htmlFilePath");
+      return true;
+    } catch (e) {
+      if (e is DioException && e.type == DioExceptionType.cancel) {
+        statusNotifier.value = DownloadStatus.cancelled;
+        progressNotifier.value = 0.0;
+        print("Download cancelled for ID $htmlId");
+      } else {
+        statusNotifier.value = DownloadStatus.failed;
+        progressNotifier.value = 0.0;
+        print("Error downloading HTML for ID $htmlId: $e");
+      }
+      return false;
+    } finally {
+      _cancelTokens.remove(htmlId);
+    }
+  }
+
   // Cancel a download
   static void cancelDownload(String id) {
     final cancelToken = _cancelTokens[id];

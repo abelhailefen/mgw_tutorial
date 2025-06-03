@@ -6,13 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import '../constants/color.dart'; // Import AppColors
-
+import '../constants/color.dart';
 import '../models/lesson.dart';
-import '../models/section.dart';
 import '../services/media_service.dart';
 import '../utils/download_status.dart';
 import '../services/database_helper.dart';
+import 'package:crypto/crypto.dart';
 
 class LessonProvider with ChangeNotifier {
   final Map<int, List<Lesson>> _lessonsBySectionId = {};
@@ -22,6 +21,10 @@ class LessonProvider with ChangeNotifier {
   List<Lesson> lessonsForSection(int sectionId) => _lessonsBySectionId[sectionId] ?? [];
   bool isLoadingForSection(int sectionId) => _isLoadingForSectionId[sectionId] ?? false;
   String? errorForSection(int sectionId) => _errorForSectionId[sectionId];
+
+  List<Lesson> getAllLessons() {
+    return _lessonsBySectionId.values.expand((lessons) => lessons).toList();
+  }
 
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
@@ -45,8 +48,26 @@ class LessonProvider with ChangeNotifier {
       }
     } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
       return lesson.id.toString();
+    } else if (lesson.lessonType == LessonType.quiz && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty) {
+      return md5.convert(utf8.encode(lesson.htmlUrl!)).toString();
     }
     return null;
+  }
+
+  String? getDownloadIdByUrl(String url) {
+    final lesson = getAllLessons().firstWhere(
+      (lesson) => lesson.htmlUrl == url,
+      orElse: () => Lesson(
+        id: 0,
+        title: '',
+        sectionId: 0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        lessonTypeString: 'quiz',
+        attachmentUrl: url,
+      ),
+    );
+    return getDownloadId(lesson);
   }
 
   Future<bool> isVideoDownloadedAsVideoOnly(Lesson lesson) async {
@@ -196,18 +217,30 @@ class LessonProvider with ChangeNotifier {
       );
     } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
       print("Downloading PDF with URL: ${lesson.attachmentUrl}");
-      const String baseUrl = "https://lessonservice.amtprinting19.com"; // Or whatever your base URL is
+      const String baseUrl = "https://lessonservice.amtprinting19.com";
 
-final fullUrl = lesson.attachmentUrl!.startsWith("http")
-    ? lesson.attachmentUrl!
-    : "$baseUrl${lesson.attachmentUrl!}";
+      final fullUrl = lesson.attachmentUrl!.startsWith("http")
+          ? lesson.attachmentUrl!
+          : "$baseUrl${lesson.attachmentUrl!}";
 
       await MediaService.downloadPDFFile(
-      pdfId: downloadId,
-      url: fullUrl,
-      title: lesson.title,
-     );
+        pdfId: downloadId,
+        url: fullUrl,
+        title: lesson.title,
+      );
+    } else if (lesson.lessonType == LessonType.quiz && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty) {
+      print("Downloading HTML with URL: ${lesson.htmlUrl}");
+      const String baseUrl = "https://lessonservice.amtprinting19.com";
 
+      final fullUrl = lesson.htmlUrl!.startsWith("http")
+          ? lesson.htmlUrl!
+          : "$baseUrl${lesson.htmlUrl!}";
+
+      await MediaService.downloadHtmlFile(
+        htmlId: downloadId,
+        url: fullUrl,
+        title: lesson.title,
+      );
     }
     notifyListeners();
   }
@@ -236,7 +269,7 @@ final fullUrl = lesson.attachmentUrl!.startsWith("http")
     notifyListeners();
   }
 
-  void cancelDownload(Lesson lesson) {
+  Future<void> cancelDownload(Lesson lesson) async {
     final downloadId = getDownloadId(lesson);
     if (downloadId != null) {
       print("LessonProvider: Cancelling download for ${lesson.title} ($downloadId)");

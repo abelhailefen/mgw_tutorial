@@ -408,6 +408,10 @@
   "unexpectedError": "An unexpected error occurred: ",
   "loginFailedNoUserData": "Login failed: No user data returned by the server. Please try again or contact support.",
   "playDownloadedVideoTooltip": "Play downloaded video",
-  "openDownloadedDocumentTooltip": "Open downloaded document"
-
+  "openDownloadedDocumentTooltip": "Open downloaded document",
+  "myExams": "My Exams",
+  "errorLoadingExams": "Failed to load exams. Please try again.",
+  "downloadExamTooltip": "Download Exam",
+  "cancelDownloadTooltip": "Cancel Download",
+  "deleteExamTooltip": "Delete Exam"
 }

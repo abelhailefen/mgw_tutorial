@@ -39,6 +39,8 @@ dependencies:
   media_kit_video: ^1.2.5
   media_kit_libs_video: ^1.0.5 
   flutter_pdfview: ^1.4.0
+  webview_flutter: ^4.9.0
+  connectivity_plus: ^6.0.5
 dev_dependencies:
   flutter_test:
     sdk: flutter

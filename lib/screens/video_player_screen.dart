@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart'; // Add this import for SchedulerBinding
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart' as media_kit;
 import 'package:mgw_tutorial/models/lesson.dart';
@@ -77,15 +78,19 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           _errorMessage = 'Playback error: $error';
           _isLoading = false;
         });
-        _showSnackBar(_errorMessage);
+        _scheduleSnackBar(_errorMessage);
       }
+    });
+    // Move video initialization to post-frame callback
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _initializeVideo(isLocal: widget.isLocal);
     });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _initializeVideo(isLocal: widget.isLocal);
+    // Removed _initializeVideo call from here to avoid build-time issues
   }
 
   void _initializeFileStatuses() {
@@ -102,6 +107,21 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     setState(() {
       _selectedSpeed = speed.toString();
       player.setRate(speed);
+    });
+  }
+
+  void _scheduleSnackBar(String message) {
+    if (!mounted) return;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
     });
   }
 
@@ -127,41 +147,86 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             _errorMessage = 'No online URL available for streaming';
             _isLoading = false;
           });
-          _showSnackBar(_errorMessage);
+          _scheduleSnackBar(_errorMessage);
           return;
         }
 
         try {
           final explode = YoutubeExplode();
-          // Use VideoId to parse the URL robustly
-          final videoId = VideoId(widget.originalVideoUrl!);
-          if (videoId.value.isEmpty) {
-            throw Exception('Could not extract video ID from URL');
+          // Clean the URL to remove query parameters
+          String cleanUrl = widget.originalVideoUrl!;
+          if (cleanUrl.contains('?')) {
+            cleanUrl = cleanUrl.split('?')[0];
           }
-          print("Fetching stream manifest for video ID: ${videoId.value}");
-          final streamManifest = await explode.videos.streamsClient.getManifest(videoId).timeout(
-            const Duration(seconds: 30),
-            onTimeout: () => throw Exception('Timed out fetching YouTube stream'),
-          );
+
+          // Extract video ID from various YouTube URL formats
+          String? videoId;
+          if (cleanUrl.contains('youtu.be/')) {
+            videoId = cleanUrl.split('youtu.be/').last;
+          } else if (cleanUrl.contains('youtube.com/watch')) {
+            final uri = Uri.parse(widget.originalVideoUrl!);
+            videoId = uri.queryParameters['v'];
+          }
+
+          if (videoId == null || videoId.isEmpty) {
+            final videoIdObj = VideoId(cleanUrl);
+            videoId = videoIdObj.value;
+          }
+
+          if (videoId == null || videoId.isEmpty) {
+            throw Exception('Could not extract video ID from URL: ${widget.originalVideoUrl}');
+          }
+          print("Extracted video ID: $videoId");
+
+          // Fetch stream manifest with retry logic
+          print("Fetching stream manifest for video ID: $videoId");
+          StreamManifest? streamManifest;
+          for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+              streamManifest = await explode.videos.streamsClient
+                  .getManifest(videoId)
+                  .timeout(
+                    const Duration(seconds: 30),
+                    onTimeout: () => throw Exception('Timed out fetching YouTube stream'),
+                  );
+              break; // Success, exit retry loop
+            } catch (e) {
+              if (attempt == 2) rethrow;
+              print("Retry attempt ${attempt + 1} failed: $e");
+              await Future.delayed(Duration(seconds: 1 << attempt));
+            }
+          }
+          if (streamManifest == null) {
+            throw Exception('Failed to fetch stream manifest');
+          }
           print("Stream manifest fetched successfully");
-          final mp4VideoStreams = streamManifest.videoOnly.where((stream) => stream.container.name == 'mp4').toList();
+
+          // Select the best MP4 stream
+          final mp4VideoStreams = streamManifest.videoOnly
+              .where((stream) => stream.container.name == 'mp4')
+              .toList();
           if (mp4VideoStreams.isEmpty) {
             print("No video-only MP4 streams found, trying muxed streams");
-            final muxedStreams = streamManifest.muxed.where((stream) => stream.container.name == 'mp4').toList();
+            final muxedStreams = streamManifest.muxed
+                .where((stream) => stream.container.name == 'mp4')
+                .toList();
             if (muxedStreams.isEmpty) {
               print("No MP4 streams found, trying any stream");
               final allStreams = streamManifest.video;
               if (allStreams.isEmpty) {
                 throw Exception('No suitable streams found');
               }
-              final videoStream = allStreams.reduce((a, b) => a.bitrate.bitsPerSecond > b.bitrate.bitsPerSecond ? a : b);
+              final videoStream = allStreams.reduce((a, b) =>
+                  a.bitrate.bitsPerSecond > b.bitrate.bitsPerSecond ? a : b);
               uri = videoStream.url.toString();
             } else {
-              final videoStream = muxedStreams.reduce((a, b) => a.bitrate.bitsPerSecond > b.bitrate.bitsPerSecond ? a : b);
+              final videoStream = muxedStreams.reduce((a, b) =>
+                  a.bitrate.bitsPerSecond > b.bitrate.bitsPerSecond ? a : b);
               uri = videoStream.url.toString();
             }
           } else {
-            final videoStream = mp4VideoStreams.reduce((a, b) => a.bitrate.bitsPerSecond > b.bitrate.bitsPerSecond ? a : b);
+            final videoStream = mp4VideoStreams.reduce((a, b) =>
+                a.bitrate.bitsPerSecond > b.bitrate.bitsPerSecond ? a : b);
             uri = videoStream.url.toString();
           }
           explode.close();
@@ -174,7 +239,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             _errorMessage = 'Failed to fetch YouTube stream: $e';
             _isLoading = false;
           });
-          _showSnackBar(_errorMessage);
+          _scheduleSnackBar(_errorMessage);
           return;
         }
       }
@@ -201,7 +266,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           _errorMessage = e.toString();
           _isLoading = false;
         });
-        _showSnackBar("Error playing video: $_errorMessage");
+        _scheduleSnackBar("Error playing video: $_errorMessage");
       }
     }
   }
@@ -265,7 +330,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
     final downloadId = lessonProvider.getDownloadId(lesson);
     if (downloadId == null && isLocal) {
-      _showSnackBar("No downloaded file available for $title");
+      _scheduleSnackBar("No downloaded file available for $title");
       _isOpening = false;
       return;
     }
@@ -274,7 +339,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     if (isLocal) {
       filePath = await lessonProvider.getDownloadedFilePath(lesson) ?? '';
       if (filePath.isEmpty) {
-        _showSnackBar("Failed to get file path for $title");
+        _scheduleSnackBar("Failed to get file path for $title");
         _isOpening = false;
         return;
       }
@@ -307,8 +372,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
     _isOpening = false;
   }
-
-  
 
   Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider lessonProv) {
     final theme = Theme.of(context);
@@ -523,7 +586,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       ? const Center(child: CircularProgressIndicator())
                       : Column(
                           children: [
-                          
                             const SizedBox(height: 16),
                             Expanded(
                               child: media_kit.Video(

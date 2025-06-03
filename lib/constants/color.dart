@@ -1,4 +1,3 @@
-// lib/constants/color.dart
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -58,4 +57,12 @@ class AppColors {
   static const Color inputFillDark = Color(0xFF2C2C2C);
   static const Color inputHintLight = Color(0xFF757575); // Colors.grey[600]
   static const Color inputHintDark = Color(0xFF9E9E9E); // Colors.grey[500]
+
+  // --- Colors for MyExamsScreen and ExamViewerScreen ---
+  static const Color textPrimaryDark = Color(0xFF212121); // Matches onSurfaceLight
+  static const Color textSecondaryDark = Color(0xFF616161); // Matches onSurfaceVariantLight
+  static const Color downloadIconColor = Color(0xFF388E3C); // Matches success
+  static const Color downloadProgressColor = Color(0xFF388E3C); // Matches success
+  static const Color errorIconColor = Color(0xFFD32F2F); // Matches error
+  static const Color deleteIconColor = Color(0xFFD32F2F); // Matches error
 }
