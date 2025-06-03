@@ -7,6 +7,10 @@ import 'package:mgw_tutorial/provider/lesson_provider.dart';
 import 'package:mgw_tutorial/utils/download_status.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+
+
+
 import 'dart:io';
 
 class VideoPlayerScreen extends StatefulWidget {
@@ -30,6 +34,8 @@ class VideoPlayerScreen extends StatefulWidget {
 }
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  YoutubePlayerController? _ytController;
+
   late final player = Player(
     configuration: const PlayerConfiguration(
       bufferSize: 32 * 1024 * 1024,
@@ -55,37 +61,35 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   Size _videoSize = const Size(16, 9);
   bool _isOpening = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _initializeFileStatuses();
-    player.streams.width.listen((width) {
-      if (width != null && width > 0 && mounted) {
-        player.streams.height.listen((height) {
-          if (height != null && height > 0 && mounted) {
-            setState(() {
-              _videoSize = Size(width.toDouble(), height.toDouble());
-            });
-            print("Updated video size: $_videoSize");
-          }
-        });
-      }
-    });
-    player.streams.error.listen((error) {
-      if (error != null && mounted) {
-        setState(() {
-          _videoError = true;
-          _errorMessage = 'Playback error: $error';
-          _isLoading = false;
-        });
-        _scheduleSnackBar(_errorMessage);
-      }
-    });
-    // Move video initialization to post-frame callback
+@override
+void initState() {
+  super.initState();
+
+  _initializeFileStatuses();
+
+ if (!widget.isLocal && widget.originalVideoUrl != null) {
+  final videoId = YoutubePlayerController.convertUrlToId(widget.originalVideoUrl!);
+  if (videoId != null) {
+    _ytController = YoutubePlayerController.fromVideoId(
+      videoId: videoId,
+      params: const YoutubePlayerParams(
+        showControls: true,
+        showFullscreenButton: true,
+        mute: false,
+        playsInline: true,
+      ),
+    );
+  }
+}
+
+
+  if (widget.isLocal) {
     SchedulerBinding.instance.addPostFrameCallback((_) {
-      _initializeVideo(isLocal: widget.isLocal);
+      _initializeVideo(isLocal: true);
     });
   }
+}
+
 
   @override
   void didChangeDependencies() {
@@ -283,12 +287,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    player.dispose();
-    super.dispose();
-    print("VideoPlayerScreen disposed");
-  }
+ @override
+void dispose() {
+  _ytController?.close();
+  player.dispose();
+  super.dispose();
+}
+
 
   void _checkFileStatus(String url) {
     final lessonProvider = Provider.of<LessonProvider>(context, listen: false);
@@ -580,24 +585,24 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             ),
             child: AspectRatio(
               aspectRatio: _videoSize.width / _videoSize.height,
-              child: _videoError
-                  ? Center(child: Text('Error: $_errorMessage'))
-                  : _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : Column(
-                          children: [
-                            const SizedBox(height: 16),
-                            Expanded(
-                              child: media_kit.Video(
-                                controller: controller,
-                                controls: media_kit.AdaptiveVideoControls,
-                                width: double.infinity,
-                                height: double.infinity,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ],
-                        ),
+            child: _videoError
+    ? Center(child: Text('Error: $_errorMessage'))
+    : _isLoading && widget.isLocal
+        ? const Center(child: CircularProgressIndicator())
+        : widget.isLocal
+            ? media_kit.Video(
+                controller: controller,
+                controls: media_kit.AdaptiveVideoControls,
+              )
+            : _ytController != null
+                ? YoutubePlayerScaffold(
+                    controller: _ytController!,
+                    aspectRatio: 16 / 9,
+                    builder: (context, player) => player,
+                  )
+                : const Center(child: Text("Invalid YouTube video")),
+
+
             ),
           ),
           Expanded(
