@@ -37,7 +37,7 @@ class _HtmlViewerState extends State<HtmlViewer> {
 
   // Base URL for remote content if the provided URL is relative.
   // Consider making this configurable if needed.
-  static const String baseUrl = "https://lessonservice.amtprinting19.com/api/lessons";
+  static const String baseUrl = "https://lessonservice.amtprinting19.com/";
 
   // Subscription to listen for connectivity changes (optional, but can be useful)
   // StreamSubscription<ConnectivityResult>? _connectivitySubscription;
