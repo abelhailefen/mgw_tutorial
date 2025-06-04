@@ -971,7 +971,5 @@ class AppLocalizationsTi extends AppLocalizations {
   String get fileDownloadedTooltip => 'File downloaded';
 
   @override
-  String couldNotLoadItem(Object itemUrl) {
-    return 'Could not load $itemUrl';
-  }
+  String get couldNotLoadItem => 'Could not load';
 }

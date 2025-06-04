@@ -1929,8 +1929,8 @@ abstract class AppLocalizations {
   /// No description provided for @couldNotLoadItem.
   ///
   /// In en, this message translates to:
-  /// **'Could not load {itemUrl}'**
-  String couldNotLoadItem(Object itemUrl);
+  /// **'Could not load'**
+  String get couldNotLoadItem;
 }
 
 class _AppLocalizationsDelegate
