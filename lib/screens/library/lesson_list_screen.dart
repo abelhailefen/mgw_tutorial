@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:mgw_tutorial/l10n/app_localizations.dart';
-
 import 'package:mgw_tutorial/models/lesson.dart';
 import 'package:mgw_tutorial/models/section.dart';
 import 'package:mgw_tutorial/provider/lesson_provider.dart';
 import 'package:mgw_tutorial/utils/download_status.dart';
 import 'package:mgw_tutorial/screens/video_player_screen.dart';
 import 'package:mgw_tutorial/screens/pdf_reader_screen.dart';
-import 'package:mgw_tutorial/screens/exam_viewer_screen.dart';
+import 'package:mgw_tutorial/screens/html_viewer.dart';
 import 'package:mgw_tutorial/constants/color.dart';
 
 class LessonListScreen extends StatefulWidget {
@@ -62,169 +61,139 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     String? localFilePath;
 
     if (downloadId != null) {
-        downloadStatus = lessonProvider.getDownloadStatusNotifier(downloadId).value;
-        if(downloadStatus == DownloadStatus.downloaded) {
-            localFilePath = await lessonProvider.getDownloadedFilePath(lesson);
+      downloadStatus = lessonProvider.getDownloadStatusNotifier(downloadId).value;
+      if (downloadStatus == DownloadStatus.downloaded) {
+        localFilePath = await lessonProvider.getDownloadedFilePath(lesson);
+      }
+      if (downloadStatus == DownloadStatus.downloaded &&
+          (localFilePath == null || localFilePath.isEmpty || !await File(localFilePath).exists())) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.errorContainer,
+              content: Text(l10n.couldNotFindDownloadedFileError),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
         }
-         if (downloadStatus == DownloadStatus.downloaded && (localFilePath == null || localFilePath.isEmpty || !await File(localFilePath).exists())) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                     backgroundColor: AppColors.errorContainer,
-                    content: Text(l10n.couldNotFindDownloadedFileError),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-              localFilePath = null;
-              downloadStatus = DownloadStatus.notDownloaded;
-         }
+        localFilePath = null;
+        downloadStatus = DownloadStatus.notDownloaded;
+      }
     }
 
     if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
       final List<Lesson> allLessonsForSection = lessonProvider.lessonsForSection(widget.section.id);
 
       if (localFilePath != null && downloadStatus == DownloadStatus.downloaded) {
-          if (mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (ctx) => VideoPlayerScreen(
-                    videoTitle: lesson.title,
-                    videoPath: localFilePath!,
-                    originalVideoUrl: lesson.videoUrl,
-                    lessons: allLessonsForSection,
-                    isLocal: true,
-                  ),
-                ),
-              );
-          }
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (ctx) => VideoPlayerScreen(
+                videoTitle: lesson.title,
+                videoPath: localFilePath!,
+                originalVideoUrl: lesson.videoUrl,
+                lessons: allLessonsForSection,
+                isLocal: true,
+              ),
+            ),
+          );
+        }
       } else if (downloadStatus == DownloadStatus.downloading) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-               backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
+              backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
               content: Text(l10n.videoIsDownloadingMessage),
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
-      }
-      else {
-         if (mounted) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (ctx) => VideoPlayerScreen(
-                  videoTitle: lesson.title,
-                  videoPath: '',
-                  originalVideoUrl: lesson.videoUrl,
-                  lessons: allLessonsForSection,
-                  isLocal: false,
-                ),
+      } else {
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (ctx) => VideoPlayerScreen(
+                videoTitle: lesson.title,
+                videoPath: '',
+                originalVideoUrl: lesson.videoUrl,
+                lessons: allLessonsForSection,
+                isLocal: false,
               ),
-            );
-         }
+            ),
+          );
+        }
       }
     } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
-       if (localFilePath != null && downloadStatus == DownloadStatus.downloaded) {
-           if (mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (ctx) => PdfReaderScreen(
-                    pdfUrl: localFilePath!,
-                    title: lesson.title,
-                    isLocal: true,
-                  ),
-                ),
-              );
-           }
-       } else if (downloadStatus == DownloadStatus.downloading) {
-           if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(
-               SnackBar(
-                  backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
-                 content: Text(l10n.documentIsDownloadingMessage),
-                 behavior: SnackBarBehavior.floating,
-               ),
-             );
-           }
-       }
-       else {
-          if (mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (ctx) => PdfReaderScreen(
-                    pdfUrl: lesson.attachmentUrl!,
-                    title: lesson.title,
-                    isLocal: false,
-                  ),
-                ),
-              );
-           }
-       }
-    } else if (lesson.lessonType == LessonType.quiz && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty) {
-       if (localFilePath != null && downloadStatus == DownloadStatus.downloaded) {
-           if (mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (ctx) => ExamViewerScreen(
-                    url: 'file://$localFilePath',
-                    title: lesson.title,
-                  ),
-                ),
-              );
-           }
-       } else if (downloadStatus == DownloadStatus.downloading) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                   backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
-                  content: Text(l10n.quizIsDownloadingMessage ?? l10n.documentIsDownloadingMessage),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-       }
-       else {
-          if (mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (ctx) => ExamViewerScreen(
-                    url: lesson.htmlUrl!,
-                    title: lesson.title,
-                  ),
-                ),
-              );
-           }
-       }
-    }
-     else if (lesson.lessonType == LessonType.text && lesson.summary != null && lesson.summary!.isNotEmpty) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (dCtx) => AlertDialog(
-            backgroundColor: isDarkMode ? AppColors.surfaceDark : AppColors.surfaceLight,
-            title: Text(lesson.title, style: theme.textTheme.titleLarge),
-            content: SingleChildScrollView(child: Text(lesson.summary ?? l10n.noTextContent, style: theme.textTheme.bodyLarge)),
-            actions: [
-              TextButton(
-                child: Text(l10n.closeButtonText, style: TextStyle(color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight)),
-                onPressed: () => Navigator.of(dCtx).pop(),
+      if (localFilePath != null && downloadStatus == DownloadStatus.downloaded) {
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (ctx) => PdfReaderScreen(
+                pdfUrl: localFilePath!,
+                title: lesson.title,
+                isLocal: true,
               ),
-            ],
-          ),
-        );
+            ),
+          );
+        }
+      } else if (downloadStatus == DownloadStatus.downloading) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
+              content: Text(l10n.documentIsDownloadingMessage),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (ctx) => PdfReaderScreen(
+                pdfUrl: lesson.attachmentUrl!,
+                title: lesson.title,
+                isLocal: false,
+              ),
+            ),
+          );
+        }
       }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
-            content: Text(l10n.noLaunchableContent(lesson.title)),
-            behavior: SnackBarBehavior.floating,
+    } else if (lesson.lessonType == LessonType.quiz && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty) {
+  if (downloadStatus == DownloadStatus.downloaded && localFilePath != null) {
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (ctx) => HtmlViewer(
+            url: localFilePath!, 
+            title: lesson.title,
           ),
-        );
-      }
+        ),
+      );
     }
+  } else if (downloadStatus == DownloadStatus.downloading) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
+          content: Text(l10n.quizIsDownloadingMessage ?? l10n.documentIsDownloadingMessage),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  } else {
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (ctx) => HtmlViewer(
+            url: lesson.htmlUrl!, // Non-null due to check
+            title: lesson.title,
+          ),
+        ),
+      );
+    }
+  }
+}
   }
 
   Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider lessonProv) {
@@ -235,41 +204,41 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     final isQuiz = lesson.lessonType == LessonType.quiz;
 
     if (!isVideo && !isDocument && !isQuiz) {
-       return const SizedBox.shrink();
+      return const SizedBox.shrink();
     }
 
-     if ((isVideo && (lesson.videoUrl == null || lesson.videoUrl!.isEmpty)) ||
-         (isDocument && (lesson.attachmentUrl == null || lesson.attachmentUrl!.isEmpty)) ||
-         (isQuiz && (lesson.htmlUrl == null || lesson.htmlUrl!.isEmpty))) {
-         return SizedBox(
-           width: 40,
-           height: 40,
-           child: Center(
-             child: Icon(
-               Icons.cloud_off_outlined,
-                color: (Theme.of(context).brightness == Brightness.dark ? AppColors.iconDark : AppColors.iconLight).withOpacity(0.3),
-               size: 24.0, // Corrected typo here
-             ),
-           ),
-         );
-      }
+    if ((isVideo && (lesson.videoUrl == null || lesson.videoUrl!.isEmpty)) ||
+        (isDocument && (lesson.attachmentUrl == null || lesson.attachmentUrl!.isEmpty)) ||
+        (isQuiz && (lesson.htmlUrl == null || lesson.htmlUrl!.isEmpty))) {
+      return SizedBox(
+        width: 40,
+        height: 40,
+        child: Center(
+          child: Icon(
+            Icons.cloud_off_outlined,
+            color: (Theme.of(context).brightness == Brightness.dark ? AppColors.iconDark : AppColors.iconLight).withOpacity(0.3),
+            size: 24.0,
+          ),
+        ),
+      );
+    }
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     final String? downloadId = lessonProv.getDownloadId(lesson);
 
     if (downloadId == null) {
-         return SizedBox(
-           width: 40,
-           height: 40,
-           child: Center(
-             child: Icon(
-               Icons.cloud_off_outlined,
-                color: (isDarkMode ? AppColors.iconDark : AppColors.iconLight).withOpacity(0.3),
-               size: 24.0, // Corrected typo here
-             ),
-           ),
-         );
+      return SizedBox(
+        width: 40,
+        height: 40,
+        child: Center(
+          child: Icon(
+            Icons.cloud_off_outlined,
+            color: (isDarkMode ? AppColors.iconDark : AppColors.iconLight).withOpacity(0.3),
+            size: 24.0,
+          ),
+        ),
+      );
     }
 
     return SizedBox(
@@ -285,17 +254,17 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
               IconData icon;
               String tooltip;
               if (isVideo) {
-                 icon = Icons.download_for_offline_outlined;
-                 tooltip = l10n.downloadVideoTooltip;
+                icon = Icons.download_for_offline_outlined;
+                tooltip = l10n.downloadVideoTooltip;
               } else if (isDocument) {
-                 icon = Icons.download_for_offline_outlined;
-                 tooltip = l10n.downloadDocumentTooltip;
-              } else { // isQuiz
-                 icon = Icons.download_for_offline_outlined;
-                 tooltip = l10n.downloadQuizTooltip ?? l10n.downloadDocumentTooltip;
+                icon = Icons.download_for_offline_outlined;
+                tooltip = l10n.downloadDocumentTooltip;
+              } else {
+                icon = Icons.download_for_offline_outlined;
+                tooltip = l10n.downloadQuizTooltip ?? l10n.downloadDocumentTooltip;
               }
               return IconButton(
-                 icon: Icon(icon, color: isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight),
+                icon: Icon(icon, color: isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight),
                 tooltip: tooltip,
                 iconSize: 24,
                 padding: EdgeInsets.zero,
@@ -322,7 +291,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                           color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight,
                         ),
                       ),
-                       if (progressText.isNotEmpty)
+                      if (progressText.isNotEmpty)
                         Text(
                           progressText,
                           style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
@@ -346,23 +315,23 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                 },
               );
             case DownloadStatus.downloaded:
-               IconData downloadedIcon;
-               String downloadedTooltip;
-               if (isVideo) {
-                 downloadedIcon = Icons.play_circle_outline_rounded;
-                 downloadedTooltip = l10n.playDownloadedVideoTooltip;
-               } else if (isDocument) {
-                 downloadedIcon = Icons.description;
-                 downloadedTooltip = l10n.openDownloadedDocumentTooltip;
-               } else { // isQuiz
-                  downloadedIcon = Icons.quiz_outlined;
-                  downloadedTooltip = l10n.openDownloadedQuizTooltip ?? l10n.openDownloadedDocumentTooltip;
-               }
+              IconData downloadedIcon;
+              String downloadedTooltip;
+              if (isVideo) {
+                downloadedIcon = Icons.play_circle_outline_rounded;
+                downloadedTooltip = l10n.playDownloadedVideoTooltip;
+              } else if (isDocument) {
+                downloadedIcon = Icons.description;
+                downloadedTooltip = l10n.openDownloadedDocumentTooltip;
+              } else {
+                downloadedIcon = Icons.quiz_outlined;
+                downloadedTooltip = l10n.openDownloadedQuizTooltip ?? l10n.openDownloadedDocumentTooltip;
+              }
 
               return IconButton(
                 icon: Icon(
                   downloadedIcon,
-                   color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight
+                  color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight,
                 ),
                 tooltip: downloadedTooltip,
                 iconSize: 24,
@@ -413,12 +382,17 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         typeDescription = l10n.unknownItemType;
     }
 
-    final String? downloadIdForStatus = (lesson.lessonType == LessonType.video || lesson.lessonType == LessonType.document || lesson.lessonType == LessonType.quiz)
+    final String? downloadIdForStatus = (lesson.lessonType == LessonType.video ||
+            lesson.lessonType == LessonType.document ||
+            lesson.lessonType == LessonType.quiz)
         ? lessonProv.getDownloadId(lesson)
         : null;
 
     Widget deleteButton = const SizedBox.shrink();
-    if (downloadIdForStatus != null && (lesson.lessonType == LessonType.video || lesson.lessonType == LessonType.document || lesson.lessonType == LessonType.quiz)) {
+    if (downloadIdForStatus != null &&
+        (lesson.lessonType == LessonType.video ||
+            lesson.lessonType == LessonType.document ||
+            lesson.lessonType == LessonType.quiz)) {
       deleteButton = SizedBox(
         width: 40,
         height: 40,
@@ -443,13 +417,16 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     }
 
     final bool showDownloadButton = lesson.lessonType == LessonType.video ||
-                                     lesson.lessonType == LessonType.document ||
-                                     lesson.lessonType == LessonType.quiz;
+        lesson.lessonType == LessonType.document ||
+        lesson.lessonType == LessonType.quiz;
 
-    final bool hasDownloadUrl = (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) ||
-                                (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) ||
-                                (lesson.lessonType == LessonType.quiz && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty);
-
+    final bool hasDownloadUrl = (lesson.lessonType == LessonType.video &&
+            lesson.videoUrl != null &&
+            lesson.videoUrl!.isNotEmpty) ||
+        (lesson.lessonType == LessonType.document &&
+            lesson.attachmentUrl != null &&
+            lesson.attachmentUrl!.isNotEmpty) ||
+        (lesson.lessonType == LessonType.quiz && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty);
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
@@ -459,23 +436,23 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         leading: IconButton(
-           icon: Icon(lessonIcon, color: iconColor, size: 36),
-           onPressed: lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty
-            ? () {
-                final allLessonsForSection = lessonProv.lessonsForSection(widget.section.id);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (ctx) => VideoPlayerScreen(
-                      videoTitle: lesson.title,
-                      videoPath: '',
-                      originalVideoUrl: lesson.videoUrl!,
-                      lessons: allLessonsForSection,
-                      isLocal: false,
+          icon: Icon(lessonIcon, color: iconColor, size: 36),
+          onPressed: lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty
+              ? () {
+                  final allLessonsForSection = lessonProv.lessonsForSection(widget.section.id);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (ctx) => VideoPlayerScreen(
+                        videoTitle: lesson.title,
+                        videoPath: '',
+                        originalVideoUrl: lesson.videoUrl!,
+                        lessons: allLessonsForSection,
+                        isLocal: false,
+                      ),
                     ),
-                  ),
-                );
-              }
-            : null,
+                  );
+                }
+              : null,
         ),
         title: Text(lesson.title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500)),
         subtitle: lesson.summary != null && lesson.summary!.isNotEmpty
@@ -489,8 +466,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                 padding: const EdgeInsets.only(right: 8.0),
                 child: Text(lesson.duration!, style: theme.textTheme.bodySmall),
               ),
-            if (showDownloadButton && hasDownloadUrl)
-              _buildDownloadButton(context, lesson, lessonProv),
+            if (showDownloadButton && hasDownloadUrl) _buildDownloadButton(context, lesson, lessonProv),
             deleteButton,
           ],
         ),
@@ -499,7 +475,8 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildTabContent(BuildContext context, List<Lesson> lessons, LessonProvider lessonProv, LessonType filterType, String noContentMessage, IconData emptyIcon, {bool isNotesTab = false}) {
+  Widget _buildTabContent(BuildContext context, List<Lesson> lessons, LessonProvider lessonProv, LessonType filterType,
+      String noContentMessage, IconData emptyIcon, {bool isNotesTab = false}) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -512,7 +489,8 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
 
     if (isLoadingInitial && lessons.isEmpty) {
       return Center(
-        child: CircularProgressIndicator(color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight));
+        child: CircularProgressIndicator(color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight),
+      );
     }
 
     if (errorInitial != null && lessons.isEmpty) {
@@ -559,18 +537,17 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleMedium?.copyWith(color: (isDarkMode ? AppColors.onSurfaceDark : AppColors.onSurfaceLight).withOpacity(0.7)),
               ),
-               if ((lessons.isNotEmpty || errorInitial != null) && !isLoadingInitial)
-                 const SizedBox(height: 20),
-                 if ((lessons.isNotEmpty || errorInitial != null) && !isLoadingInitial)
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.refresh),
-                    label: Text(l10n.refresh),
-                    onPressed: isLoadingInitial ? null : _refreshLessons,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight,
-                      foregroundColor: isDarkMode ? AppColors.onPrimaryDark : AppColors.onPrimaryLight,
-                    ),
+              if ((lessons.isNotEmpty || errorInitial != null) && !isLoadingInitial) const SizedBox(height: 20),
+              if ((lessons.isNotEmpty || errorInitial != null) && !isLoadingInitial)
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  label: Text(l10n.refresh),
+                  onPressed: isLoadingInitial ? null : _refreshLessons,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight,
+                    foregroundColor: isDarkMode ? AppColors.onPrimaryDark : AppColors.onPrimaryLight,
                   ),
+                ),
             ],
           ),
         ),
@@ -583,7 +560,6 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       itemBuilder: (ctx, index) => _buildLessonItem(context, filteredLessons[index], lessonProv),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -607,20 +583,21 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         appBar: AppBar(
           title: Text(widget.section.title, overflow: TextOverflow.ellipsis),
           backgroundColor: dynamicAppBarBackground,
-           titleSpacing: 0,
+          titleSpacing: 0,
         ),
         body: Center(
-          child: CircularProgressIndicator(color: dynamicPrimaryColor)),
+          child: CircularProgressIndicator(color: dynamicPrimaryColor),
+        ),
       );
     }
 
     if (error != null && lessons.isEmpty && !isLoading) {
-       return Scaffold(
+      return Scaffold(
         backgroundColor: dynamicScaffoldBackground,
         appBar: AppBar(
           title: Text(widget.section.title, overflow: TextOverflow.ellipsis),
           backgroundColor: dynamicAppBarBackground,
-           titleSpacing: 0,
+          titleSpacing: 0,
         ),
         body: Center(
           child: Padding(
@@ -674,11 +651,11 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                   style: theme.textTheme.titleMedium?.copyWith(color: dynamicOnSurfaceColor),
                 ),
                 const SizedBox(height: 20),
-                 ElevatedButton.icon(
+                ElevatedButton.icon(
                   icon: const Icon(Icons.refresh),
                   label: Text(l10n.refresh),
                   onPressed: isLoading ? null : _refreshLessons,
-                   style: ElevatedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
                     backgroundColor: dynamicPrimaryColor,
                     foregroundColor: dynamicOnPrimaryColor,
                   ),
@@ -709,45 +686,45 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
           ],
         ),
       ),
-     body: TabBarView(
-      controller: _tabController,
-      children: [
-        RefreshIndicator(
-          onRefresh: _refreshLessons,
-          child: _buildTabContent(
-            context,
-            lessons,
-            lessonProvider,
-            LessonType.video,
-            l10n.noVideosAvailable,
-            Icons.video_library_outlined,
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          RefreshIndicator(
+            onRefresh: _refreshLessons,
+            child: _buildTabContent(
+              context,
+              lessons,
+              lessonProvider,
+              LessonType.video,
+              l10n.noVideosAvailable,
+              Icons.video_library_outlined,
+            ),
           ),
-        ),
-        RefreshIndicator(
-          onRefresh: _refreshLessons,
-          child: _buildTabContent(
-            context,
-            lessons,
-            lessonProvider,
-            LessonType.text,
-            l10n.noNotesAvailable,
-            Icons.notes_outlined,
-            isNotesTab: true,
+          RefreshIndicator(
+            onRefresh: _refreshLessons,
+            child: _buildTabContent(
+              context,
+              lessons,
+              lessonProvider,
+              LessonType.text,
+              l10n.noNotesAvailable,
+              Icons.notes_outlined,
+              isNotesTab: true,
+            ),
           ),
-        ),
-        RefreshIndicator(
-          onRefresh: _refreshLessons,
-          child: _buildTabContent(
-            context,
-            lessons,
-            lessonProvider,
-            LessonType.quiz,
-            l10n.noExamsAvailable,
-            Icons.quiz_outlined,
+          RefreshIndicator(
+            onRefresh: _refreshLessons,
+            child: _buildTabContent(
+              context,
+              lessons,
+              lessonProvider,
+              LessonType.quiz,
+              l10n.noExamsAvailable,
+              Icons.quiz_outlined,
+            ),
           ),
-        ),
-      ],
-    ),
+        ],
+      ),
     );
   }
 }
