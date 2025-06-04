@@ -1,16 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// import 'package:url_launcher/url_launcher.dart'; // Not used
 import 'package:mgw_tutorial/l10n/app_localizations.dart';
-import 'package:mgw_tutorial/models/lesson.dart'; // Ensure LessonType is defined here
+import 'package:mgw_tutorial/models/lesson.dart';
 import 'package:mgw_tutorial/models/section.dart';
-import 'package:mgw_tutorial/provider/lesson_provider.dart'; // Assumed provider
-import 'package:mgw_tutorial/utils/download_status.dart'; // Assumed enum
-import 'package:mgw_tutorial/screens/video_player_screen.dart'; // Assumed screen
-import 'package:mgw_tutorial/screens/pdf_reader_screen.dart'; // Assumed screen
-import 'package:mgw_tutorial/screens/html_viewer.dart'; // Assumed screen (updated)
-import 'package:mgw_tutorial/constants/color.dart'; // Assumed AppColors are defined here
+import 'package:mgw_tutorial/provider/lesson_provider.dart';
+import 'package:mgw_tutorial/utils/download_status.dart';
+import 'package:mgw_tutorial/screens/video_player_screen.dart';
+import 'package:mgw_tutorial/screens/pdf_reader_screen.dart';
+import 'package:mgw_tutorial/screens/html_viewer.dart';
+import 'package:mgw_tutorial/constants/color.dart';
 
 class LessonListScreen extends StatefulWidget {
   static const routeName = '/lesson-list';
@@ -64,38 +63,32 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     if (downloadId != null) {
       downloadStatus = lessonProvider.getDownloadStatusNotifier(downloadId).value;
       if (downloadStatus == DownloadStatus.downloaded) {
-        localFilePath = await lessonProvider.getDownloadedFilePath(lesson); // This gives the raw path, e.g., /data/...
-        // Verify the local file exists before proceeding
-        if (localFilePath == null || localFilePath.isEmpty || !await File(localFilePath).exists()) {
-          print('Error: Downloaded file not found at path: $localFilePath (Download ID: $downloadId)');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: AppColors.errorContainer,
-                content: Text(l10n.couldNotFindDownloadedFileError),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-          localFilePath = null; // Clear invalid path
-          downloadStatus = DownloadStatus.notDownloaded; // Reset status
-        } else {
-           print('Downloaded file confirmed found at path: $localFilePath (Download ID: $downloadId)');
+        localFilePath = await lessonProvider.getDownloadedFilePath(lesson);
+      }
+      if (downloadStatus == DownloadStatus.downloaded &&
+          (localFilePath == null || localFilePath.isEmpty || !await File(localFilePath).exists())) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.errorContainer,
+              content: Text(l10n.couldNotFindDownloadedFileError),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
         }
+        localFilePath = null;
+        downloadStatus = DownloadStatus.notDownloaded;
       }
     }
 
-    // Determine the content URL/path to use and whether it's local
-    String? contentUrl; // This will hold the raw path for local, or the online URL
-    bool isLocal = false; // Flag indicating if we should attempt local load
+    String? contentUrl;
+    bool isLocal = false;
 
     if (downloadStatus == DownloadStatus.downloaded && localFilePath != null) {
-        // Use local file path if downloaded and exists
-        contentUrl = localFilePath; // This is the raw path
+        contentUrl = localFilePath;
         isLocal = true;
     } else if (downloadStatus == DownloadStatus.downloading) {
-        // Show message if currently downloading
-        String message = l10n.documentIsDownloadingMessage; // Use document fallback
+        String message = l10n.documentIsDownloadingMessage;
         if (lesson.lessonType == LessonType.video) message = l10n.videoIsDownloadingMessage;
         else if (lesson.lessonType == LessonType.quiz) message = l10n.quizIsDownloadingMessage ?? l10n.documentIsDownloadingMessage;
 
@@ -108,44 +101,38 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
              ),
            );
         }
-        return; // Stop here if downloading
+        return;
     } else {
-        // Attempt to use the online URL if not downloaded or found locally
         if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) contentUrl = lesson.videoUrl;
         else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) contentUrl = lesson.attachmentUrl;
         else if (lesson.lessonType == LessonType.quiz && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty) contentUrl = lesson.htmlUrl;
-        else if (lesson.lessonType == LessonType.text && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty) contentUrl = lesson.htmlUrl; // Text lessons also use htmlUrl
-        isLocal = false; // It's an online URL
+        else if (lesson.lessonType == LessonType.text && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty) contentUrl = lesson.htmlUrl;
     }
 
-    // If we don't have a URL/path at this point, content is not available (online or offline)
     if (contentUrl == null || contentUrl.isEmpty) {
         print('Error: No valid content URL/path available for lesson: ${lesson.title} (Type: ${lesson.lessonType})');
         if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
                SnackBar(
                  backgroundColor: AppColors.errorContainer,
-                 // Fix: Pass lesson.title as a positional argument to itemNotAvailable
-                 content: Text(l10n.itemNotAvailable(lesson.title)),
+                 content: Text(l10n.itemNotAvailable(lesson.title)), // Fixed localization call
                  behavior: SnackBarBehavior.floating,
                ),
              );
         }
-        return; // Stop execution
+        return;
     }
 
-    // Navigate based on lesson type and whether it's local or online
     if (mounted) {
-      final allLessonsForSection = lessonProvider.lessonsForSection(widget.section.id); // Fetch once if needed
+      final allLessonsForSection = lessonProvider.lessonsForSection(widget.section.id);
 
       if (lesson.lessonType == LessonType.video) {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (ctx) => VideoPlayerScreen(
               videoTitle: lesson.title,
-              // Fix: Assert contentUrl is not null when isLocal is true (which it is by logic)
-              videoPath: isLocal ? contentUrl! : '',
-              originalVideoUrl: isLocal ? lesson.videoUrl : contentUrl, // Pass original URL for online/fallback logic inside player
+              videoPath: isLocal ? contentUrl! : '', // Fixed nullable string assignment
+              originalVideoUrl: isLocal ? lesson.videoUrl : contentUrl,
               lessons: allLessonsForSection,
               isLocal: isLocal,
             ),
@@ -155,30 +142,24 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
          Navigator.of(context).push(
           MaterialPageRoute(
             builder: (ctx) => PdfReaderScreen(
-              // Fix: Assert contentUrl is not null here as we checked above
-              pdfUrl: contentUrl!,
+              pdfUrl: contentUrl!, // Fixed nullable string assignment
               title: lesson.title,
               isLocal: isLocal,
             ),
           ),
         );
       } else if (lesson.lessonType == LessonType.quiz || lesson.lessonType == LessonType.text) {
-         // *** THIS IS THE CRUCIAL PART FOR HTMLViewer ***
-         // HtmlViewer expects a 'file://' URI for local files, NOT the raw path.
-         // It expects an HTTP/HTTPS URL for online files.
-         final String viewerUrl = isLocal ? Uri.file(contentUrl!).toString() : contentUrl!; // Fix: Assert contentUrl is not null
+         final String viewerUrl = isLocal ? Uri.file(contentUrl!).toString() : contentUrl!; // Fixed nullable string assignment
 
          Navigator.of(context).push(
            MaterialPageRoute(
              builder: (ctx) => HtmlViewer(
-               // Pass the correctly formatted URL/URI to HtmlViewer
                url: viewerUrl,
                title: lesson.title,
              ),
            ),
          );
       }
-      // Add other lesson types here if needed
     }
   }
 
@@ -213,7 +194,6 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     }
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     final String? downloadId = lessonProv.getDownloadId(lesson);
 
     if (downloadId == null) {
@@ -227,7 +207,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
        );
     }
 
-
+    // The main container for the button area (40x40)
     return SizedBox(
       width: 40,
       height: 40,
@@ -243,7 +223,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
               if (isVideo) tooltip = l10n.downloadVideoTooltip;
               else if (isDocument) tooltip = l10n.downloadDocumentTooltip;
               else if (isQuiz) tooltip = l10n.downloadQuizTooltip ?? l10n.downloadDocumentTooltip;
-              else tooltip = l10n.downloadDocumentTooltip; // Fallback
+              else tooltip = l10n.documentIsDownloadingMessage; // Fallback tooltip
 
               return IconButton(
                 icon: Icon(icon, color: isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight),
@@ -260,9 +240,13 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                 builder: (context, progress, _) {
                   final safeProgress = progress.clamp(0.0, 1.0);
                   final progressText = safeProgress > 0 && safeProgress < 1 ? "${(safeProgress * 100).toInt()}%" : "";
+
+                  // Stack to position indicator, text, and cancel button
                   return Stack(
                     alignment: Alignment.center,
+                    clipBehavior: Clip.none, // Allow overflow so cancel button is visible
                     children: [
+                      // Circular Progress Indicator (centered)
                       SizedBox(
                         width: 28,
                         height: 28,
@@ -273,23 +257,25 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                           color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight,
                         ),
                       ),
+                      // Progress Text (centered)
                       if (progressText.isNotEmpty)
                         Text(
                           progressText,
                           style: theme.textTheme.bodySmall?.copyWith(fontSize: 10, color: isDarkMode ? AppColors.onSurfaceDark : AppColors.onSurfaceLight),
                         ),
+                      // Cancel Button (positioned near the top right)
                       Positioned(
-                        right: -8,
-                        top: -8,
+                        right: -8, // Adjusted position slightly outside the 40x40 boundary
+                        top: -8,  // Adjusted position slightly outside the 40x40 boundary
                         child: GestureDetector(
+                           onTap: () {
+                              lessonProv.cancelDownload(lesson);
+                           },
                            child: Icon(
                              Icons.cancel,
                              size: 18,
                              color: AppColors.error,
                            ),
-                           onTap: () {
-                              lessonProv.cancelDownload(lesson);
-                           },
                         ),
                       ),
                     ],
