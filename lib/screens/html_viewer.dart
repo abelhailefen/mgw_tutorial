@@ -1,15 +1,11 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:mgw_tutorial/constants/color.dart';
 import 'package:mgw_tutorial/l10n/app_localizations.dart';
-
 
 class HtmlViewer extends StatefulWidget {
   final String url;
@@ -25,147 +21,179 @@ class _HtmlViewerState extends State<HtmlViewer> {
   WebViewController? _controller;
   bool _isLoading = true;
   bool _hasConnection = false;
-  bool _isDownloaded = false;
-  bool _isDownloading = false;
   String? _errorMessage;
-  String? _localFilePath;
-  AppLocalizations? _l10n; // Class-level l10n
+  AppLocalizations? _l10n;
 
-  static String baseUrl = "https://lessonservice.amtprinting19.com/api/lessons";
+  static const String baseUrl = "https://lessonservice.amtprinting19.com/api/lessons";
 
   @override
   void initState() {
     super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _l10n = AppLocalizations.of(context);
     _initHtmlViewer();
   }
 
   Future<void> _initHtmlViewer() async {
-    _l10n = AppLocalizations.of(context); // Initialize l10n
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    if (!mounted) return;
 
-    final connection = await Connectivity().checkConnectivity();
-    _hasConnection = connection != ConnectivityResult.none;
+    try {
+      print('Initializing HtmlViewer with URL: ${widget.url}');
 
-    // Check if the URL is a local file path
-    final isLocalUrl = widget.url.startsWith('/');
+      // Check connectivity
+      final connection = await Connectivity().checkConnectivity();
+      _hasConnection = connection != ConnectivityResult.none;
+      print('Connectivity: ${_hasConnection ? 'Online' : 'Offline'}');
 
-    if (isLocalUrl) {
-      _isDownloaded = true;
-      _localFilePath = widget.url;
-      _loadLocalHtml(_localFilePath!);
-    } else {
-      final fullUrl = widget.url.startsWith('http') ? widget.url : '$baseUrl${widget.url}';
-      final hash = md5.convert(utf8.encode(fullUrl)).toString();
-      final fileName = '${widget.title.replaceAll(" ", "_")}_$hash.html';
+      // Check if the URL is a local file path
+      final isLocalUrl = widget.url.startsWith('file://') || (await File(widget.url).exists());
+      print('Is local URL: $isLocalUrl (URL: ${widget.url})');
 
-      final dir = await getApplicationDocumentsDirectory();
-      final filePath = '${dir.path}/$fileName';
-      final file = File(filePath);
-      final exists = await file.exists();
-
-      if (exists) {
-        _isDownloaded = true;
-        _localFilePath = filePath;
-        _loadLocalHtml(_localFilePath!);
-      } else if (_hasConnection) {
-        _loadOnlineHtml(fullUrl);
+      if (isLocalUrl) {
+        final localPath = widget.url.startsWith('file://') ? widget.url.substring(7) : widget.url;
+        print('Loading local file: $localPath');
+        await _loadLocalHtml(localPath);
       } else {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = _l10n!.errorLoadingData; // Use existing key
-        });
+        final fullUrl = widget.url.startsWith('http') ? widget.url : '$baseUrl${widget.url.startsWith('/') ? '' : '/'}${widget.url}';
+        print('Full URL: $fullUrl');
+
+        if (_hasConnection) {
+          if (!Uri.parse(fullUrl).isAbsolute) {
+            setState(() {
+              _isLoading = false;
+              _errorMessage = _l10n?.errorLoadingData ?? 'Invalid URL: $fullUrl';
+            });
+            print('Invalid URL: $fullUrl');
+            return;
+          }
+          await _loadOnlineHtml(fullUrl).timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              setState(() {
+                _isLoading = false;
+                _errorMessage = _l10n?.errorLoadingData ?? 'Timeout loading $fullUrl';
+              });
+              print('Timeout loading $fullUrl');
+            },
+          );
+        } else {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = _l10n?.errorLoadingData ?? 'No internet connection';
+          });
+          print('No internet connection');
+        }
       }
+    } catch (e, stackTrace) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '${_l10n?.couldNotLoadItem ?? 'Failed to load'}: $e';
+        print('Error in _initHtmlViewer: $e\n$stackTrace');
+      });
     }
   }
 
-  void _loadOnlineHtml(String url) {
-    final controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) => setState(() => _isLoading = true),
-          onPageFinished: (_) => setState(() => _isLoading = false),
-          onWebResourceError: (_) => setState(() {
-            _isLoading = false;
-            _errorMessage = _l10n!.couldNotLoadItem(url); // Use existing key
-          }),
-        ),
-      )
-      ..loadRequest(Uri.parse(url));
-
-    setState(() {
-      _controller = controller;
-      _isLoading = true;
-    });
-  }
-
-  void _loadLocalHtml(String path) {
-    final controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) => setState(() => _isLoading = true),
-          onPageFinished: (_) => setState(() => _isLoading = false),
-          onWebResourceError: (_) => setState(() {
-            _isLoading = false;
-            _errorMessage = _l10n!.couldNotOpenFileError(path); // Use existing key
-          }),
-        ),
-      )
-      ..loadFile(path);
-
-    setState(() {
-      _controller = controller;
-      _isLoading = true;
-    });
-  }
-
-  Future<void> _downloadHtml() async {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    setState(() {
-      _isDownloading = true;
-    });
-
-    final fullUrl = widget.url.startsWith('http') ? widget.url : '$baseUrl${widget.url}';
-    final hash = md5.convert(utf8.encode(fullUrl)).toString();
-    final fileName = '${widget.title.replaceAll(" ", "_")}_$hash.html';
+  Future<void> _loadOnlineHtml(String url) async {
+    if (!mounted) return;
 
     try {
-      final response = await http.get(Uri.parse(fullUrl));
-      if (response.statusCode == 200) {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/$fileName');
-        await file.writeAsString(response.body);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_l10n!.fileDownloadedTooltip), // Use existing key
-            backgroundColor: isDarkMode ? AppColors.secondaryContainerDark : AppColors.secondaryContainerLight,
+      print('Loading online HTML: $url');
+      final controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(Theme.of(context).scaffoldBackgroundColor)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageStarted: (_) {
+              print('WebView: Page started loading: $url');
+              setState(() => _isLoading = true);
+            },
+            onPageFinished: (_) {
+              print('WebView: Page finished loading: $url');
+              setState(() => _isLoading = false);
+            },
+            onWebResourceError: (error) {
+              print('WebView error for $url: ${error.description}');
+              setState(() {
+                _isLoading = false;
+                _errorMessage = '${_l10n?.couldNotLoadItem ?? 'Failed to load'}: ${error.description}';
+                _controller = null;
+              });
+            },
           ),
         );
 
-        setState(() {
-          _isDownloaded = true;
-          _localFilePath = file.path;
-        });
-
-        if (!_hasConnection) {
-          _loadLocalHtml(file.path);
-        }
-      } else {
-        throw Exception('Status: ${response.statusCode}');
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_l10n!.couldNotLoadItem(e.toString())), // Use existing key
-          backgroundColor: AppColors.errorContainer,
-        ),
-      );
-    } finally {
+      await controller.loadRequest(Uri.parse(url));
       setState(() {
-        _isDownloading = false;
+        _controller = controller;
+        _isLoading = true;
+      });
+    } catch (e, stackTrace) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '${_l10n?.couldNotLoadItem ?? 'Failed to load'}: $e';
+        _controller = null;
+        print('Error loading online HTML: $e\n$stackTrace');
+      });
+    }
+  }
+
+  Future<void> _loadLocalHtml(String path) async {
+    if (!mounted) return;
+
+    try {
+      print('Loading local HTML: $path');
+      final file = File(path);
+      if (!await file.exists()) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = _l10n?.couldNotOpenFileError(path) ?? 'File not found: $path';
+          _controller = null;
+        });
+        print('Local file not found: $path');
+        return;
+      }
+
+      final controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(Theme.of(context).scaffoldBackgroundColor)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageStarted: (_) {
+              print('WebView: Local page started loading: $path');
+              setState(() => _isLoading = true);
+            },
+            onPageFinished: (_) {
+              print('WebView: Local page finished loading: $path');
+              setState(() => _isLoading = false);
+            },
+            onWebResourceError: (error) {
+              print('WebView error for local file $path: ${error.description}');
+              setState(() {
+                _isLoading = false;
+                _errorMessage = _l10n?.couldNotOpenFileError('$path: ${error.description}') ?? 'Failed to open file: $path - ${error.description}';
+                _controller = null;
+              });
+            },
+          ),
+        );
+
+      final fileUri = Uri.file(path).toString();
+      print('Loading file URI: $fileUri');
+      await controller.loadFile(fileUri);
+      setState(() {
+        _controller = controller;
+        _isLoading = true;
+      });
+    } catch (e, stackTrace) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = _l10n?.couldNotOpenFileError('$path: $e') ?? 'Failed to open file: $path - $e';
+        _controller = null;
+        print('Error loading local HTML: $e\n$stackTrace');
       });
     }
   }
@@ -175,23 +203,12 @@ class _HtmlViewerState extends State<HtmlViewer> {
     final l10n = AppLocalizations.of(context)!;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final dynamicPrimaryColor = isDarkMode ? AppColors.primaryDark : AppColors.primaryLight;
-    final dynamicOnSurfaceColor = isDarkMode ? AppColors.onSurfaceDark : AppColors.onSurfaceLight;
+    final dynamicOnSurfaceColor = isDarkMode ? Colors.white70 : AppColors.onSurfaceLight;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
-        backgroundColor: isDarkMode ? AppColors.appBarBackgroundDark : AppColors.appBarBackgroundLight,
-        actions: [
-          if (_hasConnection && !_isDownloaded)
-            ElevatedButton(
-              onPressed: _isDownloading ? null : _downloadHtml,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: dynamicPrimaryColor,
-                foregroundColor: isDarkMode ? AppColors.onPrimaryDark : AppColors.onPrimaryLight,
-              ),
-              child: Text(l10n.downloadExamTooltip), // Use existing key
-            ),
-        ],
+        backgroundColor: isDarkMode ? Colors.black : Colors.white,
       ),
       body: Stack(
         children: [
@@ -205,25 +222,14 @@ class _HtmlViewerState extends State<HtmlViewer> {
                   Text(
                     _errorMessage!,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: dynamicOnSurfaceColor.withOpacity(0.7), fontSize: 16),
+                    style: TextStyle(color: dynamicOnSurfaceColor, fontSize: 16),
                   ),
-                  if (_hasConnection && !_isDownloaded) ...[
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      onPressed: _isDownloading ? null : _downloadHtml,
-                      icon: Icon(Icons.download, color: isDarkMode ? AppColors.onPrimaryDark : AppColors.onPrimaryLight),
-                      label: Text(l10n.downloadExamTooltip), // Use existing key
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: dynamicPrimaryColor,
-                        foregroundColor: isDarkMode ? AppColors.onPrimaryDark : AppColors.onPrimaryLight,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
-          if (_controller != null && _errorMessage == null) WebViewWidget(controller: _controller!),
-          if (_isLoading || _isDownloading)
+          if (_controller != null && _errorMessage == null)
+            WebViewWidget(controller: _controller!),
+          if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.3),
               child: Center(
