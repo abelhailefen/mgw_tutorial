@@ -1,11 +1,13 @@
+// lib/services/media_service.dart
 import 'dart:io';
+import 'dart:async'; // Import TimeoutException
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-import 'package:mgw_tutorial/l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 import '../utils/download_status.dart';
 
@@ -16,7 +18,6 @@ class MediaService {
   static final Map<String, ValueNotifier<double>> _progressNotifiers = {};
   static final Map<String, CancelToken> _cancelTokens = {};
 
-  // Get or create status notifier
   static ValueNotifier<DownloadStatus> getDownloadStatus(String id) {
     return _statusNotifiers.putIfAbsent(
       id,
@@ -24,7 +25,6 @@ class MediaService {
     );
   }
 
-  // Get or create progress notifier
   static ValueNotifier<double> getDownloadProgress(String id) {
     return _progressNotifiers.putIfAbsent(
       id,
@@ -32,26 +32,29 @@ class MediaService {
     );
   }
 
-  // Get the file path for storing the media
   static Future<String> _getFilePath(String id, String fileExtension) async {
     final directory = await getApplicationDocumentsDirectory();
-    return '${directory.path}/$id.$fileExtension';
+    final filePath = '${directory.path}/$id.$fileExtension';
+    final fileDir = Directory(filePath).parent;
+     if (!await fileDir.exists()) {
+        await fileDir.create(recursive: true);
+     }
+    return filePath;
   }
 
-  // Check if a file is already downloaded
   static Future<bool> isFileDownloaded(String id) async {
     try {
       final storedPath = await _secureStorage.read(key: id);
-      print("Checking if file is downloaded for ID: $id, storedPath: $storedPath");
-      if (storedPath != null) {
+      if (storedPath != null && storedPath.isNotEmpty) {
         final file = File(storedPath);
-        final exists = file.existsSync();
-        print("File exists: $exists for path: $storedPath");
+        final exists = await file.exists();
         final statusNotifier = getDownloadStatus(id);
+
         if (exists && statusNotifier.value != DownloadStatus.downloaded) {
           statusNotifier.value = DownloadStatus.downloaded;
           getDownloadProgress(id).value = 1.0;
         } else if (!exists && statusNotifier.value == DownloadStatus.downloaded) {
+          await _secureStorage.delete(key: id);
           statusNotifier.value = DownloadStatus.notDownloaded;
           getDownloadProgress(id).value = 0.0;
         }
@@ -59,44 +62,58 @@ class MediaService {
       }
       return false;
     } catch (e) {
-      print("Error checking if file is downloaded for ID $id: $e");
       return false;
     }
   }
 
-  // Download a YouTube video
   static Future<bool> downloadVideoFile({
-    required String videoId,
-    required String url,
+    required String videoId, // Expects a non-nullable String ID (the download ID)
+    required String url, // Expects the original non-nullable URL
     required String title,
-    CancelToken? cancelToken,
   }) async {
     if (url.isEmpty) {
-      print("Error: Empty video URL for $title");
       _updateStatus(videoId, DownloadStatus.failed);
+      debugPrint("MediaService: Video download failed for ID $videoId. URL is empty.");
       return false;
     }
 
-    final yt = YoutubeExplode();
     final statusNotifier = getDownloadStatus(videoId);
     final progressNotifier = getDownloadProgress(videoId);
+
+     if (statusNotifier.value == DownloadStatus.downloaded) {
+       debugPrint("MediaService: Video already downloaded for ID $videoId.");
+       return true;
+    }
+
+    cancelDownload(videoId); // Cancel any pending download for this ID
+
     final cancelToken = CancelToken();
     _cancelTokens[videoId] = cancelToken;
+    debugPrint("MediaService: Starting video download for ID $videoId from URL: $url");
+
+    YoutubeExplode? yt;
 
     try {
-      statusNotifier.value = DownloadStatus.downloading;
-      progressNotifier.value = 0.0;
+      _updateStatus(videoId, DownloadStatus.downloading);
+      _updateProgress(videoId, 0.0);
+      debugPrint("MediaService: Status updated to downloading for ID $videoId.");
 
-      url = url.split(';').first;
-      final video = await yt.videos.get(url);
-      final cleanVideoId = video.id.value;
+      yt = YoutubeExplode();
+      debugPrint("MediaService: YoutubeExplode client created for ID $videoId.");
 
-      final manifest = await yt.videos.streamsClient.getManifest(cleanVideoId,
-          ytClients: [YoutubeApiClient.safari, YoutubeApiClient.androidVr]);
+      final video = await yt.videos.get(url).timeout(const Duration(seconds: 15));
+      final actualVideoId = video.id.value;
+      debugPrint("MediaService: Fetched video object for ID $videoId. Actual video ID: $actualVideoId");
+
+      final manifest = await yt.videos.streamsClient.getManifest(actualVideoId).timeout(const Duration(seconds: 15));
+      debugPrint("MediaService: Fetched manifest for ID $videoId.");
+
 
       if (manifest.muxed.isNotEmpty) {
         final muxedStream = manifest.muxed.withHighestBitrate();
-        final videoFilePath = await _getFilePath(cleanVideoId, muxedStream.container.name);
+        final fileExtension = muxedStream.container.name;
+        final videoFilePath = await _getFilePath(videoId, fileExtension);
+        debugPrint("MediaService: Starting file download to $videoFilePath for ID $videoId.");
 
         await _dio.download(
           muxedStream.url.toString(),
@@ -105,62 +122,81 @@ class MediaService {
           onReceiveProgress: (received, total) {
             if (total != -1) {
               final progress = received / total;
-              progressNotifier.value = progress;
+              _updateProgress(videoId, progress);
             }
           },
-        );
+        ).timeout(const Duration(seconds: 60));
 
-        await _secureStorage.write(key: cleanVideoId, value: videoFilePath);
-        statusNotifier.value = DownloadStatus.downloaded;
-        progressNotifier.value = 1.0;
-        print("Video downloaded successfully for ID $cleanVideoId: $videoFilePath");
+        await _secureStorage.write(key: videoId, value: videoFilePath);
+        _updateStatus(videoId, DownloadStatus.downloaded);
+        _updateProgress(videoId, 1.0);
+        debugPrint("MediaService: Video download successful for ID $videoId.");
         return true;
       } else {
-        statusNotifier.value = DownloadStatus.failed;
-        progressNotifier.value = 0.0;
-        print("No muxed streams available for ID $cleanVideoId");
+        _updateStatus(videoId, DownloadStatus.failed);
+        _updateProgress(videoId, 0.0);
+        debugPrint("MediaService: No muxed streams available for ID $videoId.");
         return false;
       }
-    } catch (e) {
+    } catch (e, s) {
       if (e is DioException && e.type == DioExceptionType.cancel) {
-        statusNotifier.value = DownloadStatus.cancelled;
-        progressNotifier.value = 0.0;
-        print("Download cancelled for ID $videoId");
+        _updateStatus(videoId, DownloadStatus.cancelled);
+        _updateProgress(videoId, 0.0);
+        debugPrint("MediaService: Download cancelled for ID $videoId.");
+      } else if (e is TimeoutException) {
+         _updateStatus(videoId, DownloadStatus.failed);
+         _updateProgress(videoId, 0.0);
+         debugPrint("MediaService: Timeout during video download process for ID $videoId: $e");
+         debugPrint(s.toString());
       } else {
-        statusNotifier.value = DownloadStatus.failed;
-        progressNotifier.value = 0.0;
-        print("Error downloading video for ID $videoId: $e");
+        _updateStatus(videoId, DownloadStatus.failed);
+        _updateProgress(videoId, 0.0);
+        debugPrint("MediaService: Error downloading video for ID $videoId: $e");
+        debugPrint(s.toString());
       }
       return false;
     } finally {
-      yt.close();
+      yt?.close();
       _cancelTokens.remove(videoId);
+      debugPrint("MediaService: YoutubeExplode client closed and cancel token removed for ID $videoId.");
     }
   }
 
-  // Download a PDF file
   static Future<bool> downloadPDFFile({
     required String pdfId,
     required String url,
     required String title,
-    CancelToken? cancelToken,
   }) async {
     if (url.isEmpty) {
-      print("Error: Empty PDF URL for $title");
       _updateStatus(pdfId, DownloadStatus.failed);
+      debugPrint("MediaService: PDF download failed for ID $pdfId. URL is empty.");
       return false;
     }
 
     final statusNotifier = getDownloadStatus(pdfId);
     final progressNotifier = getDownloadProgress(pdfId);
+
+     if (statusNotifier.value == DownloadStatus.downloaded) {
+        debugPrint("MediaService: PDF already downloaded for ID $pdfId.");
+       return true;
+    }
+
+    cancelDownload(pdfId);
+
     final cancelToken = CancelToken();
     _cancelTokens[pdfId] = cancelToken;
+    debugPrint("MediaService: Starting PDF download for ID $pdfId from URL: $url");
+
 
     try {
-      statusNotifier.value = DownloadStatus.downloading;
-      progressNotifier.value = 0.0;
+      _updateStatus(pdfId, DownloadStatus.downloading);
+      _updateProgress(pdfId, 0.0);
+       debugPrint("MediaService: Status updated to downloading for ID $pdfId.");
+
 
       final pdfFilePath = await _getFilePath(pdfId, 'pdf');
+      debugPrint("MediaService: Starting file download to $pdfFilePath for ID $pdfId.");
+
 
       await _dio.download(
         url,
@@ -169,55 +205,74 @@ class MediaService {
         onReceiveProgress: (received, total) {
           if (total != -1) {
             final progress = received / total;
-            progressNotifier.value = progress;
+            _updateProgress(pdfId, progress);
           }
         },
-      );
+      ).timeout(const Duration(seconds: 60));
 
       await _secureStorage.write(key: pdfId, value: pdfFilePath);
-      statusNotifier.value = DownloadStatus.downloaded;
-      progressNotifier.value = 1.0;
-      print("PDF downloaded successfully for ID $pdfId: $pdfFilePath");
+      _updateStatus(pdfId, DownloadStatus.downloaded);
+      _updateProgress(pdfId, 1.0);
+      debugPrint("MediaService: PDF download successful for ID $pdfId.");
       return true;
-    } catch (e) {
+    } catch (e, s) {
       if (e is DioException && e.type == DioExceptionType.cancel) {
-        statusNotifier.value = DownloadStatus.cancelled;
-        progressNotifier.value = 0.0;
-        print("Download cancelled for ID $pdfId");
-      } else {
-        statusNotifier.value = DownloadStatus.failed;
-        progressNotifier.value = 0.0;
-        print("Error downloading PDF for ID $pdfId: $e");
+        _updateStatus(pdfId, DownloadStatus.cancelled);
+        _updateProgress(pdfId, 0.0);
+        debugPrint("MediaService: Download cancelled for ID $pdfId.");
+      } else if (e is TimeoutException) {
+         _updateStatus(pdfId, DownloadStatus.failed);
+         _updateProgress(pdfId, 0.0);
+         debugPrint("MediaService: Timeout during PDF download process for ID $pdfId: $e");
+         debugPrint(s.toString());
+      }
+      else {
+        _updateStatus(pdfId, DownloadStatus.failed);
+        _updateProgress(pdfId, 0.0);
+        debugPrint("MediaService: Error downloading PDF for ID $pdfId: $e");
+        debugPrint(s.toString());
       }
       return false;
     } finally {
       _cancelTokens.remove(pdfId);
+      debugPrint("MediaService: Cancel token removed for ID $pdfId.");
     }
   }
 
-  // Download an HTML file
   static Future<bool> downloadHtmlFile({
     required String htmlId,
     required String url,
     required String title,
-    CancelToken? cancelToken,
   }) async {
     if (url.isEmpty) {
-      print("Error: Empty HTML URL for $title");
       _updateStatus(htmlId, DownloadStatus.failed);
+      debugPrint("MediaService: HTML download failed for ID $htmlId. URL is empty.");
       return false;
     }
 
     final statusNotifier = getDownloadStatus(htmlId);
     final progressNotifier = getDownloadProgress(htmlId);
+
+     if (statusNotifier.value == DownloadStatus.downloaded) {
+       debugPrint("MediaService: HTML already downloaded for ID $htmlId.");
+       return true;
+    }
+
+    cancelDownload(htmlId);
+
     final cancelToken = CancelToken();
     _cancelTokens[htmlId] = cancelToken;
+    debugPrint("MediaService: Starting HTML download for ID $htmlId from URL: $url");
 
     try {
-      statusNotifier.value = DownloadStatus.downloading;
-      progressNotifier.value = 0.0;
+      _updateStatus(htmlId, DownloadStatus.downloading);
+      _updateProgress(htmlId, 0.0);
+       debugPrint("MediaService: Status updated to downloading for ID $htmlId.");
+
 
       final htmlFilePath = await _getFilePath(htmlId, 'html');
+       debugPrint("MediaService: Starting file download to $htmlFilePath for ID $htmlId.");
+
 
       await _dio.download(
         url,
@@ -226,97 +281,133 @@ class MediaService {
         onReceiveProgress: (received, total) {
           if (total != -1) {
             final progress = received / total;
-            progressNotifier.value = progress;
+            _updateProgress(htmlId, progress);
           }
         },
-      );
+      ).timeout(const Duration(seconds: 60));
 
       await _secureStorage.write(key: htmlId, value: htmlFilePath);
-      statusNotifier.value = DownloadStatus.downloaded;
-      progressNotifier.value = 1.0;
-      print("HTML downloaded successfully for ID $htmlId: $htmlFilePath");
+      _updateStatus(htmlId, DownloadStatus.downloaded);
+      _updateProgress(htmlId, 1.0);
+      debugPrint("MediaService: HTML download successful for ID $htmlId.");
       return true;
-    } catch (e) {
+    } catch (e, s) {
       if (e is DioException && e.type == DioExceptionType.cancel) {
-        statusNotifier.value = DownloadStatus.cancelled;
-        progressNotifier.value = 0.0;
-        print("Download cancelled for ID $htmlId");
-      } else {
-        statusNotifier.value = DownloadStatus.failed;
-        progressNotifier.value = 0.0;
-        print("Error downloading HTML for ID $htmlId: $e");
+        _updateStatus(htmlId, DownloadStatus.cancelled);
+        _updateProgress(htmlId, 0.0);
+        debugPrint("MediaService: Download cancelled for ID $htmlId.");
+      } else if (e is TimeoutException) {
+         _updateStatus(htmlId, DownloadStatus.failed);
+         _updateProgress(htmlId, 0.0);
+         debugPrint("MediaService: Timeout during HTML download process for ID $htmlId: $e");
+         debugPrint(s.toString());
+      }
+      else {
+        _updateStatus(htmlId, DownloadStatus.failed);
+        _updateProgress(htmlId, 0.0);
+        debugPrint("MediaService: Error downloading HTML for ID $htmlId: $e");
+        debugPrint(s.toString());
       }
       return false;
     } finally {
       _cancelTokens.remove(htmlId);
+       debugPrint("MediaService: Cancel token removed for ID $htmlId.");
     }
   }
 
-  // Cancel a download
   static void cancelDownload(String id) {
     final cancelToken = _cancelTokens[id];
     if (cancelToken != null && !cancelToken.isCancelled) {
-      cancelToken.cancel('Download cancelled by user');
-      _updateStatus(id, DownloadStatus.cancelled);
-      _updateProgress(id, 0.0);
-      _cancelTokens.remove(id);
+      debugPrint("MediaService: Attempting to cancel download for ID $id.");
+      try {
+         cancelToken.cancel('Download cancelled by user');
+      } catch(e) {
+         debugPrint("MediaService: Error cancelling Dio download for ID $id: $e");
+      }
     }
+     if (_statusNotifiers.containsKey(id) && _statusNotifiers[id]!.value == DownloadStatus.downloading) {
+         _updateStatus(id, DownloadStatus.cancelled);
+         _updateProgress(id, 0.0);
+          debugPrint("MediaService: Status updated to cancelled for ID $id.");
+     }
+     _cancelTokens.remove(id);
   }
 
-  // Retrieve a file's local path
   static Future<String?> getSecurePath(String id) async {
     try {
-      final path = await _secureStorage.read(key: id);
-      return path;
+      final storedPath = await _secureStorage.read(key: id);
+       if (storedPath != null && storedPath.isNotEmpty) {
+         final file = File(storedPath);
+         if (await file.exists()) {
+             debugPrint("MediaService: Found secure path for ID $id: $storedPath");
+            return storedPath;
+         } else {
+            debugPrint("MediaService: Stored file not found for ID $id at path $storedPath. Cleaning up secure storage.");
+            await _secureStorage.delete(key: id);
+            _updateStatus(id, DownloadStatus.notDownloaded);
+            _updateProgress(id, 0.0);
+         }
+       }
+      return null;
     } catch (e) {
-      print("Error retrieving secure path for ID $id: $e");
+       debugPrint("MediaService: Error getting secure path for ID $id: $e");
       return null;
     }
   }
 
-  // Delete a downloaded file
   static Future<bool> deleteFile(String id, BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    bool success = false;
+    String? storedPath;
+    debugPrint("MediaService: Attempting to delete file for ID $id.");
+
     try {
-      final storedPath = await _secureStorage.read(key: id);
-      if (storedPath != null) {
+      storedPath = await _secureStorage.read(key: id);
+      if (storedPath != null && storedPath.isNotEmpty) {
         final file = File(storedPath);
         if (await file.exists()) {
+           debugPrint("MediaService: Found file at $storedPath for ID $id. Deleting.");
           await file.delete();
-          print("File deleted successfully for ID: $id");
+          success = true;
+           debugPrint("MediaService: File deleted successfully for ID $id.");
+        } else {
+           debugPrint("MediaService: No file found at $storedPath for ID $id, but secure storage entry exists. Treating as successful deletion.");
+           success = true;
         }
-        await _secureStorage.delete(key: id);
-        _updateStatus(id, DownloadStatus.notDownloaded);
-        _updateProgress(id, 0.0);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.fileDeletedSuccessfully),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
-        return true;
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.fileNotFoundOrFailedToDelete),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-        return false;
+         debugPrint("MediaService: No secure storage entry found for ID $id. Nothing to delete.");
+         success = true;
       }
-    } catch (e) {
-      print("Error deleting file for ID $id: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${AppLocalizations.of(context)!.couldNotDeleteFileError}: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-      return false;
+    } catch (e, s) {
+      debugPrint("MediaService: Error during file deletion for ID $id: $e");
+      debugPrint(s.toString());
+      success = false;
+    } finally {
+       if (success) {
+          await _secureStorage.delete(key: id);
+         _updateStatus(id, DownloadStatus.notDownloaded);
+         _updateProgress(id, 0.0);
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(
+             content: Text(l10n.fileDeletedSuccessfully),
+             backgroundColor: Theme.of(context).colorScheme.primary,
+           ),
+         );
+       } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(
+               content: Text('${l10n.couldNotDeleteFileError}: ${storedPath ?? 'Unknown File'}'),
+               backgroundColor: Theme.of(context).colorScheme.error,
+             ),
+          );
+       }
     }
+    return success;
   }
 
-  // Retrieve all downloaded files
+
   static Future<Map<String, String>> getAllDownloadedFiles() async {
+    debugPrint("MediaService: Getting all downloaded files from secure storage.");
     try {
       final allEntries = await _secureStorage.readAll();
       final downloadedFiles = <String, String>{};
@@ -325,49 +416,43 @@ class MediaService {
         final file = File(entry.value);
         if (await file.exists()) {
           downloadedFiles[entry.key] = entry.value;
+           debugPrint("MediaService: Found downloaded file for ID: ${entry.key}");
         } else {
+           debugPrint("MediaService: Stale entry found for ID: ${entry.key}. File not found. Cleaning up secure storage.");
           await _secureStorage.delete(key: entry.key);
-          print("Removed stale secure storage entry for ID: ${entry.key}");
         }
       }
-
+      debugPrint("MediaService: Found ${downloadedFiles.length} downloaded files.");
       return downloadedFiles;
-    } catch (e) {
-      print("Error retrieving downloaded files: $e");
+    } catch (e, s) {
+       debugPrint("MediaService: Error retrieving all downloaded files: $e");
+       debugPrint(s.toString());
       return {};
     }
   }
 
-  // Helper to update status
   static void _updateStatus(String id, DownloadStatus status) {
     final notifier = getDownloadStatus(id);
     if (notifier.value != status) {
       notifier.value = status;
+       debugPrint("MediaService: Updated status for ID $id to $status");
     }
   }
 
-  // Helper to update progress
   static void _updateProgress(String id, double progress) {
     final notifier = getDownloadProgress(id);
-    if (notifier.value != progress) {
-      notifier.value = progress;
-    }
+     if ((notifier.value - progress).abs() > 0.01 || progress == 0.0 || progress == 1.0) {
+        notifier.value = progress;
+     }
   }
 
-  // Clean up resources
   static void dispose() {
+     debugPrint("MediaService: Dispose called.");
     for (var token in _cancelTokens.values) {
-      token.cancel('Service disposed');
+      if (!token.isCancelled) {
+        token.cancel('Service disposed');
+      }
     }
     _cancelTokens.clear();
-    for (var notifier in _statusNotifiers.values) {
-      notifier.dispose();
-    }
-    for (var notifier in _progressNotifiers.values) {
-      notifier.dispose();
-    }
-    _statusNotifiers.clear();
-    _progressNotifiers.clear();
-    _dio.close();
   }
 }

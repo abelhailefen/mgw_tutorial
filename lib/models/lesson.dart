@@ -1,3 +1,4 @@
+// lib/models/lesson.dart
 import 'dart:convert';
 
 enum LessonType { video, document, quiz, text, unknown }
@@ -34,33 +35,28 @@ class Lesson {
     required this.updatedAt,
   });
 
-LessonType get lessonType {
-  final type = lessonTypeString?.toLowerCase();
-  final attachmentType = attachmentTypeString?.toLowerCase();
+  LessonType get lessonType {
+    final type = lessonTypeString?.toLowerCase();
+    final attachmentType = attachmentTypeString?.toLowerCase();
 
-  if (type == 'video') return LessonType.video;
-  if (type == 'quiz' || type == 'exam') return LessonType.quiz;
+    if (type == 'video') return LessonType.video;
+    if (type == 'quiz' || type == 'exam') return LessonType.quiz;
 
-  // Handle HTML attachments as quizzes
-  if (type == 'attachment' && attachmentType == 'html') return LessonType.quiz;
+    if (type == 'attachment' && attachmentType == 'html') return LessonType.quiz;
 
-  // PDFs and others are treated as documents
-  if (type == 'attachment' &&
-      (attachmentType == 'pdf' || attachmentType == 'epub' || attachmentType == 'doc' || attachmentType == 'article')) {
-    return LessonType.document;
+    if (type == 'attachment' &&
+        (attachmentType == 'pdf' || attachmentType == 'epub' || attachmentType == 'doc' || attachmentType == 'article')) {
+      return LessonType.document;
+    }
+
+    if (type == 'text') return LessonType.text;
+
+    if (videoUrl != null && videoUrl!.isNotEmpty) return LessonType.video;
+    if (attachmentType == 'html') return LessonType.quiz;
+    if (attachmentUrl != null && attachmentUrl!.isNotEmpty) return LessonType.document;
+
+    return LessonType.unknown;
   }
-
-  if (type == 'text') return LessonType.text;
-
-  // Fallbacks
-  if (videoUrl != null && videoUrl!.isNotEmpty) return LessonType.video;
-  if (attachmentType == 'html') return LessonType.quiz;
-  if (attachmentUrl != null && attachmentUrl!.isNotEmpty) return LessonType.document;
-
-  return LessonType.unknown;
-}
-
-
 
   AttachmentType get attachmentType {
     switch (attachmentTypeString?.toLowerCase()) {
@@ -84,9 +80,8 @@ LessonType get lessonType {
     }
   }
 
-  // Getter for HTML URL for quizzes
   String? get htmlUrl {
-    if (lessonType == LessonType.quiz && attachmentUrl != null && attachmentUrl!.isNotEmpty) {
+    if ((lessonType == LessonType.quiz || lessonType == LessonType.text) && attachmentUrl != null && attachmentUrl!.isNotEmpty) {
       return attachmentUrl;
     }
     return null;
@@ -95,9 +90,7 @@ LessonType get lessonType {
   factory Lesson.fromJson(Map<String, dynamic> json) {
     String safeGetString(Map<String, dynamic> jsonMap, String key, {String defaultValue = ""}) {
       final value = jsonMap[key];
-      if (value is String) {
-        return value;
-      }
+      if (value is String && value.isNotEmpty) return value;
       if (value != null) {
         final strValue = value.toString();
         if (strValue.isNotEmpty) return strValue;
@@ -107,9 +100,7 @@ LessonType get lessonType {
 
     String? safeGetNullableString(Map<String, dynamic> jsonMap, String key) {
       final value = jsonMap[key];
-      if (value is String && value.isNotEmpty) {
-        return value;
-      }
+      if (value is String && value.isNotEmpty) return value;
       if (value != null) {
         final strValue = value.toString();
         if (strValue.isNotEmpty) return strValue;
@@ -117,37 +108,32 @@ LessonType get lessonType {
       return null;
     }
 
-    DateTime parseSafeDate(dynamic dateValue, String fieldName) {
+    DateTime parseSafeDate(dynamic dateValue) {
       if (dateValue is String && dateValue.isNotEmpty) {
         try {
           return DateTime.parse(dateValue);
         } catch (e) {
-          print("Error parsing date for Lesson field '$fieldName': $dateValue. Error: $e. Using current time as fallback.");
-          return DateTime.now();
+           return DateTime.now();
         }
       }
       return DateTime.now();
     }
 
-    int safeGetInt(dynamic value, String fieldName, {int defaultValue = 0}) {
-      if (value is int) {
-        return value;
-      }
+    int safeGetInt(dynamic value, {int defaultValue = 0}) {
+      if (value is int) return value;
       if (value is String) {
         final parsed = int.tryParse(value);
         if (parsed != null) return parsed;
       }
       if (value is num) return value.toInt();
-      print("Warning: Integer field '$fieldName' in Lesson JSON was not int or parsable string/number. Using default: '$defaultValue'. Value: $value);");
       return defaultValue;
     }
 
-    int? safeGetNullableInt(dynamic value, String fieldName) {
+    int? safeGetNullableInt(dynamic value) {
       if (value == null) return null;
       if (value is int) return value;
       if (value is String) return int.tryParse(value);
       if (value is num) return value.toInt();
-      print("Warning: Nullable integer field '$fieldName' in Lesson JSON was not int or parsable string/number. Returning null. Value: $value");
       return null;
     }
 
@@ -157,19 +143,19 @@ LessonType get lessonType {
     }
 
     return Lesson(
-      id: safeGetInt(json['id'], 'id'),
+      id: safeGetInt(json['id']),
       title: safeGetString(json, 'title', defaultValue: 'Untitled Lesson'),
-      sectionId: safeGetInt(json['section_id'], 'section_id', defaultValue: -1),
+      sectionId: safeGetInt(json['section_id'], defaultValue: -1),
       summary: safeGetNullableString(json, 'summary'),
-      order: safeGetNullableInt(json['order'], 'order'),
+      order: safeGetNullableInt(json['order']),
       videoProvider: inferredVideoProvider,
       videoUrl: safeGetNullableString(json, 'video_url'),
       attachmentUrl: safeGetNullableString(json, 'attachment'),
       attachmentTypeString: safeGetNullableString(json, 'attachment_type'),
       lessonTypeString: safeGetNullableString(json, 'lesson_type'),
       duration: safeGetNullableString(json, 'duration'),
-      createdAt: parseSafeDate(json['createdAt'], 'createdAt'),
-      updatedAt: parseSafeDate(json['updatedAt'], 'updatedAt'),
+      createdAt: parseSafeDate(json['createdAt']),
+      updatedAt: parseSafeDate(json['updatedAt']),
     );
   }
 
@@ -192,12 +178,11 @@ LessonType get lessonType {
   }
 
   factory Lesson.fromMap(Map<String, dynamic> map) {
-    DateTime parseSafeDateFromDb(dynamic dateValue, String fieldName) {
+    DateTime parseSafeDateFromDb(dynamic dateValue) {
       if (dateValue is String && dateValue.isNotEmpty) {
         try {
           return DateTime.parse(dateValue);
         } catch (e) {
-          print("Error parsing date from DB for Lesson field '$fieldName': $dateValue. Error: $e. Using current time as fallback.");
           return DateTime.now();
         }
       }
@@ -215,8 +200,8 @@ LessonType get lessonType {
       attachmentTypeString: map['attachmentTypeString'] as String?,
       lessonTypeString: map['lessonTypeString'] as String?,
       duration: map['duration'] as String?,
-      createdAt: parseSafeDateFromDb(map['createdAt'], 'createdAt'),
-      updatedAt: parseSafeDateFromDb(map['updatedAt'], 'updatedAt'),
+      createdAt: parseSafeDateFromDb(map['createdAt']),
+      updatedAt: parseSafeDateFromDb(map['updatedAt']),
     );
   }
 }
