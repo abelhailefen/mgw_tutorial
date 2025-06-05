@@ -20,7 +20,7 @@ import 'package:mgw_tutorial/provider/lesson_provider.dart';
 import 'package:mgw_tutorial/provider/theme_provider.dart';
 import 'package:mgw_tutorial/provider/testimonial_provider.dart';
 import 'package:mgw_tutorial/provider/order_provider.dart';
-
+import 'package:mgw_tutorial/provider/subject_provider.dart';
 
 // Screens
 import 'package:mgw_tutorial/screens/sidebar/faq_screen.dart';
@@ -35,7 +35,9 @@ import 'package:mgw_tutorial/screens/library/course_sections_screen.dart';
 import 'package:mgw_tutorial/screens/library/lesson_list_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/testimonials_screen.dart';
 import 'package:mgw_tutorial/screens/enrollment/order_screen.dart';
-import 'package:mgw_tutorial/screens/sidebar/my_courses_screen.dart'; // <<< ADD THIS IMPORT
+import 'package:mgw_tutorial/screens/sidebar/my_courses_screen.dart'; 
+import 'package:mgw_tutorial/screens/sidebar/weekly_exams_screen.dart';
+
 
 // Models
 import 'package:mgw_tutorial/models/post.dart';
@@ -73,6 +75,7 @@ void main() async {
         ChangeNotifierProvider(create: (context) => TestimonialProvider()),
         ChangeNotifierProvider(create: (context) => OrderProvider()),
         ChangeNotifierProvider(create: (context) => FaqProvider()),
+        ChangeNotifierProvider(create: (_) => SubjectProvider()),
         ChangeNotifierProxyProvider<AuthProvider, DiscussionProvider>(
           create: (context) => DiscussionProvider(
             Provider.of<AuthProvider>(context, listen: false),
@@ -396,6 +399,7 @@ class MyApp extends StatelessWidget {
         TestimonialsScreen.routeName: (ctx) => const TestimonialsScreen(),
         MyCoursesScreen.routeName: (ctx) => const MyCoursesScreen(), // <<< ROUTE IS CORRECTLY DEFINED
         FaqScreen.routeName: (ctx) => const FaqScreen(),
+        WeeklyExamsScreen.routeName: (context) => const WeeklyExamsScreen(),
         OrderScreen.routeName: (ctx) {
           final args = ModalRoute.of(ctx)?.settings.arguments;
           if (args is Semester) {
