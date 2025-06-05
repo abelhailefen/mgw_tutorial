@@ -346,7 +346,12 @@ class AppDrawer extends StatelessWidget {
             theme: theme, icon: Icons.quiz_outlined, text: l10n.faqTitle,
             onTap: () => _navigateTo(context, FaqScreen.routeName),
           ),
+         
           Divider(color: theme.dividerColor),
+           _buildDrawerItem(
+            theme: theme, icon: Icons.settings, text: l10n.settings,
+            onTap: () => _navigateTo(context, SettingsScreen.routeName),
+          ),
           if (authProvider.currentUser != null)
             _buildDrawerItem(
               theme: theme, icon: Icons.logout, text: l10n.logout,
