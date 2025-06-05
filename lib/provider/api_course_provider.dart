@@ -1,4 +1,3 @@
-// lib/provider/api_course_provider.dart
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
@@ -43,44 +42,38 @@ class ApiCourseProvider with ChangeNotifier {
     }
 
     if (_courses.isEmpty || forceRefresh) {
-         // Attempt to load from DB first ONLY if the list is currently empty OR force refreshing (to show stale data quickly)
         if (_courses.isEmpty || forceRefresh) {
             try {
               print("ApiCourseProvider: Attempting to load courses from DB...");
               final List<Map<String, dynamic>> courseMaps = await _dbHelper.query('courses', orderBy: 'title ASC');
               final List<ApiCourse> cachedCourses = courseMaps.map((map) => ApiCourse.fromMap(map)).toList();
 
+              print("ApiCourseProvider: Loaded ${cachedCourses.length} courses from DB.");
               if (cachedCourses.isNotEmpty) {
                 _courses = cachedCourses;
                 _error = null;
-                 // _isLoading remains true if forceRefresh, set to false only if this was the *only* load attempt
-                 _isLoading = forceRefresh; // Keep loading true if we are about to fetch from network
-                print("ApiCourseProvider: Successfully loaded ${_courses.length} courses from DB.");
-                notifyListeners(); // Notify UI to show cached data
+                 _isLoading = forceRefresh;
+                 // Add logging for loaded cached data paths
+                 for(int i = 0; i < cachedCourses.length && i < 5; i++) {
+                   print("ApiCourseProvider: Cached Course ${cachedCourses[i].id} local path: ${cachedCourses[i].localThumbnailPath}");
+                 }
+                notifyListeners();
               } else {
                  print("ApiCourseProvider: No courses found in DB.");
                  _courses = [];
                  _error = null;
-                 _isLoading = true; // Still loading from network
-                 notifyListeners(); // Notify that DB was empty and still loading
+                 _isLoading = true;
+                 notifyListeners();
               }
             } catch (e, s) {
               print("ApiCourseProvider: Error loading courses from DB: $e\n$s");
               _courses = [];
-              // Keep the error for potential display later if network also fails, but don't notify yet
-              // unless we have no cached data at all and couldn't even attempt network
-              // For now, just log the DB error and proceed to network.
-              // _error = "Failed to load cached courses: $e"; // Decide if we want to surface DB errors this way
               _isLoading = true;
-              // notifyListeners(); // Avoid notifying twice if network fetch is imminent
             }
         }
     }
 
-
-    // Always attempt network fetch unless explicitly told not to (which isn't an option currently)
-    // or if we just loaded from DB and not force refreshing (handled by the initial showLoading check)
-    if (forceRefresh || _courses.isEmpty || (_error != null && _error!.contains("DB"))) { // Fetch if force, empty, or had a DB read error
+    if (forceRefresh || _courses.isEmpty || (_error != null && _error!.contains("DB"))) {
         print("ApiCourseProvider: Attempting network fetch from $_apiBaseUrl/course");
         final url = Uri.parse('$_apiBaseUrl/course');
 
@@ -110,9 +103,8 @@ class ApiCourseProvider with ChangeNotifier {
                   _isLoading = false;
                   notifyListeners();
                } else {
-                  // If cached data is shown, just log the parse error, don't overwrite UI error
                   print("ApiCourseProvider: Network response parse error after showing cached data.");
-                   _error = null; // Ensure error is null in this case
+                   _error = null;
                }
               return;
             }
@@ -134,25 +126,31 @@ class ApiCourseProvider with ChangeNotifier {
             if (!listEquals(_courses, fetchedCourses) || forceRefresh) {
                  print("ApiCourseProvider: Network data is different or force refresh. Saving and updating state.");
 
+                // This call modifies fetchedCourses by adding local paths
                 await _downloadAndSaveThumbnails(fetchedCourses);
                 print("ApiCourseProvider: Finished thumbnail download/save process.");
 
+                // Add logging for fetched data paths before saving
+                 for(int i = 0; i < fetchedCourses.length && i < 5; i++) {
+                   print("ApiCourseProvider: Fetched Course ${fetchedCourses[i].id} local path BEFORE save: ${fetchedCourses[i].localThumbnailPath}");
+                 }
+
+
                 try {
+                    // Save the list which now contains local paths
                     await _saveCoursesToDb(fetchedCourses);
                     print("ApiCourseProvider: Courses saved to DB successfully.");
 
-                    _courses = fetchedCourses;
+                    _courses = fetchedCourses; // Update state with the list containing local paths
                     _error = null;
 
                 } catch (dbSaveError, dbSaveStack) {
                     print("ApiCourseProvider: !!! CRITICAL DB SAVE ERROR: $dbSaveError\n$dbSaveStack");
-                    // If DB save failed, keep the old data if it exists, set an error
-                    if (_courses.isEmpty) { // Only set error if no cached data to fall back on
-                         _error = "Failed to save courses locally after fetching. Offline mode may not work correctly."; // More user-friendly error
+                    if (_courses.isEmpty) {
+                         _error = "Failed to save courses locally after fetching. Offline mode may not work correctly.";
                     } else {
-                         // If cached data is shown, log the DB error but don't overwrite UI error
                          print("ApiCourseProvider: DB save failed after showing cached data.");
-                         _error = null; // Ensure error is null in this case
+                         _error = null;
                     }
                 }
 
@@ -174,7 +172,6 @@ class ApiCourseProvider with ChangeNotifier {
                    }
                 }
              } catch (e) {
-                // Failed to parse error body
              }
 
              if (_courses.isEmpty) {
@@ -223,20 +220,17 @@ class ApiCourseProvider with ChangeNotifier {
         }
     } else {
          print("ApiCourseProvider: Not forcing refresh and courses list is not empty. Skipping network fetch.");
-          _isLoading = false; // Ensure loading is false if we truly skipped the fetch
+          _isLoading = false;
           notifyListeners();
     }
-
   }
 
   Future<void> _saveCoursesToDb(List<ApiCourse> coursesToSave) async {
      print("ApiCourseProvider: Starting DB save process...");
      try {
-        // This is where we orchestrate the DB save, including cleaning up old data and files
         final db = await _dbHelper.database;
         List<String> oldThumbnailPaths = [];
 
-        // --- Step 1: Transactionally delete old data and get old paths ---
         print("ApiCourseProvider: Deleting old courses and getting paths...");
         try {
            await db.transaction((txn) async {
@@ -245,11 +239,9 @@ class ApiCourseProvider with ChangeNotifier {
            print("ApiCourseProvider: Old courses deleted from DB. ${oldThumbnailPaths.length} paths collected for file deletion.");
         } catch (e, s) {
            print("ApiCourseProvider: Error during old course deletion transaction: $e\n$s");
-           // Re-throw so fetchCourses can catch it and decide how to handle the state
            rethrow;
         }
 
-        // --- Step 2: Delete old thumbnail files (outside transaction) ---
         if (oldThumbnailPaths.isNotEmpty) {
           print("ApiCourseProvider: Deleting old thumbnail files...");
           await _dbHelper.deleteThumbnailFiles(oldThumbnailPaths);
@@ -258,10 +250,8 @@ class ApiCourseProvider with ChangeNotifier {
            print("ApiCourseProvider: No old thumbnail files to delete.");
         }
 
-        // --- Step 3: Transactionally insert new data ---
         if (coursesToSave.isEmpty) {
            print("ApiCourseProvider: No new courses to save to DB.");
-           // The old data was already cleared in step 1.
            return;
         }
 
@@ -273,14 +263,12 @@ class ApiCourseProvider with ChangeNotifier {
            print("ApiCourseProvider: New courses saved to DB successfully.");
         } catch (e, s) {
           print("ApiCourseProvider: Error during new course insertion transaction: $e\n$s");
-          // Re-throw so fetchCourses can catch it
           rethrow;
         }
 
      } catch (e, s) {
        print("ApiCourseProvider: Overall Error during _saveCoursesToDb process: $e");
        print("Stacktrace: $s");
-       // Re-throw the ultimate error
        rethrow;
      }
    }
@@ -335,6 +323,9 @@ class ApiCourseProvider with ChangeNotifier {
       }
       final thumbnailDir = await _dbHelper.getThumbnailDirectory();
       final client = http.Client();
+      int downloadedCount = 0;
+      int skippedCount = 0;
+      int failedCount = 0;
 
       try {
         for (final course in courses) {
@@ -347,11 +338,13 @@ class ApiCourseProvider with ChangeNotifier {
                  if (!uri.hasScheme || !(uri.scheme == 'http' || uri.scheme == 'https')) {
                     print("ApiCourseProvider: Invalid scheme for thumbnail URL for course ${course.id}: $imageUrl");
                     course.localThumbnailPath = null;
+                    failedCount++;
                     continue;
                  }
                } catch(e) {
                   print("ApiCourseProvider: Invalid thumbnail URL for course ${course.id}: $imageUrl. Error: $e");
                    course.localThumbnailPath = null;
+                   failedCount++;
                   continue;
                }
 
@@ -372,39 +365,47 @@ class ApiCourseProvider with ChangeNotifier {
 
                if (await localFile.exists()) {
                    course.localThumbnailPath = localPath;
+                   skippedCount++;
+                   // print("ApiCourseProvider: Thumbnail for course ${course.id} already exists: $localPath"); // Too verbose
                    continue;
                }
 
-              print("ApiCourseProvider: Downloading thumbnail for course ${course.id} from $imageUrl to $localPath");
+              print("ApiCourseProvider: Downloading thumbnail for course ${course.id} from $imageUrl"); // Verbose log before download
               final response = await client.get(uri).timeout(const Duration(seconds: 15));
 
               if (response.statusCode == 200) {
                 await localFile.writeAsBytes(response.bodyBytes);
                 course.localThumbnailPath = localPath;
-                print("ApiCourseProvider: Saved thumbnail for course ${course.id}.");
+                downloadedCount++;
+                print("ApiCourseProvider: Successfully saved thumbnail for course ${course.id} to $localPath"); // Verbose log on success
               } else {
                 print("ApiCourseProvider: Failed to download thumbnail for course ${course.id} (Status: ${response.statusCode}): $imageUrl");
                 course.localThumbnailPath = null;
+                failedCount++;
               }
             } on TimeoutException catch (e) {
                print("ApiCourseProvider: Timeout downloading thumbnail for course ${course.id} ($imageUrl): $e");
                 course.localThumbnailPath = null;
+                failedCount++;
             } on http.ClientException catch (e) {
                print("ApiCourseProvider: HTTP Client Error downloading thumbnail for course ${course.id} ($imageUrl): ${e.message}");
                 course.localThumbnailPath = null;
+                failedCount++;
             } catch (e, s) {
               print("ApiCourseProvider: Generic Error downloading/saving thumbnail for course ${course.id} ($imageUrl): $e");
               print("Stacktrace: $s");
                course.localThumbnailPath = null;
+               failedCount++;
             }
           } else {
              print("ApiCourseProvider: No thumbnail URL for course ${course.id}");
              course.localThumbnailPath = null;
+             skippedCount++; // Consider courses without URLs as skipped for reporting
           }
         }
       } finally {
         client.close();
-         print("ApiCourseProvider: Thumbnail download client closed.");
+        print("ApiCourseProvider: Thumbnail download summary: Downloaded $downloadedCount, Skipped $skippedCount, Failed $failedCount.");
       }
    }
 

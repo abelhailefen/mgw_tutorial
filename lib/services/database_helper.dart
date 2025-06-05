@@ -348,9 +348,9 @@ class DatabaseHelper {
         final file = File(path);
         if (await file.exists()) {
           await file.delete();
-          print("DatabaseHelper: Deleted thumbnail file: $path");
+          // print("DatabaseHelper: Deleted thumbnail file: $path"); // Too verbose
         } else {
-           print("DatabaseHelper: Thumbnail file not found, skipping deletion: $path");
+           // print("DatabaseHelper: Thumbnail file not found, skipping deletion: $path"); // Too verbose
         }
       } catch (e) {
         errors.add("Failed to delete $path: $e");

@@ -1,4 +1,3 @@
-// lib/models/api_course.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' show join;
@@ -94,7 +93,6 @@ class ApiCourse {
       }
       String baseUrl = thumbnailBaseUrl;
       String thumbPath = thumbnail!;
-      // Ensure there's exactly one slash between base URL and path
       return '$baseUrl/${thumbPath.startsWith('/') ? thumbPath.substring(1) : thumbPath}';
     }
     return null;
@@ -107,10 +105,10 @@ class ApiCourse {
            if (file.existsSync()) {
              return localThumbnailPath;
            } else {
-              print("Local thumbnail file not found: $localThumbnailPath. Falling back to network.");
+              print("ApiCourse(${id}): Local thumbnail file not found: $localThumbnailPath. Falling back to network.");
            }
          } catch (e) {
-            print("Error checking local thumbnail file: $e. Falling back to network.");
+            print("ApiCourse(${id}): Error checking local thumbnail file: $e. Falling back to network.");
          }
      }
      return fullThumbnailUrl;
@@ -183,6 +181,7 @@ class ApiCourse {
   }
 
   Map<String, dynamic> toMap() {
+     // Helper to convert boolean to int (0 or 1) for DB
      int? boolToInt(bool? b) => b == null ? null : (b ? 1 : 0);
 
     return {
@@ -196,15 +195,15 @@ class ApiCourse {
       'section': section,
       'requirements': jsonEncode(requirements),
       'price': price,
-      'discountFlag': boolToInt(discountFlag),
+      'discountFlag': boolToInt(discountFlag), // Correctly uses boolToInt
       'discountedPrice': discountedPrice,
       'thumbnail': thumbnail,
       'videoUrl': videoUrl,
-      'isTopCourse': boolToInt(isTopCourse),
+      'isTopCourse': boolToInt(isTopCourse), // Correctly uses boolToInt
       'status': status,
-      'isVideoCourse': boolToInt(isVideoCourse),
-      'isFreeCourse': boolToInt(isFreeCourse),
-      'multiInstructor': boolToInt(multiInstructor),
+      'isVideoCourse': boolToInt(isVideoCourse), // Correctly uses boolToInt
+      'isFreeCourse': boolToInt(isFreeCourse), // CORRECTED: Was intToBool, changed to boolToInt
+      'multiInstructor': boolToInt(multiInstructor), // CORRECTED: Was intToBool, changed to boolToInt
       'creator': creator,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -241,6 +240,7 @@ class ApiCourse {
       return [];
     }
 
+     // Helper to convert int (0 or 1) or string to boolean
      bool? intToBool(dynamic value) {
       if (value is int) return value == 1;
       if (value is String) return value.toLowerCase() == 'true' || value == '1';
