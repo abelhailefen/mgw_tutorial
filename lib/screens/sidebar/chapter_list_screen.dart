@@ -6,6 +6,8 @@ import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import 'package:mgw_tutorial/constants/color.dart';
 import 'package:mgw_tutorial/provider/chapter_provider.dart';
 import 'package:mgw_tutorial/models/chapter.dart';
+// Import the new ExamListScreen
+import 'package:mgw_tutorial/screens/sidebar/exam_list_screen.dart';
 
 class ChapterListScreen extends StatefulWidget {
   static const routeName = '/chapter_list';
@@ -114,10 +116,15 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
                           child: Text('${chapter.order + 1}'),
                         ),
                         onTap: () {
-                          // TODO: Implement navigation to quiz/materials for this chapter
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Tapped Chapter: ${chapter.name}. (Further navigation not implemented)')),
-                          );
+                          // Navigate to the ExamListScreen
+                           Navigator.pushNamed(
+                             context,
+                             ExamListScreen.routeName,
+                             arguments: {
+                               'chapterId': chapter.id,
+                               'chapterName': chapter.name,
+                             },
+                           );
                         },
                       );
                     },

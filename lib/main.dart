@@ -22,6 +22,8 @@ import 'package:mgw_tutorial/provider/testimonial_provider.dart';
 import 'package:mgw_tutorial/provider/order_provider.dart';
 import 'package:mgw_tutorial/provider/subject_provider.dart';
 import 'package:mgw_tutorial/provider/chapter_provider.dart';
+import 'package:mgw_tutorial/provider/exam_provider.dart'; // Added ExamProvider import
+
 
 // Screens
 import 'package:mgw_tutorial/screens/sidebar/faq_screen.dart';
@@ -38,7 +40,8 @@ import 'package:mgw_tutorial/screens/sidebar/testimonials_screen.dart';
 import 'package:mgw_tutorial/screens/enrollment/order_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/my_courses_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/weekly_exams_screen.dart';
-import 'package:mgw_tutorial/screens/sidebar/chapter_list_screen.dart'; // Import ChapterListScreen
+import 'package:mgw_tutorial/screens/sidebar/chapter_list_screen.dart';
+import 'package:mgw_tutorial/screens/sidebar/exam_list_screen.dart'; // Added ExamListScreen import
 
 
 // Models
@@ -77,6 +80,7 @@ void main() async {
         ChangeNotifierProvider(create: (context) => FaqProvider()),
         ChangeNotifierProvider(create: (_) => SubjectProvider()),
         ChangeNotifierProvider(create: (_) => ChapterProvider()),
+        ChangeNotifierProvider(create: (_) => ExamProvider()), // Added ExamProvider
         ChangeNotifierProxyProvider<AuthProvider, DiscussionProvider>(
           create: (context) => DiscussionProvider(
             Provider.of<AuthProvider>(context, listen: false),
@@ -254,7 +258,6 @@ class MyApp extends StatelessWidget {
           labelStyle: finalTypographyLight.bodyMedium?.copyWith(color: lightColorScheme.onSurface.withOpacity(0.7)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
         ),
-        // Corrected CardThemeData
         cardTheme: CardThemeData(
           elevation: 4.0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
@@ -340,7 +343,6 @@ class MyApp extends StatelessWidget {
           labelStyle: finalTypographyDark.bodyMedium?.copyWith(color: darkColorScheme.onSurface.withOpacity(0.7)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
         ),
-        // Corrected CardThemeData
         cardTheme: CardThemeData(
           elevation: 4.0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
@@ -416,6 +418,21 @@ class MyApp extends StatelessWidget {
             subjectId: args['subjectId'] as int,
             subjectName: args['subjectName'] as String,
           );
+        },
+         // Added route for ExamListScreen
+        ExamListScreen.routeName: (context) {
+           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+            if (args == null || !args.containsKey('chapterId') || !args.containsKey('chapterName')) {
+               print('Error: Missing arguments for ExamListScreen navigation');
+               return Scaffold(
+                 appBar: AppBar(title: const Text("Navigation Error")),
+                 body: const Center(child: Text("Error: Could not load exam list.")),
+               );
+            }
+           return ExamListScreen(
+             chapterId: args['chapterId'] as int,
+             chapterName: args['chapterName'] as String,
+           );
         },
         OrderScreen.routeName: (ctx) {
           final args = ModalRoute.of(ctx)?.settings.arguments;

@@ -15,7 +15,8 @@ import 'package:mgw_tutorial/provider/testimonial_provider.dart';
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
 import 'package:mgw_tutorial/provider/department_provider.dart';
 import 'package:mgw_tutorial/provider/subject_provider.dart';
-import 'package:mgw_tutorial/provider/chapter_provider.dart'; // Make sure ChapterProvider is imported
+import 'package:mgw_tutorial/provider/chapter_provider.dart';
+import 'package:mgw_tutorial/provider/exam_provider.dart';
 
 
 // Import Screens
@@ -140,8 +141,13 @@ class AppDrawer extends StatelessWidget {
     final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
     final departmentProvider = Provider.of<DepartmentProvider>(context, listen: false);
     final subjectProvider = Provider.of<SubjectProvider>(context, listen: false);
-    final chapterProvider = Provider.of<ChapterProvider>(context, listen: false); // Get chapter provider
+    final chapterProvider = Provider.of<ChapterProvider>(context, listen: false);
+    final examProvider = Provider.of<ExamProvider>(context, listen: false);
 
+
+    // Clear cached data *before* fetching new data
+    chapterProvider.clearChapters();
+    examProvider.clearExams();
 
     List<Future<void>> refreshFutures = [
       semesterProvider.fetchSemesters(forceRefresh: true),
@@ -150,10 +156,9 @@ class AppDrawer extends StatelessWidget {
       discussionProvider.fetchPosts(),
       departmentProvider.fetchDepartments(),
       subjectProvider.fetchSubjects(forceRefresh: true),
-       // Note: Refreshing all chapters on global refresh might be inefficient.
-       // Consider refreshing only if a chapter list screen is currently open.
-       // chapterProvider.clearChapters(); // Example: Clear cache
-       // chapterProvider.fetchChaptersForSubject(someSubjectId, forceRefresh: true); // Example: Refresh specific subject
+       // Do NOT include void methods here:
+       // chapterProvider.clearChapters(),
+       // examProvider.clearExams(),
     ];
 
     try {
@@ -213,7 +218,8 @@ class AppDrawer extends StatelessWidget {
       Provider.of<SemesterProvider>(context, listen: false).clearSemesters();
       Provider.of<TestimonialProvider>(context, listen: false).clearTestimonials();
       Provider.of<SubjectProvider>(context, listen: false).clearSubjects();
-      Provider.of<ChapterProvider>(context, listen: false).clearChapters(); // Clear chapters on logout
+      Provider.of<ChapterProvider>(context, listen: false).clearChapters();
+      Provider.of<ExamProvider>(context, listen: false).clearExams();
 
 
       Navigator.of(context).pushAndRemoveUntil(
@@ -331,12 +337,10 @@ class AppDrawer extends StatelessWidget {
             onTap: () => _handleRefresh(context),
           ),
           _buildDrawerItem(
-            theme: theme, icon: Icons.contact_phone_outlined, text: l10n.contactus,
+            theme: theme, icon: Icons.contact_phone_outlined,
+            // Corrected typo here
+            text: l10n.contactus,
             onTap: () => _showContactOptions(context),
-          ),
-          _buildDrawerItem(
-            theme: theme, icon: Icons.settings_outlined, text: l10n.settings,
-            onTap: () => _navigateTo(context, SettingsScreen.routeName),
           ),
           _buildDrawerItem(
             theme: theme, icon: Icons.quiz_outlined, text: l10n.faqTitle,
