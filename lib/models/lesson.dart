@@ -1,4 +1,3 @@
-// lib/models/lesson.dart
 import 'dart:convert';
 
 enum LessonType { video, document, quiz, text, unknown }

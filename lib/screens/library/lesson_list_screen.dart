@@ -1,4 +1,3 @@
-// lib/screens/library/lesson_list_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -66,22 +65,22 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       downloadStatus = lessonProvider.getDownloadStatusNotifier(downloadId).value;
       if (downloadStatus == DownloadStatus.downloaded) {
         localFilePath = await lessonProvider.getDownloadedFilePath(lesson);
-      }
-      if (downloadStatus == DownloadStatus.downloaded &&
-          (localFilePath == null || localFilePath.isEmpty || !await File(localFilePath).exists())) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppColors.errorContainer,
-              content: Text(l10n.couldNotFindDownloadedFileError),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+
+        if (localFilePath == null || localFilePath.isEmpty || !await File(localFilePath).exists()) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: AppColors.errorContainer,
+                content: Text(l10n.couldNotFindDownloadedFileError),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          localFilePath = null;
+          MediaService.getDownloadStatus(downloadId).value = DownloadStatus.notDownloaded;
+          MediaService.getDownloadProgress(downloadId).value = 0.0;
+          downloadStatus = DownloadStatus.notDownloaded;
         }
-        localFilePath = null;
-        MediaService.getDownloadStatus(downloadId).value = DownloadStatus.notDownloaded;
-        MediaService.getDownloadProgress(downloadId).value = 0.0;
-        downloadStatus = DownloadStatus.notDownloaded;
       }
     }
 
@@ -94,8 +93,8 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     } else if (downloadStatus == DownloadStatus.downloading) {
         String message = l10n.documentIsDownloadingMessage;
         if (lesson.lessonType == LessonType.video) message = l10n.videoIsDownloadingMessage;
-        else if (lesson.lessonType == LessonType.quiz) message = l10n.quizIsDownloadingMessage ?? l10n.documentIsDownloadingMessage;
-        else if (lesson.lessonType == LessonType.text) message = l10n.documentIsDownloadingMessage;
+        else if (lesson.lessonType == LessonType.quiz && l10n.quizIsDownloadingMessage != null) message = l10n.quizIsDownloadingMessage!;
+        // Using documentIsDownloadingMessage for text and document types
 
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(
@@ -113,6 +112,12 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         else if ((lesson.lessonType == LessonType.quiz || lesson.lessonType == LessonType.text) && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty) contentUrl = lesson.htmlUrl;
     }
 
+    const String baseUrl = "https://lessonservice.amtprinting19.com";
+     if (!isLocal && contentUrl != null && contentUrl.isNotEmpty && !contentUrl.startsWith("http")) {
+        contentUrl = "$baseUrl$contentUrl";
+     }
+
+
     if (contentUrl == null || contentUrl.isEmpty) {
         if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -126,33 +131,34 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         return;
     }
 
-    if (mounted) {
-      final allLessonsForSection = lessonProvider.lessonsForSection(widget.section.id);
+    if (!mounted) return;
 
-      if (lesson.lessonType == LessonType.video) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (ctx) => VideoPlayerScreen(
-              videoTitle: lesson.title,
-              videoPath: isLocal ? contentUrl! : '',
-              originalVideoUrl: isLocal ? lesson.videoUrl : contentUrl,
-              lessons: allLessonsForSection,
-              isLocal: isLocal,
-            ),
+    final allLessonsForSection = lessonProvider.lessonsForSection(widget.section.id);
+
+    if (lesson.lessonType == LessonType.video) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (ctx) => VideoPlayerScreen(
+            videoTitle: lesson.title,
+            videoPath: isLocal ? contentUrl! : '', // Add null assertion !
+            originalVideoUrl: isLocal ? lesson.videoUrl : contentUrl,
+            lessons: allLessonsForSection,
+            isLocal: isLocal,
           ),
-        );
-      } else if (lesson.lessonType == LessonType.document) {
+        ),
+      );
+    } else if (lesson.lessonType == LessonType.document) {
          Navigator.of(context).push(
           MaterialPageRoute(
             builder: (ctx) => PdfReaderScreen(
-              pdfUrl: contentUrl!,
+              pdfUrl: contentUrl!, // Add null assertion !
               title: lesson.title,
               isLocal: isLocal,
             ),
           ),
         );
       } else if (lesson.lessonType == LessonType.quiz || lesson.lessonType == LessonType.text) {
-         final String viewerUrl = isLocal ? Uri.file(contentUrl!).toString() : contentUrl!;
+         final String viewerUrl = isLocal ? Uri.file(contentUrl!).toString() : contentUrl!; // Add null assertion !
 
          Navigator.of(context).push(
            MaterialPageRoute(
@@ -162,8 +168,17 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
              ),
            ),
          );
+      } else {
+         if (mounted) {
+             ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: AppColors.errorContainer,
+                  content: Text('${l10n.itemNotAvailable(lesson.title)}: Unsupported type'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+             );
+         }
       }
-    }
   }
 
   Widget _buildDownloadButton(BuildContext context, Lesson lesson, LessonProvider lessonProv) {
@@ -225,19 +240,58 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
             case DownloadStatus.cancelled:
               IconData icon = Icons.download_for_offline_outlined;
               String tooltip;
-              if (isVideo) tooltip = l10n.downloadVideoTooltip;
-              else if (isDocument) tooltip = l10n.downloadDocumentTooltip;
-              else if (isQuiz) tooltip = l10n.downloadQuizTooltip ?? l10n.documentIsDownloadingMessage;
-              else if (isText) tooltip = l10n.documentIsDownloadingMessage;
-              else tooltip = l10n.documentIsDownloadingMessage;
+              Color iconColor = isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight;
+
+              if (isVideo) {
+                 tooltip = l10n.downloadVideoTooltip;
+                 iconColor = AppColors.error;
+              } else if (isDocument) {
+                 tooltip = l10n.downloadDocumentTooltip;
+                 iconColor = isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight;
+              } else if (isQuiz && l10n.downloadQuizTooltip != null) {
+                 tooltip = l10n.downloadQuizTooltip!;
+                 iconColor = isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight;
+              } else if (isText) {
+                 tooltip = l10n.documentIsDownloadingMessage; // Fallback tooltip
+                 iconColor = isDarkMode ? AppColors.primaryDark : AppColors.primaryLight;
+              } else {
+                  tooltip = l10n.documentIsDownloadingMessage; // Fallback tooltip
+                  iconColor = isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight;
+              }
+
 
               return IconButton(
-                icon: Icon(icon, color: isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight),
+                icon: Icon(icon, color: iconColor),
                 tooltip: tooltip,
                 iconSize: 24,
                 padding: EdgeInsets.zero,
-                onPressed: () {
-                  lessonProv.startDownload(lesson);
+                onPressed: () async {
+                  // Await the download start result
+                  final success = await lessonProv.startDownload(lesson);
+                   if (!mounted) return;
+                   if (!success) {
+                      // Show a generic failure message using existing keys
+                       String failureMessage = l10n.unexpectedError; // Use a generic error key
+                       if (isVideo && l10n.videoDownloadFailedMessage != null) {
+                           failureMessage = l10n.videoDownloadFailedMessage!;
+                       } else if (isDocument) {
+                           failureMessage = "${l10n.documentItemType} ${l10n.downloadFailedTooltip}"; // Combine keys
+                       } else if (isQuiz) {
+                           failureMessage = "${l10n.quizItemType} ${l10n.downloadFailedTooltip}"; // Combine keys
+                       } else if (isText) {
+                            failureMessage = "${l10n.textItemType} ${l10n.downloadFailedTooltip}"; // Combine keys
+                       } else {
+                           failureMessage = l10n.downloadFailedTooltip; // Generic fallback
+                       }
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                         SnackBar(
+                           backgroundColor: AppColors.errorContainer,
+                           content: Text(failureMessage),
+                           behavior: SnackBarBehavior.floating,
+                         ),
+                      );
+                   }
                 },
               );
             case DownloadStatus.downloading:
@@ -246,6 +300,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                 builder: (context, progress, _) {
                   final safeProgress = progress.clamp(0.0, 1.0);
                   final progressText = safeProgress > 0 && safeProgress < 1 ? "${(safeProgress * 100).toInt()}%" : "";
+                  final primaryColor = isDarkMode ? AppColors.primaryDark : AppColors.primaryLight;
 
                   return Stack(
                     alignment: Alignment.center,
@@ -258,7 +313,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                           value: safeProgress > 0 ? safeProgress : null,
                           strokeWidth: 3.0,
                           backgroundColor: (isDarkMode ? AppColors.onSurfaceDark : AppColors.onSurfaceLight).withOpacity(0.1),
-                          color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight,
+                          color: primaryColor,
                         ),
                       ),
                       if (progressText.isNotEmpty)
@@ -273,10 +328,13 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                            onTap: () {
                               lessonProv.cancelDownload(lesson);
                            },
-                           child: Icon(
-                             Icons.cancel,
-                             size: 18,
-                             color: AppColors.error,
+                           child: Tooltip(
+                              message: l10n.cancelDownloadTooltip ?? "Cancel Download",
+                              child: Icon(
+                                Icons.cancel,
+                                size: 18,
+                                color: AppColors.error,
+                              ),
                            ),
                         ),
                       ),
@@ -287,24 +345,31 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
             case DownloadStatus.downloaded:
               IconData downloadedIcon;
               String downloadedTooltip;
+              Color iconColor = isDarkMode ? AppColors.primaryDark : AppColors.primaryLight;
+
               if (isVideo) {
                 downloadedIcon = Icons.play_circle_filled_rounded;
                 downloadedTooltip = l10n.playDownloadedVideoTooltip;
+                iconColor = AppColors.error;
               } else if (isDocument) {
                 downloadedIcon = Icons.description;
                 downloadedTooltip = l10n.openDownloadedDocumentTooltip;
-              } else if (isQuiz) {
+                iconColor = isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight;
+              } else if (isQuiz && l10n.openDownloadedQuizTooltip != null) {
                 downloadedIcon = Icons.quiz_rounded;
-                downloadedTooltip = l10n.openDownloadedQuizTooltip ?? l10n.openDownloadedDocumentTooltip;
+                downloadedTooltip = l10n.openDownloadedQuizTooltip!;
+                iconColor = isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight;
               } else { // isText
                  downloadedIcon = Icons.notes;
-                 downloadedTooltip = l10n.openDownloadedDocumentTooltip;
+                 downloadedTooltip = l10n.openDownloadedDocumentTooltip; // Fallback
+                 iconColor = isDarkMode ? AppColors.primaryDark : AppColors.primaryLight;
               }
+
 
               return IconButton(
                 icon: Icon(
                   downloadedIcon,
-                  color: isDarkMode ? AppColors.primaryDark : AppColors.primaryLight,
+                  color: iconColor,
                 ),
                 tooltip: downloadedTooltip,
                 iconSize: 24,
@@ -312,6 +377,9 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                 onPressed: () async {
                   await _playOrLaunchContent(context, lesson);
                 },
+                 onLongPress: () {
+                    lessonProv.deleteDownload(lesson, context);
+                 },
               );
           }
         },
@@ -319,7 +387,6 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
     );
   }
 
-  // This method builds the individual lesson item in the list
   Widget _buildLessonItem(BuildContext context, Lesson lesson, LessonProvider lessonProv) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
@@ -335,25 +402,25 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         lessonIcon = Icons.play_circle_outline_rounded;
         iconColor = AppColors.error;
         typeDescription = l10n.videoItemType;
-        isTappable = lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty;
+        isTappable = (lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty);
         break;
       case LessonType.document:
         lessonIcon = Icons.description_outlined;
         iconColor = isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight;
         typeDescription = l10n.documentItemType;
-        isTappable = lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty;
+        isTappable = (lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty);
         break;
       case LessonType.quiz:
         lessonIcon = Icons.quiz_outlined;
         iconColor = isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight;
         typeDescription = l10n.quizItemType;
-        isTappable = lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty;
+        isTappable = (lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty);
         break;
       case LessonType.text:
         lessonIcon = Icons.notes_outlined;
         iconColor = isDarkMode ? AppColors.primaryDark : AppColors.primaryLight;
         typeDescription = l10n.textItemType;
-        isTappable = lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty;
+        isTappable = (lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty);
         break;
       default:
         lessonIcon = Icons.extension_outlined;
@@ -362,20 +429,16 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         isTappable = false;
     }
 
-    final String? downloadIdForDeletion = (lesson.lessonType == LessonType.video ||
-            lesson.lessonType == LessonType.document ||
-            lesson.lessonType == LessonType.quiz ||
-            lesson.lessonType == LessonType.text)
-        ? lessonProv.getDownloadId(lesson)
-        : null;
+    final String? downloadIdForDownload = lessonProv.getDownloadId(lesson);
+
 
     Widget deleteButton = const SizedBox.shrink();
-    if (downloadIdForDeletion != null) {
+    if (downloadIdForDownload != null) {
       deleteButton = SizedBox(
         width: 40,
         height: 40,
         child: ValueListenableBuilder<DownloadStatus>(
-          valueListenable: lessonProv.getDownloadStatusNotifier(downloadIdForDeletion),
+          valueListenable: lessonProv.getDownloadStatusNotifier(downloadIdForDownload),
           builder: (context, status, child) {
             if (status == DownloadStatus.downloaded) {
               return IconButton(
@@ -399,7 +462,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         lesson.lessonType == LessonType.quiz ||
         lesson.lessonType == LessonType.text;
 
-    final bool hasDownloadUrlCheck = (lesson.lessonType == LessonType.video &&
+     final bool hasDownloadUrlCheck = (lesson.lessonType == LessonType.video &&
             lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) ||
         (lesson.lessonType == LessonType.document &&
             lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) ||
@@ -411,8 +474,8 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 8),
       elevation: 2.0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8.0), // Corrected: Pass BorderRadius directly
-        side: BorderSide(color: (isTappable ? (isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight) : (isDarkMode ? AppColors.onSurfaceDark : AppColors.onSurfaceLight)).withOpacity(0.1), width: 0.5), // Side goes directly in RoundedRectangleBorder
+        borderRadius: BorderRadius.circular(8.0),
+        side: BorderSide(color: (isTappable ? (isDarkMode ? AppColors.secondaryDark : AppColors.secondaryLight) : (isDarkMode ? AppColors.onSurfaceDark : AppColors.onSurfaceLight)).withOpacity(0.1), width: 0.5),
       ),
       color: isDarkMode ? AppColors.cardBackgroundDark : AppColors.cardBackgroundLight,
       child: ListTile(
@@ -475,7 +538,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
 
     final bool isLoadingSection = lessonProv.isLoadingForSection(widget.section.id);
     final String? errorSection = lessonProv.errorForSection(widget.section.id);
-    final bool hasLoadedDataPreviously = lessons.isNotEmpty || errorSection != null;
+    final bool hasLoadedDataPreviously = lessons.isNotEmpty || errorSection != null || (lessonProv.lessonsForSection(widget.section.id).isNotEmpty);
 
 
     if (isLoadingSection && !hasLoadedDataPreviously) {
@@ -589,7 +652,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       return Scaffold(
         backgroundColor: dynamicScaffoldBackground,
         appBar: AppBar(
-          title: Text(widget.section.title, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleLarge),
+          title: Text(widget.section.title, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleLarge?.copyWith(fontSize: 18)),
           backgroundColor: dynamicAppBarBackground,
           titleSpacing: 0,
         ),
@@ -603,7 +666,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       return Scaffold(
         backgroundColor: dynamicScaffoldBackground,
         appBar: AppBar(
-          title: Text(widget.section.title, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleLarge),
+          title: Text(widget.section.title, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleLarge?.copyWith(fontSize: 18)),
           backgroundColor: dynamicAppBarBackground,
           titleSpacing: 0,
         ),
@@ -624,7 +687,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                 ElevatedButton.icon(
                   icon: const Icon(Icons.refresh),
                   label: Text(l10n.refresh),
-                  onPressed: _refreshLessons,
+                  onPressed: isLoading ? null : _refreshLessons,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: dynamicPrimaryColor,
                     foregroundColor: dynamicOnPrimaryColor,
@@ -641,7 +704,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
       return Scaffold(
         backgroundColor: dynamicScaffoldBackground,
         appBar: AppBar(
-          title: Text(widget.section.title, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleLarge),
+          title: Text(widget.section.title, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleLarge?.copyWith(fontSize: 18)),
           backgroundColor: dynamicAppBarBackground,
           titleSpacing: 0,
         ),
@@ -719,7 +782,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
                 lessons,
                 lessonProvider,
                 LessonType.document,
-                l10n.noNotesAvailable,
+                l10n.noNotesAvailable, // This tab includes text lessons too based on your filtering
                 Icons.notes_outlined,
                 isNotesTab: true,
                 primaryColor: dynamicPrimaryColor,

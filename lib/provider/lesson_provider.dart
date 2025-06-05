@@ -1,4 +1,3 @@
-// lib/provider/lesson_provider.dart
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io' show SocketException;
@@ -6,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'package:sqflite_common/sqlite_api.dart';
 import '../l10n/app_localizations.dart';
 import '../constants/color.dart';
 import '../models/lesson.dart';
@@ -41,26 +41,36 @@ class LessonProvider with ChangeNotifier {
     if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
        if (lesson.videoUrl!.contains('youtu.be/') || lesson.videoUrl!.contains('youtube.com/')) {
         try {
-          return VideoId.parseVideoId(lesson.videoUrl!); // parseVideoId returns String
+           // Use VideoId constructor directly and access .value
+           final videoIdString = VideoId(lesson.videoUrl!).value;
+           return 'video_${videoIdString}'; // Prefix to distinguish type
         } catch (e) {
-          return null;
+           debugPrint("LessonProvider: Failed to parse YouTube ID from ${lesson.videoUrl}: $e");
+          return null; // Return null if parsing fails
         }
+      } else {
+         // For non-YouTube videos, use a hash of the URL
+         return 'video_url_${md5.convert(utf8.encode(lesson.videoUrl!)).toString()}';
       }
     } else if (lesson.lessonType == LessonType.document && lesson.attachmentUrl != null && lesson.attachmentUrl!.isNotEmpty) {
-      return lesson.id.toString();
+      // Use a hash of the URL for documents
+      return 'document_${md5.convert(utf8.encode(lesson.attachmentUrl!)).toString()}';
     } else if ((lesson.lessonType == LessonType.quiz || lesson.lessonType == LessonType.text) && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty) {
-      return md5.convert(utf8.encode(lesson.htmlUrl!)).toString();
+      // Use a hash of the URL for HTML content (quiz/text)
+      return 'html_${md5.convert(utf8.encode(lesson.htmlUrl!)).toString()}';
     }
+     // Fallback or unknown types might not be downloadable
     return null;
   }
 
   String? getDownloadIdByUrl(String url) {
      final lesson = getAllLessons().firstWhere(
        (lesson) => lesson.htmlUrl == url || lesson.videoUrl == url || lesson.attachmentUrl == url,
-       orElse: () => Lesson(
+       orElse: () => Lesson( // Return a dummy lesson if not found
            id: 0, title: '', sectionId: 0, createdAt: DateTime.now(), updatedAt: DateTime.now()),
      );
      if (lesson.id != 0) {
+        // Use the correct getDownloadId which now includes type prefixes
         return getDownloadId(lesson);
      }
      return null;
@@ -73,16 +83,14 @@ class LessonProvider with ChangeNotifier {
   static const String _apiBaseUrl = "https://lessonservice.amtprinting19.com/api";
 
   Future<void> fetchLessonsForSection(int sectionId, {bool forceRefresh = false}) async {
-    if (!_lessonsBySectionId.containsKey(sectionId) || (_lessonsBySectionId[sectionId]?.isEmpty ?? true)) {
-      await _loadLessonsFromDb(sectionId);
-      if (_lessonsBySectionId.containsKey(sectionId) && _lessonsBySectionId[sectionId]!.isNotEmpty) {
-        await _checkExistingDownloads(_lessonsBySectionId[sectionId]!);
-        notifyListeners();
-      }
+    await _loadLessonsFromDb(sectionId);
+    if (_lessonsBySectionId.containsKey(sectionId) && _lessonsBySectionId[sectionId]!.isNotEmpty) {
+      await _checkExistingDownloads(_lessonsBySectionId[sectionId]!);
     }
 
-    if (!forceRefresh && (_lessonsBySectionId[sectionId]?.isNotEmpty ?? false)) {
-      _isLoadingForSectionId[sectionId] = false;
+
+    if (!forceRefresh && (_lessonsBySectionId[sectionId]?.isNotEmpty ?? false) && !(_isLoadingForSectionId[sectionId] ?? false)) {
+      debugPrint("LessonProvider: Data for section $sectionId already available and not forcing refresh.");
       return;
     }
 
@@ -104,7 +112,10 @@ class LessonProvider with ChangeNotifier {
               .map((lessonJson) => Lesson.fromJson(lessonJson as Map<String, dynamic>))
               .toList();
 
-          await _saveLessonsToDb(sectionId, fetchedLessons);
+          if (forceRefresh || !listEquals(_lessonsBySectionId[sectionId], fetchedLessons)) {
+             await _saveLessonsToDb(sectionId, fetchedLessons);
+          }
+
 
           fetchedLessons.sort((a, b) => (a.order ?? 0).compareTo(b.order ?? 0));
           _lessonsBySectionId[sectionId] = fetchedLessons;
@@ -124,6 +135,7 @@ class LessonProvider with ChangeNotifier {
     } on http.ClientException {
       _errorForSectionId[sectionId] = _networkErrorMessage;
     } catch (e, s) {
+      debugPrint("LessonProvider: Unexpected error fetching lessons for section $sectionId: $e\n$s");
       _errorForSectionId[sectionId] = _unexpectedErrorMessage;
     } finally {
       _isLoadingForSectionId[sectionId] = false;
@@ -131,18 +143,47 @@ class LessonProvider with ChangeNotifier {
     }
   }
 
+  bool listEquals<T>(List<T>? a, List<T>? b) {
+    if (a == null || b == null) return a == b;
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+       if (a[i] is Lesson && b[i] is Lesson) {
+           final lessonA = a[i] as Lesson;
+           final lessonB = b[i] as Lesson;
+           if (lessonA.id != lessonB.id ||
+               lessonA.title != lessonB.title ||
+               lessonA.sectionId != lessonB.sectionId ||
+               lessonA.summary != lessonB.summary ||
+               lessonA.order != lessonB.order ||
+               lessonA.videoProvider != lessonB.videoProvider ||
+               lessonA.videoUrl != lessonB.videoUrl ||
+               lessonA.attachmentUrl != lessonB.attachmentUrl ||
+               lessonA.attachmentTypeString != lessonB.attachmentTypeString ||
+               lessonA.lessonTypeString != lessonB.lessonTypeString ||
+               lessonA.duration != lessonB.duration) {
+              return false;
+           }
+       } else if (a[i] != b[i]) {
+         return false;
+       }
+    }
+    return true;
+  }
+
+
   Future<void> _loadLessonsFromDb(int sectionId) async {
     try {
       final List<Map<String, dynamic>> lessonMaps = await _dbHelper.query(
         'lessons',
         where: 'sectionId = ?',
         whereArgs: [sectionId],
-        orderBy: "'order' ASC",
+        orderBy: '"order" ASC',
       );
       final loadedLessons = lessonMaps.map((map) => Lesson.fromMap(map)).toList();
       _lessonsBySectionId[sectionId] = loadedLessons;
-    } catch (e) {
-      // Error loading from DB
+      debugPrint("LessonProvider: Loaded ${loadedLessons.length} lessons from DB for section $sectionId.");
+    } catch (e, s) {
+      debugPrint("LessonProvider: Error loading lessons from DB for section $sectionId: $e\n$s");
     }
   }
 
@@ -151,25 +192,56 @@ class LessonProvider with ChangeNotifier {
       return;
     }
     try {
-      await _dbHelper.deleteLessonsForSection(sectionId);
-      for (final lesson in lessonsToSave) {
-        await _dbHelper.upsert('lessons', lesson.toMap());
-      }
-    } catch (e) {
-      // Error saving to DB
+      final db = await _dbHelper.database; // Await the database Future
+      await db.transaction((txn) async {
+         await txn.delete(
+            'lessons',
+            where: 'sectionId = ?',
+            whereArgs: [sectionId],
+         );
+         for (final lesson in lessonsToSave) {
+           final lessonMap = {
+              'id': lesson.id,
+              'sectionId': lesson.sectionId,
+              'title': lesson.title,
+              'summary': lesson.summary,
+              'order': lesson.order,
+              'videoProvider': lesson.videoProvider,
+              'videoUrl': lesson.videoUrl,
+              'attachmentUrl': lesson.attachmentUrl,
+              'attachmentTypeString': lesson.attachmentTypeString,
+              'lessonTypeString': lesson.lessonTypeString,
+              'duration': lesson.duration,
+              'createdAt': lesson.createdAt.toIso8601String(),
+              'updatedAt': lesson.updatedAt.toIso8601String(),
+           };
+            await txn.insert(
+              'lessons',
+              lessonMap,
+              conflictAlgorithm: ConflictAlgorithm.replace, // Correctly access ConflictAlgorithm
+            );
+         }
+      });
+       debugPrint("LessonProvider: Saved ${lessonsToSave.length} lessons to DB for section $sectionId.");
+    } catch (e, s) {
+      debugPrint("LessonProvider: Error saving lessons to DB for section $sectionId: $e\n$s");
     }
   }
 
+
   Future<void> _checkExistingDownloads(List<Lesson> lessons) async {
+    debugPrint("LessonProvider: Checking existing downloads for ${lessons.length} lessons.");
     for (final lesson in lessons) {
       final downloadId = getDownloadId(lesson);
       if (downloadId != null) {
         await MediaService.isFileDownloaded(downloadId);
+        debugPrint("LessonProvider: Checked download status for lesson ${lesson.id} (ID: $downloadId). Status: ${MediaService.getDownloadStatus(downloadId).value}");
       }
     }
+    notifyListeners();
   }
 
-  Future<void> startDownload(Lesson lesson) async {
+  Future<bool> startDownload(Lesson lesson) async {
     final downloadId = getDownloadId(lesson);
     if (downloadId == null) {
       final fallBackId = lesson.id.toString();
@@ -177,32 +249,36 @@ class LessonProvider with ChangeNotifier {
       final progressNotifier = MediaService.getDownloadProgress(fallBackId);
       statusNotifier.value = DownloadStatus.failed;
       progressNotifier.value = 0.0;
-      return;
+      notifyListeners();
+      debugPrint("LessonProvider: Download ID is null for lesson ${lesson.id}. Cannot start download.");
+      return false;
     }
 
-    if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
-       // getDownloadId should give us the videoId string for YouTube.
-       // We pass this ID and the original URL to MediaService.
-       // MediaService.downloadVideoFile expects a non-nullable String for videoId.
-       // getDownloadId returns String? but within this block, if it's a YouTube video with a valid URL,
-       // getDownloadId's try block *should* return a non-null String.
-       // To satisfy the compiler, we can use a null check or assertion if needed,
-       // but passing downloadId directly is likely okay if getDownloadId's logic is sound.
-       // Let's add a defensive check just in case getDownloadId returned null unexpectedly here.
-       if (downloadId != null) { // This check is technically redundant if the outer check passed, but makes it explicit
-         await MediaService.downloadVideoFile(
-           videoId: downloadId, // This is the YouTube ID string obtained from getDownloadId
-           url: lesson.videoUrl!, // Original URL
-           title: lesson.title,
-         );
-       } else {
-          // Should not be reached if getDownloadId returned non-null above, but fallback for safety
-          final statusNotifier = MediaService.getDownloadStatus(lesson.id.toString());
-          final progressNotifier = MediaService.getDownloadProgress(lesson.id.toString());
-          statusNotifier.value = DownloadStatus.failed;
-          progressNotifier.value = 0.0;
-       }
+    if (MediaService.getDownloadStatus(downloadId).value == DownloadStatus.failed ||
+        MediaService.getDownloadStatus(downloadId).value == DownloadStatus.cancelled) {
+           MediaService.getDownloadStatus(downloadId).value = DownloadStatus.notDownloaded;
+           MediaService.getDownloadProgress(downloadId).value = 0.0;
+    }
 
+    if (MediaService.getDownloadStatus(downloadId).value == DownloadStatus.downloading) {
+       debugPrint("LessonProvider: Download already in progress for ID $downloadId.");
+       notifyListeners();
+       return true;
+    }
+
+    bool success = false;
+
+    if (lesson.lessonType == LessonType.video && lesson.videoUrl != null && lesson.videoUrl!.isNotEmpty) {
+         if (lesson.videoUrl != null) {
+           success = await MediaService.downloadVideoFile(
+             videoId: downloadId,
+             url: lesson.videoUrl!,
+             title: lesson.title,
+           );
+         } else {
+             debugPrint("LessonProvider: Video URL is null despite type being video.");
+             success = false;
+         }
     } else if ((lesson.lessonType == LessonType.document || lesson.lessonType == LessonType.text || lesson.lessonType == LessonType.quiz) && (lesson.attachmentUrl != null || lesson.htmlUrl != null)) {
        final url = lesson.htmlUrl ?? lesson.attachmentUrl;
        if (url != null && url.isNotEmpty) {
@@ -210,43 +286,58 @@ class LessonProvider with ChangeNotifier {
          final fullUrl = url.startsWith("http") ? url : "$baseUrl$url";
 
          if (lesson.lessonType == LessonType.document) {
-            await MediaService.downloadPDFFile(
+            success = await MediaService.downloadPDFFile(
                pdfId: downloadId,
                url: fullUrl,
                title: lesson.title,
             );
          } else if (lesson.lessonType == LessonType.quiz || lesson.lessonType == LessonType.text) {
-            await MediaService.downloadHtmlFile(
+            success = await MediaService.downloadHtmlFile(
                htmlId: downloadId,
                url: fullUrl,
                title: lesson.title,
             );
+         } else {
+             debugPrint("LessonProvider: Unhandled lesson type for attachment/html download.");
+             success = false;
          }
        } else {
           final statusNotifier = MediaService.getDownloadStatus(downloadId);
           final progressNotifier = MediaService.getDownloadProgress(downloadId);
           statusNotifier.value = DownloadStatus.failed;
           progressNotifier.value = 0.0;
+          debugPrint("LessonProvider: Attachment/HTML URL is null or empty.");
+          success = false;
        }
+    } else {
+        debugPrint("LessonProvider: Attempted to download unsupported lesson type.");
+        success = false;
     }
+
     notifyListeners();
+    return success;
   }
 
   Future<String?> getDownloadedFilePath(Lesson lesson) async {
     final downloadId = getDownloadId(lesson);
-    if (downloadId == null) return null;
+    if (downloadId == null) {
+       debugPrint("LessonProvider: Cannot get downloaded file path, download ID is null for lesson ${lesson.id}.");
+      return null;
+    }
     return await MediaService.getSecurePath(downloadId);
   }
 
   Future<void> deleteDownload(Lesson lesson, BuildContext context) async {
     final downloadId = getDownloadId(lesson);
     if (downloadId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.couldNotDeleteFileError),
-          backgroundColor: AppColors.errorContainer,
-        ),
-      );
+       // No need for mounted check here, context is passed directly
+       ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.couldNotDeleteFileError),
+            backgroundColor: AppColors.errorContainer,
+          ),
+       );
+      debugPrint("LessonProvider: Cannot delete download, ID is null for lesson ${lesson.id}.");
       return;
     }
 
@@ -259,6 +350,8 @@ class LessonProvider with ChangeNotifier {
     if (downloadId != null) {
       MediaService.cancelDownload(downloadId);
       notifyListeners();
+    } else {
+       debugPrint("LessonProvider: Cannot cancel download, ID is null for lesson ${lesson.id}.");
     }
   }
 
@@ -282,6 +375,7 @@ class LessonProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    debugPrint("LessonProvider: Dispose called for section provider.");
     super.dispose();
   }
 }
