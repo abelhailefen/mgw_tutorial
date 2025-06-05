@@ -15,7 +15,7 @@ class ExamProvider with ChangeNotifier {
   String? getErrorMessage(int chapterId) => _errorMessages[chapterId];
   List<Exam>? getExams(int chapterId) => _examsCache[chapterId];
 
-  final String _baseApiUrl = "https://mgw-backend.onrender.com/api/exams/chapter/";
+  final String _baseApiUrl = "https://courseservice.anbesgames.com/api/exams/chapter/";
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Future<void> fetchExamsForChapter(int chapterId, {bool forceRefresh = false}) async {

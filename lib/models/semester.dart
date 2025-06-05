@@ -80,7 +80,7 @@ class Semester {
       }
 
     
-      const String imageBaseUrl = "https://mgw-backend.onrender.com"; 
+      const String imageBaseUrl = "https://courseservice.anbesgames.com"; 
 
       if (imagePath.startsWith('/')) { // Path like /uploads/image.jpg
         final fullUrl = "$imageBaseUrl$imagePath";

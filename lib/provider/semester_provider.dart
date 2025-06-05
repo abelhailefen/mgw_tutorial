@@ -20,7 +20,7 @@ class SemesterProvider with ChangeNotifier {
   static const String _unexpectedErrorMessage = "An unexpected error occurred while fetching semesters. Please try again later.";
   static const String _failedToLoadSemestersMessage = "Failed to load semesters. Please try again.";
 
-  static const String _apiBaseUrl = "https://mgw-backend.onrender.com/api";
+  static const String _apiBaseUrl = "https://courseservice.anbesgames.com/api";
 
   Future<void> fetchSemesters({bool forceRefresh = false}) async {
     if (!forceRefresh && _semesters.isNotEmpty && !_isLoading) {

@@ -14,7 +14,7 @@ class FaqProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  final String _apiUrl = "https://mgw-backend.onrender.com/api/faqs";
+  final String _apiUrl = "https://courseservice.anbesgames.com/api/faqs";
 
   Future<void> fetchFaqs({bool forceRefresh = false}) async {
     if (_faqs.isNotEmpty && !forceRefresh && _error == null) {

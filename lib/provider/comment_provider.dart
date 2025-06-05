@@ -14,7 +14,7 @@ class CommentProvider with ChangeNotifier {
   bool isLoadingForPost(int postId) => _isLoadingForPostId[postId] ?? false;
   String? errorForPost(int postId) => _errorForPostId[postId];
 
-  final String _apiBaseUrl; // This will be "https://mgw-backend.onrender.com/api"
+  final String _apiBaseUrl; // This will be "https://courseservice.anbesgames.com/api"
   final AuthProvider _authProvider;
 
   CommentProvider(this._apiBaseUrl, this._authProvider);

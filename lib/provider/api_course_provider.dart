@@ -21,8 +21,8 @@ class ApiCourseProvider with ChangeNotifier {
 
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  static const String _apiBaseUrl = "https://mgw-backend.onrender.com/api";
-  static const String _thumbnailBaseUrl = "https://mgw-backend.onrender.com"; // Defined here for thumbnail download
+  static const String _apiBaseUrl = "https://courseservice.anbesgames.com/api";
+  static const String _thumbnailBaseUrl = "https://courseservice.anbesgames.com"; // Defined here for thumbnail download
 
 
   // Define reusable error messages based on existing l10n keys if possible

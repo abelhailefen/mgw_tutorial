@@ -11,7 +11,7 @@ class Testimonial {
   final DateTime updatedAt;
   final Author author;
 
-  static const String imageBaseUrl = "https://mgw-backend.onrender.com";
+  static const String imageBaseUrl = "https://courseservice.anbesgames.com";
 
   Testimonial({
     required this.id,

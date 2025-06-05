@@ -17,7 +17,7 @@ class TestimonialProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  static const String apiBaseUrl = "https://mgw-backend.onrender.com/api";
+  static const String apiBaseUrl = "https://courseservice.anbesgames.com/api";
 
   static const String _networkErrorMessage = "Sorry, there seems to be a network error. Please check your connection and try again.";
   static const String _timeoutErrorMessage = "The request timed out. Please check your connection or try again later.";

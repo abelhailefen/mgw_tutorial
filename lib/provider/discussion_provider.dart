@@ -14,7 +14,7 @@ class DiscussionProvider with ChangeNotifier {
   late final CommentProvider _commentProvider;
   late final ReplyProvider _replyProvider;
 
-  static const String _apiBaseUrl = "https://mgw-backend.onrender.com/api";
+  static const String _apiBaseUrl = "https://courseservice.anbesgames.com/api";
 
   // UI specific error states for submission forms
   String? _submitPostError;

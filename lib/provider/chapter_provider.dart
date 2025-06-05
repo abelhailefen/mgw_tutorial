@@ -15,7 +15,7 @@ class ChapterProvider with ChangeNotifier {
   String? getErrorMessage(int subjectId) => _errorMessages[subjectId];
   List<Chapter>? getChapters(int subjectId) => _chaptersCache[subjectId];
 
-  final String _baseApiUrl = "https://mgw-backend.onrender.com/api/chapters/subject/";
+  final String _baseApiUrl = "https://courseservice.anbesgames.com/api/chapters/subject/";
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Future<void> fetchChaptersForSubject(int subjectId, {bool forceRefresh = false}) async {

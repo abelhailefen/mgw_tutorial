@@ -15,7 +15,7 @@ class SubjectProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  final String _subjectsApiUrl = "https://mgw-backend.onrender.com/api/subjects";
+  final String _subjectsApiUrl = "https://courseservice.anbesgames.com/api/subjects";
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Future<void> fetchSubjects({bool forceRefresh = false}) async {

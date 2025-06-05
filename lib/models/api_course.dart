@@ -63,7 +63,7 @@ class ApiCourse {
   String? localThumbnailPath;
 
 
-  static const String thumbnailBaseUrl = "https://mgw-backend.onrender.com"; // Define your thumbnail base URL here if specific to thumbnails
+  static const String thumbnailBaseUrl = "https://courseservice.anbesgames.com"; // Define your thumbnail base URL here if specific to thumbnails
 
 
   ApiCourse({
