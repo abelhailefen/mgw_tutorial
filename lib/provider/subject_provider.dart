@@ -1,9 +1,8 @@
-// lib/provider/subject_provider.dart
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:mgw_tutorial/models/subject.dart';
+import 'package:mgw_tutorial/services/database_helper.dart';
 
 class SubjectProvider with ChangeNotifier {
   List<Subject> _subjects = [];
@@ -15,10 +14,18 @@ class SubjectProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   final String _subjectsApiUrl = "https://mgw-backend.onrender.com/api/subjects";
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Future<void> fetchSubjects({bool forceRefresh = false}) async {
-    if (_subjects.isNotEmpty && !forceRefresh && !_isLoading) {
-      return;
+    if (!forceRefresh && !_isLoading) {
+      final cached = await _dbHelper.query('subjects');
+      if (cached.isNotEmpty) {
+        _subjects = cached.map((e) => Subject.fromJson(e)).toList();
+        _isLoading = false;
+        _errorMessage = null;
+        notifyListeners();
+        return;
+      }
     }
 
     _isLoading = true;
@@ -26,7 +33,7 @@ class SubjectProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(Uri.parse(_subjectsApiUrl));
+      final response = await http.get(Uri.parse(_subjectsApiUrl)).timeout(Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
@@ -34,12 +41,23 @@ class SubjectProvider with ChangeNotifier {
         if (responseData.containsKey('data') && responseData['data'] is List) {
           List<dynamic> subjectsJson = responseData['data'];
           _subjects = subjectsJson.map((json) => Subject.fromJson(json)).toList();
+
+          // Cache in SQLite
+          for (var subject in _subjects) {
+            await _dbHelper.upsert('subjects', {
+              'id': subject.id,
+              'name': subject.name,
+              'category': subject.category,
+              'year': subject.year,
+              'imageUrl': subject.imageUrl,
+            });
+          }
         } else {
-          _errorMessage = 'Invalid API response format: Missing or invalid "data" field.';
+          _errorMessage = 'Unable to load subjects. Please try again later.';
           _subjects = [];
         }
       } else {
-        _errorMessage = 'Failed to load subjects. Status: ${response.statusCode}';
+        _errorMessage = 'Unable to load subjects. Please check your connection.';
         _subjects = [];
       }
     } catch (e) {
@@ -51,10 +69,11 @@ class SubjectProvider with ChangeNotifier {
     }
   }
 
-  void clearSubjects() {
+  Future<void> clearSubjects() async {
     _subjects = [];
     _errorMessage = null;
     _isLoading = false;
+    await _dbHelper.delete('subjects');
     notifyListeners();
   }
 }
