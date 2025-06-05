@@ -132,12 +132,10 @@ class MediaService {
       yt = YoutubeExplode();
       debugPrint("MediaService: YoutubeExplode client created for ID $videoId.");
 
-      // Use the URL directly to get the Video object
       final video = await yt.videos.get(url).timeout(const Duration(seconds: 30));
       debugPrint("MediaService: Fetched video object from URL: $url. Actual video ID: ${video.id.value}");
 
-      // Use the actual VideoId object for the manifest
-      final manifest = await yt.videos.streamsClient.getManifest(video.id).timeout(const Duration(seconds: 30));
+      final manifest = await yt.videos.streamsClient.getManifest(video.id).timeout(const Duration(seconds: 60));
       debugPrint("MediaService: Fetched manifest for ID ${video.id.value}.");
 
       if (manifest.muxed.isNotEmpty) {
@@ -172,7 +170,7 @@ class MediaService {
       }
     } catch (e, s) {
       DownloadStatus finalStatus = DownloadStatus.failed;
-      String errorMessage = "An unexpected error occurred"; // Generic message for logging
+      String errorMessage = "An unexpected error occurred";
 
       if (e is DioException && e.type == DioExceptionType.cancel) {
         finalStatus = DownloadStatus.cancelled;
@@ -183,7 +181,6 @@ class MediaService {
          errorMessage = "Timeout during download process";
          debugPrint("MediaService: Timeout during video download process for ID $videoId: $e");
       }
-      // Catch any other Exception including youtube_explode errors
       else {
         errorMessage = "Error fetching video streams: $e";
         debugPrint("MediaService: Error downloading video for ID $videoId: $e");
@@ -401,6 +398,7 @@ class MediaService {
     } catch (e, s) {
        debugPrint("MediaService: Error getting secure path for ID $id: $e\n$s");
        _updateStatus(id, DownloadStatus.notDownloaded);
+       getDownloadProgress(id).value = 0.0;
        _fileExtensions.remove(id);
       return null;
     }
@@ -437,7 +435,6 @@ class MediaService {
           await _secureStorage.delete(key: id);
           _fileExtensions.remove(id);
          _updateStatus(id, DownloadStatus.notDownloaded);
-          // Use the context passed into the method
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(l10n.fileDeletedSuccessfully),
@@ -445,7 +442,6 @@ class MediaService {
             ),
           );
        } else {
-           // Use the context passed into the method
            ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('${l10n.couldNotDeleteFileError}: ${storedPath ?? 'Unknown File'}'),

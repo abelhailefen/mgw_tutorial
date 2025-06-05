@@ -192,7 +192,7 @@ class LessonProvider with ChangeNotifier {
       return;
     }
     try {
-      final db = await _dbHelper.database; // Await the database Future
+      final db = await _dbHelper.database;
       await db.transaction((txn) async {
          await txn.delete(
             'lessons',
@@ -218,7 +218,7 @@ class LessonProvider with ChangeNotifier {
             await txn.insert(
               'lessons',
               lessonMap,
-              conflictAlgorithm: ConflictAlgorithm.replace, // Correctly access ConflictAlgorithm
+              conflictAlgorithm: ConflictAlgorithm.replace,
             );
          }
       });
@@ -330,7 +330,6 @@ class LessonProvider with ChangeNotifier {
   Future<void> deleteDownload(Lesson lesson, BuildContext context) async {
     final downloadId = getDownloadId(lesson);
     if (downloadId == null) {
-       // No need for mounted check here, context is passed directly
        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!.couldNotDeleteFileError),

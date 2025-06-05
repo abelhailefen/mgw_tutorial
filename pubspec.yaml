@@ -29,7 +29,7 @@ dependencies:
   share_plus: ^7.0.0 # Check for latest version
   http_parser: ^4.0.2 # Check for latest version
   
-  youtube_explode_dart: ^2.3.4 # Check for latest version
+  youtube_explode_dart: ^2.4.2 # Check for latest version
   dio: ^5.4.3+1                # Check for latest version
   path_provider: ^2.1.3        # Check for latest version
   sqflite: ^2.3.0
