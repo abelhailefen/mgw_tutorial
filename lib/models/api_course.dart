@@ -1,7 +1,9 @@
 // lib/models/api_course.dart
 import 'dart:convert'; // Import jsonEncode/jsonDecode
 import 'dart:io'; // Import File class
+import 'package:path/path.dart' show join; // For path joining
 
+// --- Start of CourseCategoryInfo Class ---
 class CourseCategoryInfo {
   final int id;
   final String name;
@@ -15,7 +17,6 @@ class CourseCategoryInfo {
     );
   }
 
-  // Added for DB conversion
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -23,7 +24,6 @@ class CourseCategoryInfo {
     };
   }
 
-  // Added for DB conversion
   factory CourseCategoryInfo.fromMap(Map<String, dynamic> map) {
      return CourseCategoryInfo(
       id: map['id'] as int? ?? 0,
@@ -31,7 +31,10 @@ class CourseCategoryInfo {
     );
   }
 }
+// --- End of CourseCategoryInfo Class ---
 
+
+// --- Start of ApiCourse Class ---
 class ApiCourse {
   final int id;
   final String title;
@@ -57,11 +60,10 @@ class ApiCourse {
   final DateTime updatedAt;
   final CourseCategoryInfo? category;
 
-  // NEW: Field to store the local file path of the thumbnail
   String? localThumbnailPath;
 
 
-  static const String thumbnailBaseUrl = "https://mgw-backend.onrender.com";
+  static const String thumbnailBaseUrl = "https://mgw-backend.onrender.com"; // Define your thumbnail base URL here if specific to thumbnails
 
 
   ApiCourse({
@@ -88,56 +90,35 @@ class ApiCourse {
     required this.createdAt,
     required this.updatedAt,
     this.category,
-    // NEW: Initialize localThumbnailPath
     this.localThumbnailPath,
   });
 
-  // Corrected getter for the full thumbnail URL (network)
   String? get fullThumbnailUrl {
     if (thumbnail != null && thumbnail!.isNotEmpty) {
       if (thumbnail!.toLowerCase().startsWith('http')) {
-        return thumbnail; // Already a full URL
+        return thumbnail;
       }
-      // Ensure there's a slash between base URL and thumbnail path
-      String baseUrl = thumbnailBaseUrl;
+      String baseUrl = thumbnailBaseUrl; // Or get this from a config if it's the same as API base
       String thumbPath = thumbnail!;
 
-      // Ensure base URL doesn't end with / and thumbPath doesn't start with /
-      // If base URL ends with / and thumbPath starts with /, remove the thumbPath's leading /
-      if (baseUrl.endsWith('/') && thumbPath.startsWith('/')) {
-        return baseUrl + thumbPath.substring(1);
-      }
-      // If base URL doesn't end with / and thumbPath doesn't start with /, add a /
-      else if (!baseUrl.endsWith('/') && !thumbPath.startsWith('/')) {
-         return '$baseUrl/$thumbPath';
-      }
-      // Otherwise, one has a slash, the other doesn't - they fit
-      else {
-        return baseUrl + thumbPath;
-      }
+      return join(baseUrl, thumbPath);
     }
     return null;
   }
 
-  // NEW: Getter to use for display - prioritizes local path
   String? get displayThumbnailPath {
-     // Check if the local path exists and the file is actually there
      if (localThumbnailPath != null && localThumbnailPath!.isNotEmpty) {
          try {
            final file = File(localThumbnailPath!);
            if (file.existsSync()) {
-             return localThumbnailPath; // Use local path
+             return localThumbnailPath;
            } else {
-              // File not found, clear the path and use network
               print("Local thumbnail file not found: ${localThumbnailPath}. Falling back to network.");
-              localThumbnailPath = null; // Clear invalid path
            }
          } catch (e) {
             print("Error checking local thumbnail file: $e. Falling back to network.");
-            localThumbnailPath = null; // Clear invalid path on error
          }
      }
-     // If local path is null, empty, or file doesn't exist, use network URL
      return fullThumbnailUrl;
   }
 
@@ -151,7 +132,7 @@ class ApiCourse {
             return decoded.map((item) => item.toString()).toList();
           }
         } catch (e) {
-          print("Could not parse string list: $jsonField, error: $e");
+          print("Could not parse string list JSON: $jsonField, error: $e");
         }
       } else if (jsonField is List) {
         return jsonField.map((item) => item.toString()).toList();
@@ -161,8 +142,7 @@ class ApiCourse {
 
     bool? parseBoolFromString(dynamic value) {
         if (value is bool) return value;
-        if (value is String) return value.toLowerCase() == 'true';
-        // Added for robust parsing, though API should send bool/string
+        if (value is String) return value.toLowerCase() == 'true' || value == '1';
         if (value is int) return value == 1;
         return null;
     }
@@ -170,13 +150,13 @@ class ApiCourse {
      DateTime parseSafeDate(dynamic dateValue, String fieldName) {
       if (dateValue is String && dateValue.isNotEmpty) {
         try {
-          return DateTime.parse(dateValue);
+          return DateTime.parse(dateValue).toLocal();
         } catch (e) {
           print("Error parsing date for Course field '$fieldName': $dateValue. Error: $e. Using current time as fallback.");
           return DateTime.now();
         }
       }
-      return DateTime.now(); // Fallback
+      return DateTime.now();
     }
 
 
@@ -191,72 +171,68 @@ class ApiCourse {
       section: json['section']?.toString(),
       requirements: parseStringList(json['requirements']),
       price: json['price'] as String? ?? "0.00",
-      discountFlag: json['discount_flag'] as bool?,
+      discountFlag: parseBoolFromString(json['discount_flag']),
       discountedPrice: json['discounted_price'] as String?,
       thumbnail: json['thumbnail'] as String?,
       videoUrl: json['video_url'] as String?,
-      isTopCourse: json['is_top_course'] as bool?,
+      isTopCourse: parseBoolFromString(json['is_top_course']),
       status: json['status'] as String? ?? 'unknown',
       isVideoCourse: parseBoolFromString(json['video']),
-      isFreeCourse: json['is_free_course'] as bool?,
-      multiInstructor: json['multi_instructor'] as bool?,
+      isFreeCourse: parseBoolFromString(json['is_free_course']),
+      multiInstructor: parseBoolFromString(json['multi_instructor']),
       creator: json['creator'] as String?,
       createdAt: parseSafeDate(json['createdAt'], 'createdAt'),
       updatedAt: parseSafeDate(json['updatedAt'], 'updatedAt'),
       category: json['category'] != null && json['category'] is Map<String, dynamic>
           ? CourseCategoryInfo.fromJson(json['category'] as Map<String, dynamic>)
           : null,
-      // localThumbnailPath is not from API, so it's not included here
-      localThumbnailPath: null,
+      localThumbnailPath: null, // Not from API JSON initially
     );
   }
 
-  // Added for DB conversion (saving to SQLite)
   Map<String, dynamic> toMap() {
+     int? boolToInt(bool? b) => b == null ? null : (b ? 1 : 0);
+
     return {
       'id': id,
       'title': title,
       'shortDescription': shortDescription,
       'description': description,
-      'outcomes': jsonEncode(outcomes), // Store list as JSON string
+      'outcomes': jsonEncode(outcomes),
       'language': language,
       'categoryId': categoryId,
       'section': section,
-      'requirements': jsonEncode(requirements), // Store list as JSON string
+      'requirements': jsonEncode(requirements),
       'price': price,
-      // Store bool as int (1 for true, 0 for false, null for null)
-      'discountFlag': discountFlag == null ? null : (discountFlag! ? 1 : 0),
+      'discountFlag': boolToInt(discountFlag),
       'discountedPrice': discountedPrice,
-      'thumbnail': thumbnail, // Save the network path
+      'thumbnail': thumbnail,
       'videoUrl': videoUrl,
-      'isTopCourse': isTopCourse == null ? null : (isTopCourse! ? 1 : 0),
+      'isTopCourse': boolToInt(isTopCourse),
       'status': status,
-      'isVideoCourse': isVideoCourse == null ? null : (isVideoCourse! ? 1 : 0),
-      'isFreeCourse': isFreeCourse == null ? null : (isFreeCourse! ? 1 : 0),
-      'multiInstructor': multiInstructor == null ? null : (multiInstructor! ? 1 : 0),
+      'isVideoCourse': boolToInt(isVideoCourse),
+      'isFreeCourse': boolToInt(isFreeCourse),
+      'multiInstructor': boolToInt(multiInstructor),
       'creator': creator,
-      'createdAt': createdAt.toIso8601String(), // Store DateTime as ISO 8601 string
-      'updatedAt': updatedAt.toIso8601String(), // Store DateTime as ISO 8601 string
-      // Store category info flattened (assuming CourseCategoryInfo won't change often)
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
       'courseCategoryId': category?.id,
       'courseCategoryName': category?.name,
-      // NEW: Include local thumbnail path
       'localThumbnailPath': localThumbnailPath,
     };
   }
 
-  // Added for DB conversion (loading from SQLite)
   factory ApiCourse.fromMap(Map<String, dynamic> map) {
      DateTime parseSafeDateFromDb(dynamic dateValue, String fieldName) {
       if (dateValue is String && dateValue.isNotEmpty) {
         try {
-          return DateTime.parse(dateValue);
+          return DateTime.parse(dateValue).toLocal();
         } catch (e) {
           print("Error parsing date from DB for Course field '$fieldName': $dateValue. Error: $e. Using current time as fallback.");
           return DateTime.now();
         }
       }
-      return DateTime.now(); // Fallback
+      return DateTime.now();
     }
 
      List<String> parseStringListFromDb(dynamic dbField) {
@@ -275,10 +251,10 @@ class ApiCourse {
 
      bool? intToBool(dynamic value) {
       if (value is int) return value == 1;
+      if (value is String) return value.toLowerCase() == 'true' || value == '1';
       return null;
     }
 
-    // Safely get category info from flattened DB fields
     CourseCategoryInfo? categoryInfo;
     if (map['courseCategoryId'] != null && map['courseCategoryName'] != null) {
        categoryInfo = CourseCategoryInfo(
@@ -287,7 +263,6 @@ class ApiCourse {
        );
     }
 
-    // Create the ApiCourse object
     final course = ApiCourse(
       id: map['id'] as int? ?? 0,
       title: map['title'] as String? ?? 'Untitled Course',
@@ -301,7 +276,7 @@ class ApiCourse {
       price: map['price'] as String? ?? "0.00",
       discountFlag: intToBool(map['discountFlag']),
       discountedPrice: map['discountedPrice'] as String?,
-      thumbnail: map['thumbnail'] as String?, // Load the network path
+      thumbnail: map['thumbnail'] as String?,
       videoUrl: map['videoUrl'] as String?,
       isTopCourse: intToBool(map['isTopCourse']),
       status: map['status'] as String? ?? 'unknown',
@@ -311,8 +286,7 @@ class ApiCourse {
       creator: map['creator'] as String?,
       createdAt: parseSafeDateFromDb(map['createdAt'], 'createdAt'),
       updatedAt: parseSafeDateFromDb(map['updatedAt'], 'updatedAt'),
-      category: categoryInfo, // Use the parsed category info
-      // NEW: Load the local thumbnail path
+      category: categoryInfo,
       localThumbnailPath: map['localThumbnailPath'] as String?,
     );
 

@@ -197,7 +197,6 @@ class AppDrawer extends StatelessWidget {
     await authProvider.logout();
     if (context.mounted) {
       Provider.of<SemesterProvider>(context, listen: false).clearSemesters();
-      Provider.of<ApiCourseProvider>(context, listen: false).clearError();
       Provider.of<TestimonialProvider>(context, listen: false).clearTestimonials();
 
       Navigator.of(context).pushAndRemoveUntil(
