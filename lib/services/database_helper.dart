@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' show join;
-import 'package:mgw_tutorial/models/user.dart'; // Assuming User model is needed here
+import 'package:mgw_tutorial/models/user.dart';
+import 'package:mgw_tutorial/models/api_course.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -20,17 +21,15 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, 'app_database.db');
-    // Increment version number to trigger onUpgrade for new tables
     return await openDatabase(
       path,
-      version: 6, // Increased from 5 to 6 for new tables
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // Create courses table
     await db.execute('''
       CREATE TABLE courses(
         id INTEGER PRIMARY KEY,
@@ -61,7 +60,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create sections table
     await db.execute('''
       CREATE TABLE sections(
         id INTEGER PRIMARY KEY,
@@ -74,7 +72,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create lessons table
     await db.execute('''
       CREATE TABLE lessons(
         id INTEGER PRIMARY KEY,
@@ -94,7 +91,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create logged_in_user table
     await db.execute('''
       CREATE TABLE logged_in_user(
         id INTEGER PRIMARY KEY,
@@ -106,7 +102,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create subjects table
     await db.execute('''
       CREATE TABLE subjects(
         id INTEGER PRIMARY KEY,
@@ -117,7 +112,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create chapters table
     await db.execute('''
       CREATE TABLE chapters(
         id INTEGER PRIMARY KEY,
@@ -130,7 +124,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create exams table
     await db.execute('''
       CREATE TABLE exams(
         id INTEGER PRIMARY KEY,
@@ -154,7 +147,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create indexes for foreign keys
     await db.execute('CREATE INDEX idx_sections_courseId ON sections(courseId)');
     await db.execute('CREATE INDEX idx_lessons_sectionId ON lessons(sectionId)');
     await db.execute('CREATE INDEX idx_chapters_subjectId ON chapters(subjectId)');
@@ -310,56 +302,62 @@ class DatabaseHelper {
     }
   }
 
-  Future<void> _deleteCourseThumbnailFiles(List<int> courseIds) async {
-    if (courseIds.isEmpty) return;
-    print("DatabaseHelper: Attempting to delete thumbnail files for course IDs: $courseIds");
-    try {
-      final db = await database;
-      final List<Map<String, dynamic>> results = await db.query(
-        'courses',
-        columns: ['localThumbnailPath'],
-        where: 'id IN (${List.filled(courseIds.length, '?').join(',')})',
-        whereArgs: courseIds,
-      );
-      final List<String> pathsToDelete = results
-          .map((row) => row['localThumbnailPath'] as String?)
-          .where((path) => path != null && path.isNotEmpty)
-          .cast<String>()
-          .toList();
-
-      List<String> errors = [];
-      for (final path in pathsToDelete) {
-        try {
-          final file = File(path);
-          if (await file.exists()) {
-            await file.delete();
-            print("DatabaseHelper: Deleted thumbnail file: $path");
-          }
-        } catch (e) {
-          errors.add("Failed to delete $path: $e");
-        }
-      }
-      if (errors.isNotEmpty) {
-        print("DatabaseHelper: Errors during thumbnail deletion: ${errors.join(', ')}");
-      }
-    } catch (e) {
-      print("DatabaseHelper: Error retrieving thumbnail paths for deletion: $e");
-    }
+  Future<List<String>> getOldThumbnailPathsInTxn(Transaction txn) async {
+     try {
+        final List<Map<String, dynamic>> results = await txn.query(
+          'courses',
+          columns: ['localThumbnailPath'],
+        );
+        final List<String> paths = results
+            .map((row) => row['localThumbnailPath'] as String?)
+            .where((path) => path != null && path.isNotEmpty)
+            .cast<String>()
+            .toList();
+        return paths;
+     } catch (e) {
+        print("DatabaseHelper: Error retrieving thumbnail paths in transaction: $e");
+        return [];
+     }
   }
 
-  Future<void> deleteAllCourses() async {
-    try {
-      final db = await database;
-      await db.transaction((txn) async {
-        final List<Map<String, dynamic>> allCourseIds = await txn.query('courses', columns: ['id']);
-        final List<int> courseIdsToDelete = allCourseIds.map((row) => row['id'] as int).toList();
-        await _deleteCourseThumbnailFiles(courseIdsToDelete);
-        await txn.delete('courses');
-        print("DatabaseHelper: All courses deleted from DB.");
-      });
-    } catch (e) {
-      print("DatabaseHelper Error deleting all courses: $e");
-      rethrow;
+  Future<List<String>> deleteCoursesInTxn(Transaction txn) async {
+      final paths = await getOldThumbnailPathsInTxn(txn);
+      await txn.delete('courses');
+      print("DatabaseHelper: All courses deleted from DB transactionally.");
+      return paths;
+  }
+
+  Future<void> insertCoursesInTxn(Transaction txn, List<ApiCourse> courses) async {
+     if (courses.isEmpty) {
+       print("DatabaseHelper: No courses to insert in transaction.");
+       return;
+     }
+     print("DatabaseHelper: Inserting ${courses.length} courses into DB transactionally...");
+     for (final course in courses) {
+        await txn.insert('courses', course.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+     }
+     print("DatabaseHelper: New courses inserted into DB successfully transactionally.");
+  }
+
+  Future<void> deleteThumbnailFiles(List<String> paths) async {
+    if (paths.isEmpty) return;
+    print("DatabaseHelper: Attempting to delete ${paths.length} thumbnail files.");
+    List<String> errors = [];
+    for (final path in paths) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+          print("DatabaseHelper: Deleted thumbnail file: $path");
+        } else {
+           print("DatabaseHelper: Thumbnail file not found, skipping deletion: $path");
+        }
+      } catch (e) {
+        errors.add("Failed to delete $path: $e");
+      }
+    }
+    if (errors.isNotEmpty) {
+      print("DatabaseHelper: Errors during thumbnail deletion: ${errors.join(', ')}");
     }
   }
 

@@ -1,9 +1,8 @@
 // lib/models/api_course.dart
-import 'dart:convert'; // Import jsonEncode/jsonDecode
-import 'dart:io'; // Import File class
-import 'package:path/path.dart' show join; // For path joining
+import 'dart:convert';
+import 'dart:io';
+import 'package:path/path.dart' show join;
 
-// --- Start of CourseCategoryInfo Class ---
 class CourseCategoryInfo {
   final int id;
   final String name;
@@ -31,10 +30,7 @@ class CourseCategoryInfo {
     );
   }
 }
-// --- End of CourseCategoryInfo Class ---
 
-
-// --- Start of ApiCourse Class ---
 class ApiCourse {
   final int id;
   final String title;
@@ -48,8 +44,8 @@ class ApiCourse {
   final String price;
   final bool? discountFlag;
   final String? discountedPrice;
-  final String? thumbnail; // Network path from API
-  final String? videoUrl; // Note: This seems to be a course-level video URL
+  final String? thumbnail;
+  final String? videoUrl;
   final bool? isTopCourse;
   final String status;
   final bool? isVideoCourse;
@@ -62,9 +58,7 @@ class ApiCourse {
 
   String? localThumbnailPath;
 
-
-  static const String thumbnailBaseUrl = "https://courseservice.anbesgames.com"; // Define your thumbnail base URL here if specific to thumbnails
-
+  static const String thumbnailBaseUrl = "https://courseservice.anbesgames.com";
 
   ApiCourse({
     required this.id,
@@ -98,10 +92,10 @@ class ApiCourse {
       if (thumbnail!.toLowerCase().startsWith('http')) {
         return thumbnail;
       }
-      String baseUrl = thumbnailBaseUrl; // Or get this from a config if it's the same as API base
+      String baseUrl = thumbnailBaseUrl;
       String thumbPath = thumbnail!;
-
-      return join(baseUrl, thumbPath);
+      // Ensure there's exactly one slash between base URL and path
+      return '$baseUrl/${thumbPath.startsWith('/') ? thumbPath.substring(1) : thumbPath}';
     }
     return null;
   }
@@ -113,7 +107,7 @@ class ApiCourse {
            if (file.existsSync()) {
              return localThumbnailPath;
            } else {
-              print("Local thumbnail file not found: ${localThumbnailPath}. Falling back to network.");
+              print("Local thumbnail file not found: $localThumbnailPath. Falling back to network.");
            }
          } catch (e) {
             print("Error checking local thumbnail file: $e. Falling back to network.");
@@ -121,7 +115,6 @@ class ApiCourse {
      }
      return fullThumbnailUrl;
   }
-
 
   factory ApiCourse.fromJson(Map<String, dynamic> json) {
     List<String> parseStringList(dynamic jsonField) {
@@ -159,7 +152,6 @@ class ApiCourse {
       return DateTime.now();
     }
 
-
     return ApiCourse(
       id: json['id'] as int? ?? 0,
       title: json['title'] as String? ?? 'Untitled Course',
@@ -186,7 +178,7 @@ class ApiCourse {
       category: json['category'] != null && json['category'] is Map<String, dynamic>
           ? CourseCategoryInfo.fromJson(json['category'] as Map<String, dynamic>)
           : null,
-      localThumbnailPath: null, // Not from API JSON initially
+      localThumbnailPath: null,
     );
   }
 
