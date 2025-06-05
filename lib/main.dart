@@ -2,13 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/date_symbol_data_local.dart'; // For initializeDateFormatting
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:media_kit/media_kit.dart';
-// Import AppColors
+
 import 'package:mgw_tutorial/constants/color.dart';
 
 // Providers
-import 'package:mgw_tutorial/provider/faq_provider.dart'; 
+import 'package:mgw_tutorial/provider/faq_provider.dart';
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
 import 'package:mgw_tutorial/provider/department_provider.dart';
@@ -21,6 +21,7 @@ import 'package:mgw_tutorial/provider/theme_provider.dart';
 import 'package:mgw_tutorial/provider/testimonial_provider.dart';
 import 'package:mgw_tutorial/provider/order_provider.dart';
 import 'package:mgw_tutorial/provider/subject_provider.dart';
+import 'package:mgw_tutorial/provider/chapter_provider.dart';
 
 // Screens
 import 'package:mgw_tutorial/screens/sidebar/faq_screen.dart';
@@ -35,8 +36,9 @@ import 'package:mgw_tutorial/screens/library/course_sections_screen.dart';
 import 'package:mgw_tutorial/screens/library/lesson_list_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/testimonials_screen.dart';
 import 'package:mgw_tutorial/screens/enrollment/order_screen.dart';
-import 'package:mgw_tutorial/screens/sidebar/my_courses_screen.dart'; 
+import 'package:mgw_tutorial/screens/sidebar/my_courses_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/weekly_exams_screen.dart';
+import 'package:mgw_tutorial/screens/sidebar/chapter_list_screen.dart'; // Import ChapterListScreen
 
 
 // Models
@@ -50,15 +52,13 @@ import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mgw_tutorial/l10n/ti_material_localizations.dart';
 
-// ... rest of your main.dart code ...
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('en', null);
   await initializeDateFormatting('am', null);
   await initializeDateFormatting('ti', null);
   await initializeDateFormatting('or', null);
-  
+
   MediaKit.ensureInitialized();
 
   runApp(
@@ -76,6 +76,7 @@ void main() async {
         ChangeNotifierProvider(create: (context) => OrderProvider()),
         ChangeNotifierProvider(create: (context) => FaqProvider()),
         ChangeNotifierProvider(create: (_) => SubjectProvider()),
+        ChangeNotifierProvider(create: (_) => ChapterProvider()),
         ChangeNotifierProxyProvider<AuthProvider, DiscussionProvider>(
           create: (context) => DiscussionProvider(
             Provider.of<AuthProvider>(context, listen: false),
@@ -253,6 +254,7 @@ class MyApp extends StatelessWidget {
           labelStyle: finalTypographyLight.bodyMedium?.copyWith(color: lightColorScheme.onSurface.withOpacity(0.7)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
         ),
+        // Corrected CardThemeData
         cardTheme: CardThemeData(
           elevation: 4.0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
@@ -338,6 +340,7 @@ class MyApp extends StatelessWidget {
           labelStyle: finalTypographyDark.bodyMedium?.copyWith(color: darkColorScheme.onSurface.withOpacity(0.7)),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
         ),
+        // Corrected CardThemeData
         cardTheme: CardThemeData(
           elevation: 4.0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
@@ -397,9 +400,23 @@ class MyApp extends StatelessWidget {
         DiscussionGroupScreen.routeName: (ctx) => const DiscussionGroupScreen(),
         CreatePostScreen.routeName: (ctx) => const CreatePostScreen(),
         TestimonialsScreen.routeName: (ctx) => const TestimonialsScreen(),
-        MyCoursesScreen.routeName: (ctx) => const MyCoursesScreen(), // <<< ROUTE IS CORRECTLY DEFINED
+        MyCoursesScreen.routeName: (ctx) => const MyCoursesScreen(),
         FaqScreen.routeName: (ctx) => const FaqScreen(),
         WeeklyExamsScreen.routeName: (context) => const WeeklyExamsScreen(),
+        ChapterListScreen.routeName: (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+           if (args == null || !args.containsKey('subjectId') || !args.containsKey('subjectName')) {
+              print('Error: Missing arguments for ChapterListScreen navigation');
+              return Scaffold(
+                appBar: AppBar(title: const Text("Navigation Error")),
+                body: const Center(child: Text("Error: Could not load chapter list.")),
+              );
+           }
+          return ChapterListScreen(
+            subjectId: args['subjectId'] as int,
+            subjectName: args['subjectName'] as String,
+          );
+        },
         OrderScreen.routeName: (ctx) {
           final args = ModalRoute.of(ctx)?.settings.arguments;
           if (args is Semester) {

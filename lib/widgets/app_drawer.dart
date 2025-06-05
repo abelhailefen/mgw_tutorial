@@ -14,8 +14,8 @@ import 'package:mgw_tutorial/provider/api_course_provider.dart';
 import 'package:mgw_tutorial/provider/testimonial_provider.dart';
 import 'package:mgw_tutorial/provider/discussion_provider.dart';
 import 'package:mgw_tutorial/provider/department_provider.dart';
-// Import the new Subject Provider
 import 'package:mgw_tutorial/provider/subject_provider.dart';
+import 'package:mgw_tutorial/provider/chapter_provider.dart'; // Make sure ChapterProvider is imported
 
 
 // Import Screens
@@ -26,9 +26,6 @@ import 'package:mgw_tutorial/screens/sidebar/settings_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/discussion_group_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/testimonials_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/my_courses_screen.dart';
-// REMOVE this import
-// import 'package:mgw_tutorial/screens/sidebar/my_exams_screen.dart'; // Added MyExamsScreen
-// Import the new WeeklyExamsScreen
 import 'package:mgw_tutorial/screens/sidebar/weekly_exams_screen.dart';
 
 
@@ -142,8 +139,8 @@ class AppDrawer extends StatelessWidget {
     final testimonialProvider = Provider.of<TestimonialProvider>(context, listen: false);
     final discussionProvider = Provider.of<DiscussionProvider>(context, listen: false);
     final departmentProvider = Provider.of<DepartmentProvider>(context, listen: false);
-    // Get the new Subject Provider
     final subjectProvider = Provider.of<SubjectProvider>(context, listen: false);
+    final chapterProvider = Provider.of<ChapterProvider>(context, listen: false); // Get chapter provider
 
 
     List<Future<void>> refreshFutures = [
@@ -152,8 +149,11 @@ class AppDrawer extends StatelessWidget {
       testimonialProvider.fetchTestimonials(forceRefresh: true),
       discussionProvider.fetchPosts(),
       departmentProvider.fetchDepartments(),
-      // Add the subject fetch to the refresh list
       subjectProvider.fetchSubjects(forceRefresh: true),
+       // Note: Refreshing all chapters on global refresh might be inefficient.
+       // Consider refreshing only if a chapter list screen is currently open.
+       // chapterProvider.clearChapters(); // Example: Clear cache
+       // chapterProvider.fetchChaptersForSubject(someSubjectId, forceRefresh: true); // Example: Refresh specific subject
     ];
 
     try {
@@ -212,8 +212,8 @@ class AppDrawer extends StatelessWidget {
     if (context.mounted) {
       Provider.of<SemesterProvider>(context, listen: false).clearSemesters();
       Provider.of<TestimonialProvider>(context, listen: false).clearTestimonials();
-      // Clear subjects on logout
       Provider.of<SubjectProvider>(context, listen: false).clearSubjects();
+      Provider.of<ChapterProvider>(context, listen: false).clearChapters(); // Clear chapters on logout
 
 
       Navigator.of(context).pushAndRemoveUntil(
@@ -250,8 +250,6 @@ class AppDrawer extends StatelessWidget {
       userName = ('${authProvider.currentUser!.firstName} ${authProvider.currentUser!.lastName}').trim();
       if (userName.isEmpty) userName = authProvider.currentUser!.phone;
       userDetail = authProvider.currentUser!.phone;
-      // Add logic to get user image URL if available in your AuthProvider/User model
-      // userImageUrl = authProvider.currentUser!.imageUrl; // Example
     }
 
     return Drawer(
@@ -306,18 +304,10 @@ class AppDrawer extends StatelessWidget {
                 _showNotImplemented(context, l10n.registerforcourses);
               },
             ),
-          // REMOVE My Exams screen entry
-          // if (authProvider.currentUser != null)
-          //   _buildDrawerItem(
-          //     theme: theme, icon: Icons.quiz_outlined,
-          //     text: l10n.myExams,
-          //     onTap: () => _navigateTo(context, MyExamsScreen.routeName),
-          //   ),
 
-          // UPDATE the Weekly Exam entry to navigate to the new screen
           _buildDrawerItem(
-            theme: theme, icon: Icons.assignment_turned_in_outlined, text: l10n.weeklyexam, // Assuming l10n.weeklyexam is the correct string
-            onTap: () => _navigateTo(context, WeeklyExamsScreen.routeName), // Navigate to the new screen
+            theme: theme, icon: Icons.assignment_turned_in_outlined, text: l10n.weeklyexam,
+            onTap: () => _navigateTo(context, WeeklyExamsScreen.routeName),
           ),
           Divider(color: theme.dividerColor),
           _buildDrawerItem(
