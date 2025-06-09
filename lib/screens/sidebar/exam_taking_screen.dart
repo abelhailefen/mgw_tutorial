@@ -1,5 +1,4 @@
 // lib/screens/sidebar/exam_taking_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/l10n/app_localizations.dart'; // Ensure localization is imported
@@ -33,28 +32,10 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
     super.initState();
     // Use addPostFrameCallback to ensure context is available after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Fetch questions for the specific exam when the screen initializes
-      // This call now clears previous selected answers internally.
+      
       Provider.of<QuestionProvider>(context, listen: false).fetchQuestions(widget.exam.id);
     });
   }
-
-  // REMOVED dispose() method - selected answers are cleared at the start of fetchQuestions
-
-  // Keep _refreshQuestions if you still want a manual refresh option,
-  // but the user asked to remove the button. Let's remove the method too
-  /*
-  Future<void> _refreshQuestions() async {
-    if (!mounted) return;
-    // Use the exam.id from the received Exam object
-    await Provider.of<QuestionProvider>(context, listen: false).fetchQuestions(widget.exam.id, forceRefresh: true);
-     // Reset submission state on refresh
-    setState(() {
-      _hasSubmitted = false;
-    });
-    // selected answers are cleared inside fetchQuestions when forceRefresh is true
-  }
-  */
 
   void _submitExam() {
     // Prevent multiple submissions or submission while loading
@@ -108,20 +89,12 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
           totalQuestions: totalQuestions,
           failedQuestions: failedQuestions, // Pass the list of failed questions
           onShowExplanations: () {
-             // This callback is triggered when the user taps "View Explanations" in the popup
-             // if they failed. We've already set _hasSubmitted = true.
-             // The QuestionCards will rebuild and show explanations based on hasSubmitted
-             // and the exam's isAnswerBefore property.
-             debugPrint("User tapped 'View Explanations' in popup.");
-             // Optional: You could add logic here to scroll to the first failed question
-             // if you implement scrolling control.
-          },
+            debugPrint("User tapped 'View Explanations' in popup.");
+             },
         );
       },
     );
-    // --- End Show Popup ---
 
-    // TODO: Handle actual API submission of results here or after the popup.
   }
 
 
@@ -216,8 +189,6 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                     ),
                   ),
 
-                  // --- Submit Button at the bottom ---
-                  // Only show the button if not submitted, not loading, and questions exist
                    if (!_hasSubmitted && !isLoading && currentQuestions.isNotEmpty)
                      Positioned(
                        bottom: 0,
@@ -238,10 +209,6 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                           ),
                        ),
                      ),
-                  // --- End Submit Button ---
-
-
-                   // Loading overlay (covers the whole Stack)
                    if (isLoading) // Show overlay if isLoading is true
                       const Opacity(
                         opacity: 0.6,
