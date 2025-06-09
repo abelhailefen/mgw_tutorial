@@ -36,69 +36,75 @@ class ChoiceCard extends StatelessWidget {
         Icon? trailingIcon;
         BorderSide borderSide = BorderSide.none;
 
-        // --- Logic for Colors and Icons ---
+        // Determine if correctness feedback should be shown
+        // This happens AFTER submit, OR BEFORE submit if isAnswerBeforeExam is true AND the user has selected an answer for this question.
+        final bool showCorrectnessFeedback = hasSubmitted || (isAnswerBeforeExam && selectedAnswer != null);
 
-        if (hasSubmitted) {
-          // After Submission Logic: Always show correctness
+
+        if (showCorrectnessFeedback) {
+          // --- Show correctness logic ---
           if (isSelected) {
-            cardColor = isCorrectAnswer
-                ? Colors.green.withOpacity(0.3) // User selected correctly
-                : Colors.red.withOpacity(0.3); // User selected incorrectly
-            textColor = isCorrectAnswer ? Colors.green.shade800 : Colors.red.shade800;
+             // User selected this answer
+             cardColor = isCorrectAnswer
+                 ? Colors.green.withOpacity(0.3) // Selected AND Correct
+                 : Colors.red.withOpacity(0.3); // Selected AND Wrong
+             textColor = isCorrectAnswer ? Colors.green.shade800 : Colors.red.shade800;
              trailingIcon = isCorrectAnswer
-                ? Icon(Icons.check_circle, color: Colors.green.shade800)
-                : Icon(Icons.cancel, color: Colors.red.shade800);
-          } else if (isCorrectAnswer) {
-            cardColor = Colors.green.withOpacity(0.3); // Correct answer was not selected by user
-            textColor = Colors.green.shade800;
-            trailingIcon = Icon(Icons.check_circle_outline, color: Colors.green.shade800);
-          }
-           borderSide = BorderSide.none; // No border after submit
-        } else {
-          // Before Submission Logic
-          if (isSelected) {
-            // Always highlight the selected answer
-            cardColor = Theme.of(context).colorScheme.primary.withOpacity(0.1);
-            textColor = Theme.of(context).colorScheme.primary;
-            borderSide = BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5);
-
-            // If explanations are before submit, show correctness FOR THE SELECTED ANSWER
-            if (isAnswerBeforeExam) {
-              cardColor = isCorrectAnswer
-                  ? Colors.green.withOpacity(0.3) // User selected correctly before submit
-                  : Colors.red.withOpacity(0.3); // User selected incorrectly before submit
-              textColor = isCorrectAnswer ? Colors.green.shade800 : Colors.red.shade800;
-              trailingIcon = isCorrectAnswer
-                  ? Icon(Icons.check_circle, color: Colors.green.shade800)
-                  : Icon(Icons.cancel, color: Colors.red.shade800);
-              borderSide = isCorrectAnswer
+                 ? Icon(Icons.check_circle, color: Colors.green.shade800)
+                 : Icon(Icons.cancel, color: Colors.red.shade800);
+             borderSide = isCorrectAnswer
                 ? BorderSide(color: Colors.green.shade800, width: 1.5)
                 : BorderSide(color: Colors.red.shade800, width: 1.5);
-            }
+
+          } else if (isCorrectAnswer) {
+             // This is the correct answer, but the user didn't select it
+             cardColor = Colors.green.withOpacity(0.3);
+             textColor = Colors.green.shade800;
+             trailingIcon = Icon(Icons.check_circle_outline, color: Colors.green.shade800);
+             borderSide = BorderSide(color: Colors.green.shade800, width: 1.5);
+          } else {
+            // This is a wrong answer and the user didn't select it
+            cardColor = null; // Default card color
+            textColor = Theme.of(context).colorScheme.onSurface; // Default text color
+            trailingIcon = null;
+            borderSide = BorderSide.none;
           }
-          // If not selected, no special color/icon before submit, regardless of isAnswerBeforeExam
-          // Correct answer is NOT revealed before submit unless selected and isAnswerBeforeExam is true.
+        } else {
+           // --- Before submission, no correctness feedback ---
+           if (isSelected) {
+             // User selected this answer, but no correctness feedback yet
+             cardColor = Theme.of(context).colorScheme.primary.withOpacity(0.1); // Highlight selected
+             textColor = Theme.of(context).colorScheme.primary;
+             borderSide = BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5);
+           } else {
+             // Not selected, not showing feedback
+             cardColor = null;
+             textColor = Theme.of(context).colorScheme.onSurface;
+             borderSide = BorderSide.none;
+           }
+            trailingIcon = null; // No icon before feedback is shown
         }
 
-        // --- End Logic for Colors and Icons ---
+
+        // Determine if the card should be tappable
+        // It should NOT be tappable if:
+        // 1. The exam has been submitted (hasSubmitted is true).
+        // 2. Explanations are shown before submit (isAnswerBeforeExam is true) AND the user has already selected an answer for this question (selectedAnswer != null).
+        final bool isTappable = !(hasSubmitted || (isAnswerBeforeExam && selectedAnswer != null));
 
 
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 4.0),
-          color: cardColor ?? Theme.of(context).cardColor,
+          color: cardColor ?? Theme.of(context).cardColor, // Use default card color if no specific color
           shape: RoundedRectangleBorder(
              borderRadius: BorderRadius.circular(8.0),
-             side: borderSide,
+             side: borderSide, // Apply border side
           ),
-          elevation: isSelected ? 2.0 : 1.0,
+          elevation: isSelected ? 2.0 : 1.0, // Slightly more elevation when selected
           child: InkWell(
-             // Disable tap if submitted
-             // OR if explanations are before submit AND this card shows correctness (meaning it's the selected/correct one)
-             onTap: hasSubmitted || (isAnswerBeforeExam && isSelected) // Disable if submitted OR if showing correctness before submit (which only happens for selected)
-                 ? null
-                 : () { // Allow tap if not submitted AND not showing correctness before submit for this card
-                     provider.selectAnswer(question.id, label);
-                   },
+            onTap: isTappable
+                ? () { provider.selectAnswer(question.id, label); }
+                : null, // Disable tap if not tappable
             borderRadius: BorderRadius.circular(8.0),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
