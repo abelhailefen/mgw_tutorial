@@ -1931,6 +1931,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not load'**
   String get couldNotLoadItem;
+
+  /// No description provided for @submitExam.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Exam'**
+  String get submitExam;
 }
 
 class _AppLocalizationsDelegate

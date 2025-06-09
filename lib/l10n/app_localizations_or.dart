@@ -974,4 +974,7 @@ class AppLocalizationsOr extends AppLocalizations {
 
   @override
   String get couldNotLoadItem => 'Could not load';
+
+  @override
+  String get submitExam => 'Submit Exam';
 }

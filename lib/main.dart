@@ -408,11 +408,11 @@ class MyApp extends StatelessWidget {
         MyCoursesScreen.routeName: (ctx) => const MyCoursesScreen(),
         FaqScreen.routeName: (ctx) => const FaqScreen(),
         WeeklyExamsScreen.routeName: (context) => const WeeklyExamsScreen(),
-          ChapterListScreen.routeName: (context) {
+        ChapterListScreen.routeName: (context) {
             final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-            // Ensure arguments are not null and contain required data
             if (args == null || !args.containsKey('subjectId') || !args.containsKey('subjectName')) {
-              // Handle error or navigate back
+              // Handle error or navigate back - consider logging the error
+               Future.microtask(() => Navigator.pop(context)); // Navigate back after build
               return const Scaffold(body: Center(child: Text('Error: Missing Subject arguments')));
             }
             return ChapterListScreen(
@@ -423,24 +423,33 @@ class MyApp extends StatelessWidget {
 
           ExamListScreen.routeName: (context) {
             final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-             // Ensure arguments are not null and contain required data
-            if (args == null || !args.containsKey('subjectId') || !args.containsKey('subjectName') || !args.containsKey('chapterId') || !args.containsKey('chapterName')) {
+             // EXPECT THE NEW ARGUMENT HERE
+            if (args == null ||
+                !args.containsKey('subjectId') ||
+                !args.containsKey('subjectName') ||
+                !args.containsKey('chapterId') ||
+                !args.containsKey('chapterName') ||
+                !args.containsKey('showExplanationsBeforeSubmit')) // <-- Check for the new argument
+            {
               // Handle error or navigate back
-              return const Scaffold(body: Center(child: Text('Error: Missing Chapter or Subject arguments')));
+              Future.microtask(() => Navigator.pop(context)); // Navigate back after build
+              return const Scaffold(body: Center(child: Text('Error: Missing Exam List arguments')));
             }
             return ExamListScreen(
               subjectId: args['subjectId'],
               subjectName: args['subjectName'],
               chapterId: args['chapterId'],
               chapterName: args['chapterName'],
+              showExplanationsBeforeSubmit: args['showExplanationsBeforeSubmit'], // <-- Use the new argument
             );
           },
-        ExamTakingScreen.routeName: (context) {
+
+          ExamTakingScreen.routeName: (context) {
             final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-             // Ensure arguments are not null and contain required data
-            if (args == null || !args.containsKey('subjectId') || !args.containsKey('chapterId') || !args.containsKey('examId') || !args.containsKey('examTitle')) {
+             if (args == null || !args.containsKey('subjectId') || !args.containsKey('chapterId') || !args.containsKey('examId') || !args.containsKey('examTitle')) {
               // Handle error or navigate back
-               return const Scaffold(body: Center(child: Text('Error: Missing Exam arguments')));
+              Future.microtask(() => Navigator.pop(context)); // Navigate back after build
+               return const Scaffold(body: Center(child: Text('Error: Missing Exam Taking arguments')));
             }
             return ExamTakingScreen(
               subjectId: args['subjectId'],

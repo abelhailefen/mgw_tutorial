@@ -420,5 +420,6 @@
   "downloadQuizTooltip": "Download exam",
   "openDownloadedQuizTooltip": "Open downloaded exam",
   "fileDownloadedTooltip": "File downloaded",
-  "couldNotLoadItem": "Could not load"
+  "couldNotLoadItem": "Could not load",
+  "submitExam": "Submit Exam"
 }

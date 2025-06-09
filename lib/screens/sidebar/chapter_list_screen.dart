@@ -3,11 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/l10n/app_localizations.dart';
-import 'package:mgw_tutorial/constants/color.dart';
+import 'package:mgw_tutorial/constants/color.dart'; // Assuming AppColors is defined here
 import 'package:mgw_tutorial/provider/chapter_provider.dart';
+import 'package:mgw_tutorial/models/chapter.dart';
 // Import the screen you navigate to
 import 'package:mgw_tutorial/screens/sidebar/exam_list_screen.dart';
-
 
 class ChapterListScreen extends StatefulWidget {
   static const routeName = '/chapter_list';
@@ -40,6 +40,95 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
     await Provider.of<ChapterProvider>(context, listen: false).fetchChaptersForSubject(widget.subjectId, forceRefresh: true);
   }
 
+  // --- Dialog function to show Explanation Preference Choice ---
+  void _showExplanationChoiceDialog(BuildContext context, int chapterId, String chapterName) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 16,
+        // Use theme colors instead of hardcoded AppColors.color3
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          // height: 250, // Let the column determine height
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Use minimum size
+            crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch buttons
+            children: [
+              Text(
+                'Explanation Preference', // TODO: Localize
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  // Use theme colors instead of hardcoded AppColors.color1
+                  color: Theme.of(context).colorScheme.primary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20), // Increased spacing
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context); // Close the dialog
+                  // Navigate to ExamListScreen with preference true
+                  _navigateToExamList(context, chapterId, chapterName, true);
+                },
+                icon: const Icon(Icons.visibility),
+                label: Text('Show Explanations Before Submit', textAlign: TextAlign.center), // TODO: Localize
+                style: ElevatedButton.styleFrom(
+                  // Use theme colors instead of hardcoded AppColors.color1
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 15), // Add padding
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10), // Spacing between buttons
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context); // Close the dialog
+                   // Navigate to ExamListScreen with preference false
+                  _navigateToExamList(context, chapterId, chapterName, false);
+                },
+                icon: const Icon(Icons.visibility_off),
+                label: Text('Show Explanations After Submit', textAlign: TextAlign.center), // TODO: Localize
+                style: ElevatedButton.styleFrom(
+                  // Use theme colors instead of hardcoded AppColors.color2
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  foregroundColor: Theme.of(context).colorScheme.onSecondary,
+                   padding: const EdgeInsets.symmetric(vertical: 15), // Add padding
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10), // Spacing at the bottom
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  // --- End Dialog function ---
+
+  // Helper function for navigation
+  void _navigateToExamList(BuildContext context, int chapterId, String chapterName, bool showExplanationsBeforeSubmit) {
+     Navigator.pushNamed(
+       context,
+       ExamListScreen.routeName,
+       arguments: {
+         'subjectId': widget.subjectId,
+         'subjectName': widget.subjectName,
+         'chapterId': chapterId,
+         'chapterName': chapterName,
+         'showExplanationsBeforeSubmit': showExplanationsBeforeSubmit, // Pass the chosen preference
+       },
+     );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -53,8 +142,7 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // TODO: Add localization key for "Chapters" - using subject name is good
-        title: Text('${widget.subjectName} Chapters'),
+        title: Text('${widget.subjectName} Chapters'), // TODO: Localize "Chapters"
         backgroundColor: isDarkMode ? AppColors.appBarBackgroundDark : AppColors.appBarBackgroundLight,
         actions: [
           IconButton(
@@ -66,9 +154,11 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
       body: Builder( // Use Builder to get a context under the Scaffold
         builder: (context) {
            // Handle null or empty chapters correctly
-           if (isLoading && (chapters == null || chapters.isEmpty)) {
+           final currentChapters = chapters; // Local variable for null safety
+
+           if (isLoading && (currentChapters == null || currentChapters.isEmpty)) {
              return const Center(child: CircularProgressIndicator());
-           } else if (errorMessage != null && (chapters == null || chapters.isEmpty)) {
+           } else if (errorMessage != null && (currentChapters == null || currentChapters.isEmpty)) {
              return Center(
                child: Padding(
                  padding: const EdgeInsets.all(16.0),
@@ -78,8 +168,7 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
                      Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 40),
                      const SizedBox(height: 16),
                      Text(
-                       // TODO: Add localization key for error message
-                       'Error loading chapters: $errorMessage',
+                       'Error loading chapters: ${errorMessage!}', // errorMessage is String?
                        textAlign: TextAlign.center,
                        style: TextStyle(
                          fontSize: 16,
@@ -89,19 +178,16 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
                      const SizedBox(height: 16),
                      ElevatedButton(
                        onPressed: isLoading ? null : _refreshChapters,
-                       // TODO: Add localization key for Retry
-                       child: isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Retry'),
+                       child: isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Retry'), // TODO: Localize
                      ),
                    ],
                  ),
                ),
              );
-           } else if (chapters == null || chapters.isEmpty) {
-               // This case is hit if chapters are loaded but the list is empty
+           } else if (currentChapters == null || currentChapters.isEmpty) {
               return Center(
                 child: Text(
-                  // TODO: Add localization key for this message
-                  'No chapters available for ${widget.subjectName}.',
+                  'No chapters available for ${widget.subjectName}.', // TODO: Localize
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                 ),
@@ -111,40 +197,33 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
              return Stack(
                 children: [
                   ListView.builder(
-                    itemCount: chapters.length,
+                    itemCount: currentChapters.length,
                     itemBuilder: (context, index) {
-                      final chapter = chapters[index];
+                      final chapter = currentChapters[index];
                       return ListTile(
                         title: Text(chapter.name),
                         subtitle: chapter.description != null && chapter.description!.isNotEmpty
                             ? Text(chapter.description!)
                             : null,
                         leading: CircleAvatar(
-                          child: Text('${chapter.order + 1}'),
+                           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                           foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                           child: Text('${chapter.order + 1}'),
                         ),
                         onTap: () {
-                          // Navigate to the ExamListScreen, passing subject and chapter info
-                           Navigator.pushNamed(
-                             context,
-                             ExamListScreen.routeName,
-                             arguments: {
-                               'subjectId': widget.subjectId,    // Pass subjectId from this screen's args
-                               'subjectName': widget.subjectName, // Pass subjectName from this screen's args
-                               'chapterId': chapter.id,          // Pass chapterId from the tapped chapter
-                               'chapterName': chapter.name,      // Pass chapterName from the tapped chapter
-                             },
-                           );
+                           // Show the explanation choice dialog before navigating
+                           _showExplanationChoiceDialog(context, chapter.id, chapter.name);
                         },
                       );
                     },
                   ),
                    // Loading overlay when data is already present but refreshing
-                   if (isLoading && chapters.isNotEmpty)
+                   if (isLoading && currentChapters.isNotEmpty)
                       const Opacity(
                         opacity: 0.6,
                         child: ModalBarrier(dismissible: false, color: Colors.black),
                       ),
-                   if (isLoading && chapters.isNotEmpty)
+                   if (isLoading && currentChapters.isNotEmpty)
                       const Center(child: CircularProgressIndicator()),
                 ],
              );
