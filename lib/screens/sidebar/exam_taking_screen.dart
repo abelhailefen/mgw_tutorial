@@ -34,10 +34,16 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
     // Use addPostFrameCallback to ensure context is available after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Fetch questions for the specific exam when the screen initializes
+      // This call now clears previous selected answers internally.
       Provider.of<QuestionProvider>(context, listen: false).fetchQuestions(widget.exam.id);
     });
   }
 
+  // REMOVED dispose() method - selected answers are cleared at the start of fetchQuestions
+
+  // Keep _refreshQuestions if you still want a manual refresh option,
+  // but the user asked to remove the button. Let's remove the method too
+  /*
   Future<void> _refreshQuestions() async {
     if (!mounted) return;
     // Use the exam.id from the received Exam object
@@ -45,12 +51,10 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
      // Reset submission state on refresh
     setState(() {
       _hasSubmitted = false;
-      // If you had states related to explanation visibility toggled by user, reset them here.
     });
-    // Clear selected answers when refreshing
-    if (!mounted) return;
-    Provider.of<QuestionProvider>(context, listen: false).clearSelectedAnswers();
+    // selected answers are cleared inside fetchQuestions when forceRefresh is true
   }
+  */
 
   void _submitExam() {
     // Prevent multiple submissions or submission while loading
@@ -66,12 +70,18 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
     // Calculate score and identify failed questions
     for (final question in currentQuestions) {
       final userSelection = selectedAnswers[question.id];
-      if (userSelection != null && userSelection == question.answer) {
-        score++;
+      // A question is failed if no answer was selected OR if the selected answer is wrong
+      if (userSelection == null || userSelection != question.answer) {
+         // Add to failed questions only if an explanation exists
+         if (question.explanation != null && question.explanation!.isNotEmpty) {
+            failedQuestions.add(question);
+         }
       } else {
-        failedQuestions.add(question);
+        // Correct answer was selected
+        score++;
       }
     }
+
 
     // Calculate if passed
     final totalQuestions = currentQuestions.length;
@@ -96,13 +106,15 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
           passed: passed,
           score: score,
           totalQuestions: totalQuestions,
-          failedQuestions: failedQuestions,
+          failedQuestions: failedQuestions, // Pass the list of failed questions
           onShowExplanations: () {
              // This callback is triggered when the user taps "View Explanations" in the popup
-             // if they failed. Since _hasSubmitted is now true, the QuestionCards
-             // will rebuild and show explanations based on their internal logic
+             // if they failed. We've already set _hasSubmitted = true.
+             // The QuestionCards will rebuild and show explanations based on hasSubmitted
              // and the exam's isAnswerBefore property.
-             debugPrint("User tapped 'View Explanations' in popup. Submitted state is true.");
+             debugPrint("User tapped 'View Explanations' in popup.");
+             // Optional: You could add logic here to scroll to the first failed question
+             // if you implement scrolling control.
           },
         );
       },
@@ -111,10 +123,6 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
 
     // TODO: Handle actual API submission of results here or after the popup.
   }
-
-  // Optional: Scroll to the first failed question after clicking "View Explanations"
-  // Requires a ScrollController and storing indices of failed questions.
-  // Omitted for this basic integration.
 
 
   @override
@@ -137,14 +145,8 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
         // Use exam title from the received Exam object
         title: Text(widget.exam.title),
         backgroundColor: isDarkMode ? AppColors.appBarBackgroundDark : AppColors.appBarBackgroundLight,
-        actions: [
-          // Keep the Refresh button in the AppBar
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: isLoading ? null : _refreshQuestions, // Disable while loading
-          ),
-          // TODO: Optionally add a timer display here if the exam has a time limit
-        ],
+        // REMOVED actions list, which contained the Refresh button
+        actions: const [],
       ),
       body: Builder( // Use Builder to get a context under the Scaffold
         builder: (context) {
@@ -171,7 +173,8 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                      ),
                      const SizedBox(height: 16),
                      ElevatedButton(
-                       onPressed: isLoading ? null : _refreshQuestions,
+                       // Use _refreshQuestions if you want the button visible on error, otherwise remove
+                       onPressed: isLoading ? null : () => Provider.of<QuestionProvider>(context, listen: false).fetchQuestions(widget.exam.id, forceRefresh: true),
                        child: isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text(l10n.retry), // Use localized "Retry"
                      ),
                    ],
@@ -202,6 +205,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                       itemBuilder: (context, index) {
                         final question = currentQuestions[index];
                         return QuestionCard(
+                          key: ValueKey(question.id), // Add a key for better list performance
                           question: question,
                           questionNumber: index + 1,
                           hasSubmitted: _hasSubmitted,
@@ -221,8 +225,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                        right: 0,
                        child: Container(
                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                          // Use a suitable theme color for the button container background
-                          color: Theme.of(context).colorScheme.surface, // Corrected theme property
+                          color: Theme.of(context).colorScheme.surface, // Use a suitable theme color
                           child: ElevatedButton(
                             onPressed: _submitExam, // Call submit function
                             style: ElevatedButton.styleFrom(
@@ -231,7 +234,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                               backgroundColor: Theme.of(context).colorScheme.primary,
                               foregroundColor: Theme.of(context).colorScheme.onPrimary,
                             ),
-                            child: Text(l10n.submitExam), // Use localized "Submit"
+                            child: Text(l10n.submitButton), // Use localized "Submit"
                           ),
                        ),
                      ),
