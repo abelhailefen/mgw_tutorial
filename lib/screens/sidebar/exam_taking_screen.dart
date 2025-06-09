@@ -234,7 +234,7 @@ class _ExamTakingScreenState extends State<ExamTakingScreen> {
                               backgroundColor: Theme.of(context).colorScheme.primary,
                               foregroundColor: Theme.of(context).colorScheme.onPrimary,
                             ),
-                            child: Text(l10n.submitButton), // Use localized "Submit"
+                            child: Text(l10n.submitExam), // Use localized "Submit"
                           ),
                        ),
                      ),
