@@ -3,9 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/l10n/app_localizations.dart';
-import 'package:mgw_tutorial/constants/color.dart';
+import 'package:mgw_tutorial/constants/color.dart'; // Assuming AppColors is here
 import 'package:mgw_tutorial/widgets/subject_card.dart';
 import 'package:mgw_tutorial/provider/subject_provider.dart';
+// Import the screen you navigate to
+import 'package:mgw_tutorial/screens/sidebar/chapter_list_screen.dart';
+
 
 class WeeklyExamsScreen extends StatefulWidget {
   static const routeName = '/weekly_exams';
@@ -20,7 +23,10 @@ class _WeeklyExamsScreenState extends State<WeeklyExamsScreen> {
   @override
   void initState() {
     super.initState();
-    Provider.of<SubjectProvider>(context, listen: false).fetchSubjects();
+    // Use addPostFrameCallback to ensure context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<SubjectProvider>(context, listen: false).fetchSubjects();
+    });
   }
 
   Future<void> _refreshSubjects(BuildContext context) async {
@@ -34,9 +40,9 @@ class _WeeklyExamsScreenState extends State<WeeklyExamsScreen> {
 
     final subjectProvider = Provider.of<SubjectProvider>(context);
 
-    final isLoading = subjectProvider.isLoading; // Use provider's loading state
-    final errorMessage = subjectProvider.errorMessage; // Use provider's error state
-    final subjects = subjectProvider.subjects; // Use provider's data
+    final isLoading = subjectProvider.isLoading;
+    final errorMessage = subjectProvider.errorMessage;
+    final subjects = subjectProvider.subjects;
 
     return Scaffold(
       appBar: AppBar(
@@ -44,12 +50,12 @@ class _WeeklyExamsScreenState extends State<WeeklyExamsScreen> {
         backgroundColor: isDarkMode ? AppColors.appBarBackgroundDark : AppColors.appBarBackgroundLight,
         actions: [
            IconButton(
-             icon: Icon(Icons.refresh),
+             icon: const Icon(Icons.refresh),
              onPressed: isLoading ? null : () => _refreshSubjects(context),
            ),
         ],
       ),
-      body: Builder(
+      body: Builder( // Use Builder to get a context under the Scaffold
         builder: (BuildContext context) {
            if (isLoading && subjects.isEmpty) {
              return const Center(child: CircularProgressIndicator());
@@ -63,7 +69,7 @@ class _WeeklyExamsScreenState extends State<WeeklyExamsScreen> {
                      Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 40),
                      const SizedBox(height: 16),
                      Text(
-                       'Error: $errorMessage',
+                       'Error: $errorMessage', // TODO: Localize
                        textAlign: TextAlign.center,
                        style: TextStyle(
                          fontSize: 16,
@@ -73,7 +79,7 @@ class _WeeklyExamsScreenState extends State<WeeklyExamsScreen> {
                      const SizedBox(height: 16),
                      ElevatedButton(
                        onPressed: isLoading ? null : () => _refreshSubjects(context),
-                       child: isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Retry'),
+                       child: isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Retry'), // TODO: Localize
                      ),
                    ],
                  ),
@@ -82,7 +88,7 @@ class _WeeklyExamsScreenState extends State<WeeklyExamsScreen> {
            } else if (subjects.isEmpty) {
               return Center(
                 child: Text(
-                  'No subjects available.',
+                  'No subjects available.', // TODO: Localize
                   style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                 ),
               );
@@ -99,10 +105,21 @@ class _WeeklyExamsScreenState extends State<WeeklyExamsScreen> {
                        category: subject.category,
                        year: subject.year,
                        imageUrl: subject.imageUrl,
-                       // REMOVED onTap parameter here as SubjectCard handles navigation internally
+                       // Provide the onTap logic here
+                       onTap: () {
+                         Navigator.pushNamed(
+                           context,
+                           ChapterListScreen.routeName,
+                           arguments: {
+                             'subjectId': subject.id,
+                             'subjectName': subject.name,
+                           },
+                         );
+                       },
                      );
                    },
                  ),
+                 // Loading overlay when data is already present but refreshing
                  if (isLoading && subjects.isNotEmpty)
                     const Opacity(
                       opacity: 0.6,

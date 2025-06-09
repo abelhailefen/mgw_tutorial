@@ -1,8 +1,7 @@
 // lib/widgets/subject_card.dart
 
 import 'package:flutter/material.dart';
-// Corrected import path
-import 'package:mgw_tutorial/screens/sidebar/chapter_list_screen.dart';
+// Removed the ChapterListScreen import here, as SubjectCard no longer navigates directly.
 
 class SubjectCard extends StatelessWidget {
   final int id;
@@ -10,6 +9,7 @@ class SubjectCard extends StatelessWidget {
   final String category;
   final String year;
   final String imageUrl;
+  final VoidCallback? onTap; // <-- Added onTap callback
 
   const SubjectCard({
     super.key,
@@ -18,6 +18,7 @@ class SubjectCard extends StatelessWidget {
     required this.category,
     required this.year,
     required this.imageUrl,
+    this.onTap, // <-- Receive the callback
   });
 
   @override
@@ -29,16 +30,7 @@ class SubjectCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: InkWell(
-        onTap: () {
-           Navigator.pushNamed(
-             context,
-             ChapterListScreen.routeName,
-             arguments: {
-               'subjectId': id,
-               'subjectName': name,
-             },
-           );
-        },
+        onTap: onTap, // <-- Call the provided onTap callback
         borderRadius: BorderRadius.circular(12.0),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -50,7 +42,7 @@ class SubjectCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0D47A1),
+                  color: Color(0xFF0D47A1), // Example color, consider using Theme
                 ),
               ),
               const SizedBox(height: 12),
@@ -76,10 +68,10 @@ class SubjectCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Category: $category, Year: $year',
+                'Category: $category, Year: $year', // Consider localization
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[700],
+                  color: Colors.grey[700], // Consider using Theme
                 ),
               ),
             ],

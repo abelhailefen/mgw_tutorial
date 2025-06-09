@@ -2,21 +2,27 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:intl/intl.dart';
 import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import 'package:mgw_tutorial/constants/color.dart';
-import 'package:mgw_tutorial/provider/exam_provider.dart'; // Import ExamProvider
-import 'package:mgw_tutorial/models/exam.dart'; // Import Exam model
+import 'package:mgw_tutorial/provider/exam_provider.dart';
+// Import the screen you navigate to
+import 'package:mgw_tutorial/screens/sidebar/exam_taking_screen.dart';
+
 
 class ExamListScreen extends StatefulWidget {
   static const routeName = '/exam_list';
 
-  // Screen requires chapter ID and name to display correctly
+  // Screen requires subject, chapter ID and name to fetch exams and pass down
+  final int subjectId;
+  final String subjectName;
   final int chapterId;
   final String chapterName;
 
   const ExamListScreen({
     super.key,
+    required this.subjectId,
+    required this.subjectName,
     required this.chapterId,
     required this.chapterName,
   });
@@ -29,8 +35,11 @@ class _ExamListScreenState extends State<ExamListScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch exams for the given chapter when the screen initializes
-    Provider.of<ExamProvider>(context, listen: false).fetchExamsForChapter(widget.chapterId);
+     // Use addPostFrameCallback to ensure context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Fetch exams for the given chapter when the screen initializes
+      Provider.of<ExamProvider>(context, listen: false).fetchExamsForChapter(widget.chapterId);
+    });
   }
 
   Future<void> _refreshExams() async {
@@ -41,7 +50,7 @@ class _ExamListScreenState extends State<ExamListScreen> {
   // Helper to format date or show "N/A"
   String _formatDate(DateTime? date) {
     if (date == null) return 'N/A';
-    // You might need to set up localization for dates globally or here
+    // Consider using locale-specific formatting if necessary
     return DateFormat('yyyy-MM-dd hh:mm a').format(date);
   }
 
@@ -56,22 +65,23 @@ class _ExamListScreenState extends State<ExamListScreen> {
     // Get the state for the specific chapter
     final isLoading = examProvider.isLoading(widget.chapterId);
     final errorMessage = examProvider.getErrorMessage(widget.chapterId);
-    final exams = examProvider.getExams(widget.chapterId);
+    final exams = examProvider.getExams(widget.chapterId); // This might be null initially
 
     return Scaffold(
       appBar: AppBar(
-        // TODO: Add localization key for "Exams"
+        // TODO: Add localization key for "Exams" - using chapter name is good
         title: Text('${widget.chapterName} Exams'),
         backgroundColor: isDarkMode ? AppColors.appBarBackgroundDark : AppColors.appBarBackgroundLight,
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh),
             onPressed: isLoading ? null : _refreshExams, // Disable button while loading
           ),
         ],
       ),
-      body: Builder(
+      body: Builder( // Use Builder to get a context under the Scaffold
         builder: (context) {
+           // Handle null or empty exams correctly
           if (isLoading && (exams == null || exams.isEmpty)) {
             return const Center(child: CircularProgressIndicator());
           } else if (errorMessage != null && (exams == null || exams.isEmpty)) {
@@ -103,6 +113,7 @@ class _ExamListScreenState extends State<ExamListScreen> {
               ),
             );
           } else if (exams == null || exams.isEmpty) {
+               // This case is hit if exams are loaded but the list is empty
               return Center(
                 child: Text(
                   // TODO: Add localization key for this message
@@ -112,14 +123,15 @@ class _ExamListScreenState extends State<ExamListScreen> {
                 ),
               );
           } else {
+             // Data is available, display the list
              return Stack(
                 children: [
                   ListView.builder(
                     itemCount: exams.length,
                     itemBuilder: (context, index) {
                       final exam = exams[index];
-                      return Card( // Wrap ListTile in a Card for better visual separation like SubjectCard
-                        margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0), // Smaller margin than subject card
+                      return Card( // Wrap ListTile in a Card for better visual separation
+                        margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                         elevation: 1.0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8.0),
@@ -136,12 +148,13 @@ class _ExamListScreenState extends State<ExamListScreen> {
                               if (exam.description != null && exam.description!.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4.0),
-                                  child: Text(exam.description!, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                                  child: Text(exam.description!, style: TextStyle(color: Colors.grey[700], fontSize: 13)), // Consider Theme
                                 ),
                               const SizedBox(height: 8),
+                              // TODO: Localize these labels
                               Text('Type: ${exam.examType}'),
                               Text('Questions: ${exam.totalQuestions}'),
-                              Text('Time Limit: ${exam.timeLimit} minutes'), // Assuming time_limit is in minutes
+                              Text('Time Limit: ${exam.timeLimit} minutes'),
                               Text('Passing Score: ${exam.passingScore}%'),
                               if (exam.startDate != null) Text('Start Date: ${_formatDate(exam.startDate)}'),
                               if (exam.endDate != null) Text('End Date: ${_formatDate(exam.endDate)}'),
@@ -151,18 +164,26 @@ class _ExamListScreenState extends State<ExamListScreen> {
                           leading: CircleAvatar(
                             backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                             foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-                            child: Text(exam.examType.substring(0, 1).toUpperCase()), // Display first letter of type
+                            child: Text(exam.examType.isNotEmpty ? exam.examType.substring(0, 1).toUpperCase() : 'E'), // Display first letter of type, default to E
                           ),
                           onTap: () {
-                            // TODO: Implement navigation to the actual exam taking screen
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Tapped Exam: ${exam.title} (ID: ${exam.id}). (Exam taking not implemented)')),
-                            );
+                            // Navigate to the ExamTakingScreen, passing all relevant IDs and title
+                             Navigator.pushNamed(
+                               context,
+                               ExamTakingScreen.routeName,
+                               arguments: {
+                                 'subjectId': widget.subjectId,  // Pass subjectId from this screen's args
+                                 'chapterId': widget.chapterId,  // Pass chapterId from this screen's args
+                                 'examId': exam.id,           // Pass examId from the tapped exam
+                                 'examTitle': exam.title,     // Pass examTitle from the tapped exam
+                               },
+                             );
                           },
                         ),
                       );
                     },
                   ),
+                   // Loading overlay when data is already present but refreshing
                    if (isLoading && exams.isNotEmpty)
                       const Opacity(
                         opacity: 0.6,

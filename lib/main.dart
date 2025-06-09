@@ -23,6 +23,7 @@ import 'package:mgw_tutorial/provider/order_provider.dart';
 import 'package:mgw_tutorial/provider/subject_provider.dart';
 import 'package:mgw_tutorial/provider/chapter_provider.dart';
 import 'package:mgw_tutorial/provider/exam_provider.dart'; // Added ExamProvider import
+import 'package:mgw_tutorial/provider/question_provider.dart'; 
 
 
 // Screens
@@ -41,7 +42,8 @@ import 'package:mgw_tutorial/screens/enrollment/order_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/my_courses_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/weekly_exams_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/chapter_list_screen.dart';
-import 'package:mgw_tutorial/screens/sidebar/exam_list_screen.dart'; // Added ExamListScreen import
+import 'package:mgw_tutorial/screens/sidebar/exam_list_screen.dart'; 
+import 'package:mgw_tutorial/screens/sidebar/exam_taking_screen.dart';
 
 
 // Models
@@ -80,7 +82,8 @@ void main() async {
         ChangeNotifierProvider(create: (context) => FaqProvider()),
         ChangeNotifierProvider(create: (_) => SubjectProvider()),
         ChangeNotifierProvider(create: (_) => ChapterProvider()),
-        ChangeNotifierProvider(create: (_) => ExamProvider()), // Added ExamProvider
+        ChangeNotifierProvider(create: (_) => ExamProvider()), 
+        ChangeNotifierProvider(create: (_) => QuestionProvider()),
         ChangeNotifierProxyProvider<AuthProvider, DiscussionProvider>(
           create: (context) => DiscussionProvider(
             Provider.of<AuthProvider>(context, listen: false),
@@ -405,35 +408,47 @@ class MyApp extends StatelessWidget {
         MyCoursesScreen.routeName: (ctx) => const MyCoursesScreen(),
         FaqScreen.routeName: (ctx) => const FaqScreen(),
         WeeklyExamsScreen.routeName: (context) => const WeeklyExamsScreen(),
-        ChapterListScreen.routeName: (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-           if (args == null || !args.containsKey('subjectId') || !args.containsKey('subjectName')) {
-              print('Error: Missing arguments for ChapterListScreen navigation');
-              return Scaffold(
-                appBar: AppBar(title: const Text("Navigation Error")),
-                body: const Center(child: Text("Error: Could not load chapter list.")),
-              );
-           }
-          return ChapterListScreen(
-            subjectId: args['subjectId'] as int,
-            subjectName: args['subjectName'] as String,
-          );
-        },
-         // Added route for ExamListScreen
-        ExamListScreen.routeName: (context) {
-           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-            if (args == null || !args.containsKey('chapterId') || !args.containsKey('chapterName')) {
-               print('Error: Missing arguments for ExamListScreen navigation');
-               return Scaffold(
-                 appBar: AppBar(title: const Text("Navigation Error")),
-                 body: const Center(child: Text("Error: Could not load exam list.")),
-               );
+          ChapterListScreen.routeName: (context) {
+            final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+            // Ensure arguments are not null and contain required data
+            if (args == null || !args.containsKey('subjectId') || !args.containsKey('subjectName')) {
+              // Handle error or navigate back
+              return const Scaffold(body: Center(child: Text('Error: Missing Subject arguments')));
             }
-           return ExamListScreen(
-             chapterId: args['chapterId'] as int,
-             chapterName: args['chapterName'] as String,
-           );
-        },
+            return ChapterListScreen(
+              subjectId: args['subjectId'],
+              subjectName: args['subjectName'],
+            );
+          },
+
+          ExamListScreen.routeName: (context) {
+            final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+             // Ensure arguments are not null and contain required data
+            if (args == null || !args.containsKey('subjectId') || !args.containsKey('subjectName') || !args.containsKey('chapterId') || !args.containsKey('chapterName')) {
+              // Handle error or navigate back
+              return const Scaffold(body: Center(child: Text('Error: Missing Chapter or Subject arguments')));
+            }
+            return ExamListScreen(
+              subjectId: args['subjectId'],
+              subjectName: args['subjectName'],
+              chapterId: args['chapterId'],
+              chapterName: args['chapterName'],
+            );
+          },
+        ExamTakingScreen.routeName: (context) {
+            final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+             // Ensure arguments are not null and contain required data
+            if (args == null || !args.containsKey('subjectId') || !args.containsKey('chapterId') || !args.containsKey('examId') || !args.containsKey('examTitle')) {
+              // Handle error or navigate back
+               return const Scaffold(body: Center(child: Text('Error: Missing Exam arguments')));
+            }
+            return ExamTakingScreen(
+              subjectId: args['subjectId'],
+              chapterId: args['chapterId'],
+              examId: args['examId'],
+              examTitle: args['examTitle'],
+            );
+          },
         OrderScreen.routeName: (ctx) {
           final args = ModalRoute.of(ctx)?.settings.arguments;
           if (args is Semester) {

@@ -4,6 +4,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' show join;
 import 'package:mgw_tutorial/models/user.dart';
 import 'package:mgw_tutorial/models/api_course.dart';
+// Assuming you have or will have models for Subject, Chapter, Exam, Question
+// import 'package:mgw_tutorial/models/subject.dart';
+// import 'package:mgw_tutorial/models/chapter.dart';
+// import 'package:mgw_tutorial/models/exam.dart';
+// import 'package:mgw_tutorial/models/question.dart'; // Import the Question model
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -23,13 +28,14 @@ class DatabaseHelper {
     String path = join(documentsDirectory.path, 'app_database.db');
     return await openDatabase(
       path,
-      version: 6,
+      version: 7, // <-- Increment version to 7
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
+    // Table courses (version 1)
     await db.execute('''
       CREATE TABLE courses(
         id INTEGER PRIMARY KEY,
@@ -54,12 +60,13 @@ class DatabaseHelper {
         creator TEXT,
         createdAt TEXT,
         updatedAt TEXT,
-        localThumbnailPath TEXT,
-        courseCategoryId INTEGER,
-        courseCategoryName TEXT
+        localThumbnailPath TEXT, -- Added in v4
+        courseCategoryId INTEGER, -- Added in v5
+        courseCategoryName TEXT   -- Added in v5
       )
     ''');
 
+    // Table sections (version 1)
     await db.execute('''
       CREATE TABLE sections(
         id INTEGER PRIMARY KEY,
@@ -72,6 +79,7 @@ class DatabaseHelper {
       )
     ''');
 
+    // Table lessons (version 1)
     await db.execute('''
       CREATE TABLE lessons(
         id INTEGER PRIMARY KEY,
@@ -91,6 +99,7 @@ class DatabaseHelper {
       )
     ''');
 
+    // Table logged_in_user (added/modified in v3)
     await db.execute('''
       CREATE TABLE logged_in_user(
         id INTEGER PRIMARY KEY,
@@ -102,6 +111,7 @@ class DatabaseHelper {
       )
     ''');
 
+    // Table subjects (added in v6)
     await db.execute('''
       CREATE TABLE subjects(
         id INTEGER PRIMARY KEY,
@@ -112,6 +122,7 @@ class DatabaseHelper {
       )
     ''');
 
+    // Table chapters (added in v6)
     await db.execute('''
       CREATE TABLE chapters(
         id INTEGER PRIMARY KEY,
@@ -124,6 +135,7 @@ class DatabaseHelper {
       )
     ''');
 
+    // Table exams (added in v6)
     await db.execute('''
       CREATE TABLE exams(
         id INTEGER PRIMARY KEY,
@@ -147,20 +159,54 @@ class DatabaseHelper {
       )
     ''');
 
+    // Table questions (added in v7) <-- NEW TABLE
+    await db.execute('''
+      CREATE TABLE questions (
+        id INTEGER PRIMARY KEY,
+        question TEXT,
+        answer TEXT,
+        time TEXT, -- Or INTEGER depending on how you use it
+        passage TEXT,
+        image TEXT,
+        A TEXT,
+        B TEXT,
+        C TEXT,
+        D TEXT,
+        explanation TEXT,
+        subjectId INTEGER,
+        chapterId INTEGER,
+        examId INTEGER,
+        expImage TEXT,
+        expVideo TEXT,
+        examType TEXT,
+        examYear TEXT,
+        FOREIGN KEY (subjectId) REFERENCES subjects (id) ON DELETE CASCADE,
+        FOREIGN KEY (chapterId) REFERENCES chapters (id) ON DELETE CASCADE,
+        FOREIGN KEY (examId) REFERENCES exams (id) ON DELETE CASCADE
+      )
+    ''');
+
+
+    // Create Indexes (Added throughout versions)
     await db.execute('CREATE INDEX idx_sections_courseId ON sections(courseId)');
     await db.execute('CREATE INDEX idx_lessons_sectionId ON lessons(sectionId)');
-    await db.execute('CREATE INDEX idx_chapters_subjectId ON chapters(subjectId)');
-    await db.execute('CREATE INDEX idx_exams_chapterId ON exams(chapterId)');
+    await db.execute('CREATE INDEX idx_chapters_subjectId ON chapters(subjectId)'); // Added in v6
+    await db.execute('CREATE INDEX idx_exams_chapterId ON exams(chapterId)');       // Added in v6
+    await db.execute('CREATE INDEX idx_questions_examId ON questions (examId)');   // Added in v7 <-- NEW INDEX
+    await db.execute('CREATE INDEX idx_questions_chapterId ON questions (chapterId)');// Added in v7 <-- NEW INDEX
+    await db.execute('CREATE INDEX idx_questions_subjectId ON questions (subjectId)');// Added in v7 <-- NEW INDEX
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     print("Database upgrade started: oldVersion=$oldVersion, newVersion=$newVersion");
 
     if (oldVersion < 2) {
-      print("Upgrading from < 2 to $newVersion. User table handled in v3 upgrade.");
+      print("Upgrading from < 2 to $newVersion.");
+      // Add logic for version 2 if any changes were introduced
     }
     if (oldVersion < 3) {
       print("Upgrading from < 3 to $newVersion. Dropping and recreating logged_in_user table.");
+      // Your existing v3 upgrade logic
       var tableExists = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='logged_in_user'");
       if (tableExists.isNotEmpty) {
         await db.execute('DROP TABLE logged_in_user');
@@ -179,11 +225,13 @@ class DatabaseHelper {
     }
     if (oldVersion < 4) {
       print("Upgrading from < 4 to $newVersion. Adding localThumbnailPath to courses.");
+      // Your existing v4 upgrade logic
       await db.execute('ALTER TABLE courses ADD COLUMN localThumbnailPath TEXT');
       print("localThumbnailPath column added to courses.");
     }
     if (oldVersion < 5) {
       print("Upgrading from < 5 to $newVersion. Adding category columns to courses.");
+      // Your existing v5 upgrade logic
       var columnExists = await db.rawQuery("PRAGMA table_info(courses)");
       bool hasCategoryId = false;
       bool hasCategoryName = false;
@@ -202,6 +250,7 @@ class DatabaseHelper {
     }
     if (oldVersion < 6) {
       print("Upgrading from < 6 to $newVersion. Adding subjects, chapters, and exams tables.");
+       // Your existing v6 upgrade logic
       await db.execute('''
         CREATE TABLE subjects(
           id INTEGER PRIMARY KEY,
@@ -248,8 +297,40 @@ class DatabaseHelper {
       await db.execute('CREATE INDEX idx_exams_chapterId ON exams(chapterId)');
       print("Subjects, chapters, and exams tables created.");
     }
+    if (oldVersion < 7) { // <-- NEW UPGRADE STEP FOR VERSION 7
+       print("Upgrading from < 7 to $newVersion. Adding questions table.");
+       await db.execute('''
+         CREATE TABLE questions (
+           id INTEGER PRIMARY KEY,
+           question TEXT,
+           answer TEXT,
+           time TEXT, -- Or INTEGER depending on how you use it
+           passage TEXT,
+           image TEXT,
+           A TEXT,
+           B TEXT,
+           C TEXT,
+           D TEXT,
+           explanation TEXT,
+           subjectId INTEGER,
+           chapterId INTEGER,
+           examId INTEGER,
+           expImage TEXT,
+           expVideo TEXT,
+           examType TEXT,
+           examYear TEXT,
+           FOREIGN KEY (subjectId) REFERENCES subjects (id) ON DELETE CASCADE,
+           FOREIGN KEY (chapterId) REFERENCES chapters (id) ON DELETE CASCADE,
+           FOREIGN KEY (examId) REFERENCES exams (id) ON DELETE CASCADE
+         )
+       ''');
+       await db.execute('CREATE INDEX idx_questions_examId ON questions (examId)');
+       await db.execute('CREATE INDEX idx_questions_chapterId ON questions (chapterId)');
+       await db.execute('CREATE INDEX idx_questions_subjectId ON questions (subjectId)');
+       print("Questions table created and indexes added.");
+    }
 
-    print("Database upgrade finished.");
+    print("Database upgrade finished: newVersion=$newVersion.");
   }
 
   Future<int> upsert(String table, Map<String, dynamic> data) async {
@@ -258,6 +339,8 @@ class DatabaseHelper {
     }
     final db = await database;
     try {
+      // Use insert with ConflictAlgorithm.replace for upsert logic
+      // This requires the table to have a PRIMARY KEY (like 'id')
       final id = await db.insert(
         table,
         data,
@@ -361,6 +444,7 @@ class DatabaseHelper {
     }
   }
 
+
   Future<void> deleteSectionsForCourse(int courseId) async {
     await delete('sections', where: 'courseId = ?', whereArgs: [courseId]);
   }
@@ -376,6 +460,7 @@ class DatabaseHelper {
     }
     final db = await database;
     try {
+      // Clear previous user first as it's a single logged-in user table
       await db.delete('logged_in_user');
       await db.insert(
         'logged_in_user',
