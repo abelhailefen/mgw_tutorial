@@ -1,29 +1,57 @@
-// lib/models/subject.dart
+import 'dart:io';
 
 class Subject {
-  final int id; // Changed to int based on API
-  final String name; // Changed from subjectName to name
+  final int id;
+  final String name;
   final String category;
   final String year;
-  final String imageUrl; // Changed from image to imageUrl
+  final String imageUrl;
+  final String? localImagePath;
 
   Subject({
     required this.id,
     required this.name,
     required this.category,
     required this.year,
-    required this.imageUrl, // Keep as imageUrl for consistency with CourseCard field name
+    required this.imageUrl,
+    this.localImagePath,
   });
 
-  // Factory constructor to create a Subject from JSON data
+  String? get displayImagePath {
+    if (localImagePath != null && localImagePath!.isNotEmpty) {
+      try {
+        final file = File(localImagePath!);
+        if (file.existsSync()) {
+          return localImagePath;
+        } else {
+          print("Subject(${id}): Local image file not found: $localImagePath. Falling back to network.");
+        }
+      } catch (e) {
+        print("Subject(${id}): Error checking local image file: $e. Falling back to network.");
+      }
+    }
+    return imageUrl.isNotEmpty ? imageUrl : null;
+  }
+
   factory Subject.fromJson(Map<String, dynamic> json) {
     return Subject(
-      id: json['id'] ?? 0, // Use default 0 if null, assuming id is always present and int
-      name: json['name'] ?? 'Unnamed Subject', // Use default if null
-      category: json['category'] ?? 'N/A', // Use default if null
-      year: json['year'] ?? 'N/A', // Use default if null
-      // Handle imageUrl potentially being null in API response
-      imageUrl: json['image'] ?? '', // Use 'image' key from API, default to empty string if null
+      id: json['id'] ?? 0,
+      name: json['name'] ?? 'Unnamed Subject',
+      category: json['category'] ?? 'N/A',
+      year: json['year'] ?? 'N/A',
+      imageUrl: json['image'] ?? '',
+      localImagePath: json['localImagePath'] as String?,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'category': category,
+      'year': year,
+      'imageUrl': imageUrl,
+      'localImagePath': localImagePath,
+    };
   }
 }
