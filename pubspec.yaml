@@ -42,7 +42,8 @@ dependencies:
   webview_flutter: ^4.9.0
   connectivity_plus: ^6.1.4
   youtube_player_iframe: ^5.2.1 
-  flutter_widget_from_html: ^0.16.0 # Check for latest version
+  flutter_widget_from_html: ^0.16.0 
+  confetti: ^0.8.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

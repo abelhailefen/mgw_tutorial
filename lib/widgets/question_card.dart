@@ -2,51 +2,81 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-import 'package:mgw_tutorial/models/question.dart'; // Use your project's model
-import 'package:mgw_tutorial/widgets/choice_card.dart'; // Use your project's widget
-// import 'package:video_app/constants/styles.dart'; // Replace if needed
-// import 'package:video_app/UEE/screens/explanation_screen.dart'; // Remove or adapt ExplanationWidget
+import 'package:provider/provider.dart';
+import 'package:mgw_tutorial/models/question.dart';
+import 'package:mgw_tutorial/widgets/choice_card.dart';
+import 'package:mgw_tutorial/provider/question_provider.dart'; // <-- ADD THIS IMPORT
 
-class QuestionCard extends StatelessWidget {
+
+class QuestionCard extends StatefulWidget {
   final Question question;
-  final int questionNumber; // 1-based index for display
-  final bool hasSubmitted; // Pass this state down
+  final int questionNumber;
+  final bool hasSubmitted;
+  final bool isAnswerBeforeExam;
 
   const QuestionCard({
     super.key,
     required this.question,
     required this.questionNumber,
     required this.hasSubmitted,
+    required this.isAnswerBeforeExam,
   });
 
   @override
+  State<QuestionCard> createState() => _QuestionCardState();
+}
+
+class _QuestionCardState extends State<QuestionCard> {
+  bool _showExplanations = false;
+
+  @override
   Widget build(BuildContext context) {
-    // No need to listen to provider here unless QuestionCard itself changes based on selection
-    // The choices handle their own state updates via Consumer.
+    final questionProvider = Provider.of<QuestionProvider>(context, listen: false);
+    final bool hasAnswered = questionProvider.selectedAnswers.containsKey(widget.question.id);
+
+
+    // Logic to determine if the "Show Explanation" button should be visible:
+    // 1. Always visible if already submitted AND exam explanations are after submit (isAnswerBeforeExam is false).
+    // 2. Visible before submit if exam explanations are before submit (isAnswerBeforeExam is true) AND user has answered this question.
+    final bool canShowExplanationButton =
+        (widget.hasSubmitted && !widget.isAnswerBeforeExam) ||
+        (!widget.hasSubmitted && widget.isAnswerBeforeExam && hasAnswered);
+
+    // Reset the internal _showExplanations state if the submitted state changes
+    // This ensures explanations collapse when the exam is submitted, unless the exam type means they should immediately reappear.
+    // A better approach might be to control _showExplanations externally or sync it.
+    // For now, let's reset if submission status changes.
+     if (widget.hasSubmitted && !_showExplanations && !widget.isAnswerBeforeExam && widget.question.explanation != null && widget.question.explanation!.isNotEmpty) {
+        // If submitted and explanations are *after* submit, show them by default if the button is tappable
+        // setState(() { _showExplanations = true; }); // Decide if you want to auto-expand on submit
+     } else if (!widget.hasSubmitted && _showExplanations && widget.isAnswerBeforeExam && !hasAnswered) {
+        // If not submitted, explanations before submit, but the user hasn't answered yet, hide the explanation.
+        // setState(() { _showExplanations = false; }); // Ensure it's hidden if requirements aren't met
+     }
+
 
     return Card(
-      elevation: 2, // Slightly less elevation than SubjectCard
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6), // Smaller margin
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       shape: RoundedRectangleBorder(
          borderRadius: BorderRadius.circular(10.0),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0), // Increased padding inside the card
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Question Text with Number
             HtmlWidget(
-              '$questionNumber: ${question.questionText}',
+              '${widget.questionNumber}: ${widget.question.questionText}',
               textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
             ),
-            const SizedBox(height: 12), // Increased spacing
+            const SizedBox(height: 12),
 
             // Image if available
-            if (question.imageUrl != null && question.imageUrl!.isNotEmpty) ...[
-               // Simplified image loading - just network for now
+            if (widget.question.imageUrl != null && widget.question.imageUrl!.isNotEmpty) ...[
                Image.network(
-                 question.imageUrl!,
+                 widget.question.imageUrl!,
                  errorBuilder: (context, error, stackTrace) =>
                      const Center(child: Text('Failed to load image')),
                ),
@@ -54,7 +84,7 @@ class QuestionCard extends StatelessWidget {
              ],
 
              // Passage text if available
-             if (question.passage != null && question.passage!.isNotEmpty) ...[
+             if (widget.question.passage != null && widget.question.passage!.isNotEmpty) ...[
                Card(
                  margin: const EdgeInsets.symmetric(vertical: 8.0),
                  elevation: 0.5,
@@ -62,7 +92,7 @@ class QuestionCard extends StatelessWidget {
                  child: Padding(
                    padding: const EdgeInsets.all(12.0),
                    child: HtmlWidget(
-                     question.passage!,
+                     widget.question.passage!,
                      textStyle: TextStyle(
                         fontSize: 15,
                         fontStyle: FontStyle.italic,
@@ -75,42 +105,92 @@ class QuestionCard extends StatelessWidget {
              ],
 
 
-            // Choices
+            // Choices - Pass isAnswerBeforeExam down
             ChoiceCard(
               label: 'A',
-              choiceText: question.optionA,
-              question: question,
-              hasSubmitted: hasSubmitted,
+              choiceText: widget.question.optionA,
+              question: widget.question,
+              hasSubmitted: widget.hasSubmitted,
+              isAnswerBeforeExam: widget.isAnswerBeforeExam,
             ),
             ChoiceCard(
               label: 'B',
-              choiceText: question.optionB,
-              question: question,
-              hasSubmitted: hasSubmitted,
+              choiceText: widget.question.optionB,
+              question: widget.question,
+              hasSubmitted: widget.hasSubmitted,
+              isAnswerBeforeExam: widget.isAnswerBeforeExam,
             ),
             ChoiceCard(
               label: 'C',
-              choiceText: question.optionC,
-              question: question,
-              hasSubmitted: hasSubmitted,
+              choiceText: widget.question.optionC,
+              question: widget.question,
+              hasSubmitted: widget.hasSubmitted,
+              isAnswerBeforeExam: widget.isAnswerBeforeExam,
             ),
             ChoiceCard(
               label: 'D',
-              choiceText: question.optionD,
-              question: question,
-              hasSubmitted: hasSubmitted,
+              choiceText: widget.question.optionD,
+              question: widget.question,
+              hasSubmitted: widget.hasSubmitted,
+              isAnswerBeforeExam: widget.isAnswerBeforeExam,
             ),
 
-            // Explanation - Temporarily remove or add a placeholder
-            // if (hasSubmitted && question.explanation != null && question.explanation!.isNotEmpty) ...[
-            //   const SizedBox(height: 16),
-            //   // Add a button to show/hide explanation if desired,
-            //   // or display directly if space is not an issue.
-            //   // For simplicity, let's show a placeholder.
-            //   Text('Explanation: ${question.explanation}', style: TextStyle(fontStyle: FontStyle.italic)),
-            // ]
-             // Removed the explanation widget and related logic for simplicity initially.
-             // You can add it back later, integrating it into this project's structure.
+            // Explanation Button - Show only if allowed based on exam setting and submission state
+            if (widget.question.explanation != null && widget.question.explanation!.isNotEmpty && canShowExplanationButton) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _showExplanations = !_showExplanations;
+                    });
+                  },
+                   style: ElevatedButton.styleFrom(
+                       backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                       foregroundColor: Theme.of(context).colorScheme.onSecondaryContainer,
+                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                   ),
+                  child: Text(
+                    _showExplanations ? 'Hide Explanation' : 'Show Explanation', // TODO: Localize
+                  ),
+                ),
+              ),
+            ],
+
+            // Explanation Content - Show only if button is visible (logically) AND toggled on
+            // The explanation content visibility relies on the _showExplanations toggle state
+            // which is only relevant if canShowExplanationButton is true.
+            if (_showExplanations && widget.question.explanation != null && widget.question.explanation!.isNotEmpty) ...[
+               const SizedBox(height: 12),
+               Card(
+                 elevation: 0.5,
+                 color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+                 margin: EdgeInsets.zero,
+                 child: Padding(
+                   padding: const EdgeInsets.all(12.0),
+                   child: HtmlWidget(
+                     'Explanation: ${widget.question.explanation!}', // TODO: Localize "Explanation"
+                      textStyle: TextStyle(
+                         fontSize: 15,
+                         fontStyle: FontStyle.italic,
+                         color: Theme.of(context).colorScheme.onPrimaryContainer,
+                       ),
+                   ),
+                 ),
+               ),
+               // TODO: Add Explanation Image/Video logic if needed
+               if (widget.question.explanationImageUrl != null && widget.question.explanationImageUrl!.isNotEmpty) ...[
+                 const SizedBox(height: 8),
+                 Image.network(widget.question.explanationImageUrl!, errorBuilder: (context, error, stackTrace) => const Center(child: Text('Failed to load explanation image'))), // TODO: Localize
+               ],
+               if (widget.question.explanationVideoUrl != null && widget.question.explanationVideoUrl!.isNotEmpty) ...[
+                 const SizedBox(height: 8),
+                 Text('Explanation Video: ${widget.question.explanationVideoUrl!}'), // TODO: Implement video player, Localize
+               ],
+
+            ],
+
+
           ],
         ),
       ),

@@ -51,6 +51,7 @@ import 'package:mgw_tutorial/models/post.dart';
 import 'package:mgw_tutorial/models/api_course.dart';
 import 'package:mgw_tutorial/models/section.dart';
 import 'package:mgw_tutorial/models/semester.dart';
+import 'package:mgw_tutorial/models/exam.dart';
 
 // Localization
 import 'package:mgw_tutorial/l10n/app_localizations.dart';
@@ -407,12 +408,11 @@ class MyApp extends StatelessWidget {
         TestimonialsScreen.routeName: (ctx) => const TestimonialsScreen(),
         MyCoursesScreen.routeName: (ctx) => const MyCoursesScreen(),
         FaqScreen.routeName: (ctx) => const FaqScreen(),
-        WeeklyExamsScreen.routeName: (context) => const WeeklyExamsScreen(),
-        ChapterListScreen.routeName: (context) {
+         WeeklyExamsScreen.routeName: (context) => const WeeklyExamsScreen(),
+          ChapterListScreen.routeName: (context) {
             final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
             if (args == null || !args.containsKey('subjectId') || !args.containsKey('subjectName')) {
-              // Handle error or navigate back - consider logging the error
-               Future.microtask(() => Navigator.pop(context)); // Navigate back after build
+               Future.microtask(() => Navigator.pop(context));
               return const Scaffold(body: Center(child: Text('Error: Missing Subject arguments')));
             }
             return ChapterListScreen(
@@ -423,16 +423,14 @@ class MyApp extends StatelessWidget {
 
           ExamListScreen.routeName: (context) {
             final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-             // EXPECT THE NEW ARGUMENT HERE
             if (args == null ||
                 !args.containsKey('subjectId') ||
                 !args.containsKey('subjectName') ||
                 !args.containsKey('chapterId') ||
                 !args.containsKey('chapterName') ||
-                !args.containsKey('showExplanationsBeforeSubmit')) // <-- Check for the new argument
+                !args.containsKey('showExplanationsBeforeSubmit'))
             {
-              // Handle error or navigate back
-              Future.microtask(() => Navigator.pop(context)); // Navigate back after build
+              Future.microtask(() => Navigator.pop(context));
               return const Scaffold(body: Center(child: Text('Error: Missing Exam List arguments')));
             }
             return ExamListScreen(
@@ -440,22 +438,21 @@ class MyApp extends StatelessWidget {
               subjectName: args['subjectName'],
               chapterId: args['chapterId'],
               chapterName: args['chapterName'],
-              showExplanationsBeforeSubmit: args['showExplanationsBeforeSubmit'], // <-- Use the new argument
+              showExplanationsBeforeSubmit: args['showExplanationsBeforeSubmit'],
             );
           },
 
           ExamTakingScreen.routeName: (context) {
             final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-             if (args == null || !args.containsKey('subjectId') || !args.containsKey('chapterId') || !args.containsKey('examId') || !args.containsKey('examTitle')) {
-              // Handle error or navigate back
-              Future.microtask(() => Navigator.pop(context)); // Navigate back after build
-               return const Scaffold(body: Center(child: Text('Error: Missing Exam Taking arguments')));
+             // Corrected type check: `args['exam'] is! Exam`
+            if (args == null || !args.containsKey('exam') || args['exam'] is! Exam)
+             {
+              Future.microtask(() => Navigator.pop(context));
+               return const Scaffold(body: Center(child: Text('Error: Missing or invalid Exam argument')));
             }
+            // Pass the received Exam object to the screen
             return ExamTakingScreen(
-              subjectId: args['subjectId'],
-              chapterId: args['chapterId'],
-              examId: args['examId'],
-              examTitle: args['examTitle'],
+              exam: args['exam'],
             );
           },
         OrderScreen.routeName: (ctx) {
