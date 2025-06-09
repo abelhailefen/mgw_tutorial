@@ -5,8 +5,7 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/models/question.dart';
 import 'package:mgw_tutorial/widgets/choice_card.dart';
-import 'package:mgw_tutorial/provider/question_provider.dart'; // <-- ADD THIS IMPORT
-
+import 'package:mgw_tutorial/provider/question_provider.dart';
 
 class QuestionCard extends StatefulWidget {
   final Question question;
@@ -27,32 +26,50 @@ class QuestionCard extends StatefulWidget {
 }
 
 class _QuestionCardState extends State<QuestionCard> {
+  // State to toggle explanation visibility for THIS card.
+  // Reset this state when the question data or context changes significantly (like refresh).
   bool _showExplanations = false;
+
+  // If the question or exam setting changes, hide explanation initially
+  @override
+  void didUpdateWidget(covariant QuestionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Hide explanation if the question ID or the exam's explanation setting changes
+    if (widget.question.id != oldWidget.question.id || widget.isAnswerBeforeExam != oldWidget.isAnswerBeforeExam) {
+      _showExplanations = false;
+    }
+     // If the user just submitted, and explanations are shown AFTER submit,
+     // you *might* want to auto-show the explanation here.
+     // Currently, we rely on the user clicking the button, which is often better UX.
+     // If (!oldWidget.hasSubmitted && widget.hasSubmitted && !widget.isAnswerBeforeExam) {
+     //   // Check if explanation exists before trying to show it
+     //   if (widget.question.explanation != null && widget.question.explanation!.isNotEmpty) {
+     //      setState(() { _showExplanations = true; });
+     //   }
+     // }
+  }
+
 
   @override
   Widget build(BuildContext context) {
-    final questionProvider = Provider.of<QuestionProvider>(context, listen: false);
+    final questionProvider = Provider.of<QuestionProvider>(context); // Listen to redraw if answer changes
     final bool hasAnswered = questionProvider.selectedAnswers.containsKey(widget.question.id);
 
-
     // Logic to determine if the "Show Explanation" button should be visible:
-    // 1. Always visible if already submitted AND exam explanations are after submit (isAnswerBeforeExam is false).
-    // 2. Visible before submit if exam explanations are before submit (isAnswerBeforeExam is true) AND user has answered this question.
+    // 1. Visible AFTER submit if exam explanations are after submit (isAnswerBeforeExam is false).
+    // 2. Visible BEFORE submit if exam explanations are before submit (isAnswerBeforeExam is true) AND user has answered this question.
     final bool canShowExplanationButton =
         (widget.hasSubmitted && !widget.isAnswerBeforeExam) ||
         (!widget.hasSubmitted && widget.isAnswerBeforeExam && hasAnswered);
 
-    // Reset the internal _showExplanations state if the submitted state changes
-    // This ensures explanations collapse when the exam is submitted, unless the exam type means they should immediately reappear.
-    // A better approach might be to control _showExplanations externally or sync it.
-    // For now, let's reset if submission status changes.
-     if (widget.hasSubmitted && !_showExplanations && !widget.isAnswerBeforeExam && widget.question.explanation != null && widget.question.explanation!.isNotEmpty) {
-        // If submitted and explanations are *after* submit, show them by default if the button is tappable
-        // setState(() { _showExplanations = true; }); // Decide if you want to auto-expand on submit
-     } else if (!widget.hasSubmitted && _showExplanations && widget.isAnswerBeforeExam && !hasAnswered) {
-        // If not submitted, explanations before submit, but the user hasn't answered yet, hide the explanation.
-        // setState(() { _showExplanations = false; }); // Ensure it's hidden if requirements aren't met
-     }
+    // Ensure _showExplanations is false if the button isn't supposed to be visible
+    // This prevents explanation content from showing if the condition to show the button isn't met.
+    if (!canShowExplanationButton && _showExplanations) {
+        // Don't use setState here as it would cause infinite loops.
+        // Just update the local state for this build cycle.
+        // A better pattern would be to derive visibility completely, or use didUpdateWidget.
+        // Let's stick to didUpdateWidget for state resets and button tap for toggling.
+    }
 
 
     return Card(
@@ -103,7 +120,6 @@ class _QuestionCardState extends State<QuestionCard> {
                ),
                const SizedBox(height: 12),
              ],
-
 
             // Choices - Pass isAnswerBeforeExam down
             ChoiceCard(
@@ -157,10 +173,8 @@ class _QuestionCardState extends State<QuestionCard> {
               ),
             ],
 
-            // Explanation Content - Show only if button is visible (logically) AND toggled on
-            // The explanation content visibility relies on the _showExplanations toggle state
-            // which is only relevant if canShowExplanationButton is true.
-            if (_showExplanations && widget.question.explanation != null && widget.question.explanation!.isNotEmpty) ...[
+            // Explanation Content - Show only if the button can be shown AND it's toggled on (_showExplanations is true)
+            if (_showExplanations && canShowExplanationButton && widget.question.explanation != null && widget.question.explanation!.isNotEmpty) ...[
                const SizedBox(height: 12),
                Card(
                  elevation: 0.5,
@@ -189,8 +203,6 @@ class _QuestionCardState extends State<QuestionCard> {
                ],
 
             ],
-
-
           ],
         ),
       ),
