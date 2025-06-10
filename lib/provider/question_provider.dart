@@ -27,6 +27,7 @@ class QuestionProvider with ChangeNotifier {
   final String _questionsApiUrl = "https://courseservice.anbesgames.com/api/questions"; // Base URL for all questions
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
+  // --- Fetch Questions: API First, then Cache on Failure ---
   Future<void> fetchQuestions(int examId, {bool forceRefresh = false}) async {
     // If already loading the same exam and not forcing refresh, just return.
     // The UI is already showing the loading state.
@@ -45,22 +46,12 @@ class QuestionProvider with ChangeNotifier {
     notifyListeners(); // Notify immediately to show loading state with empty data
 
 
-    // Check SQLite cache first for the specific examId
-    final cached = await _dbHelper.query('questions', where: 'examId = ?', whereArgs: [examId]);
+    List<Question> fetchedQuestions = [];
+    String? apiAttemptError;
+    bool loadedFromApi = false;
 
-    if (cached.isNotEmpty && !forceRefresh) {
-      debugPrint('Loading questions for exam $examId from cache.');
-      _questions = cached.map((e) => Question.fromJson(e)).toList();
-      _isLoading = false;
-      _errorMessage = null;
-      // _selectedAnswers is already cleared above.
-      notifyListeners();
-      return; // Cache hit, we're done.
-    }
-
-    debugPrint('Fetching questions for exam $examId from API (forceRefresh: $forceRefresh, cache empty: ${cached.isEmpty}).');
-
-    // If forceRefresh or no cache, try API
+    // --- Attempt to fetch from API first ---
+    debugPrint('Attempting to fetch questions for exam $examId from API...');
     try {
         // Assuming the API supports filtering by exam_id query parameter
         final url = Uri.parse(_questionsApiUrl).replace(queryParameters: {'exam_id': examId.toString()});
@@ -72,41 +63,66 @@ class QuestionProvider with ChangeNotifier {
           if (responseData.containsKey('data') && responseData['data'] is List) {
             List<dynamic> questionsJson = responseData['data'];
              // Client-side filter just in case API didn't filter strictly
-             List<Question> fetchedQuestions = questionsJson
+             List<Question> apiQuestions = questionsJson
                  .map((json) => Question.fromJson(json))
                  .where((q) => q.examId == examId)
                  .toList();
 
-
-            _questions = fetchedQuestions;
-
-            // Cache in SQLite - Clear old questions for this exam first
-            await _dbHelper.delete('questions', where: 'examId = ?', whereArgs: [examId]);
-            for (var question in _questions) {
-              await _dbHelper.upsert('questions', question.toMap());
+            if (apiQuestions.isNotEmpty) {
+              fetchedQuestions = apiQuestions;
+              loadedFromApi = true;
+              debugPrint('Successfully fetched ${fetchedQuestions.length} questions for exam $examId from API.');
+            } else {
+              apiAttemptError = 'API returned empty data for exam $examId.';
+              debugPrint(apiAttemptError);
             }
 
-             // _selectedAnswers is already cleared at the start.
-
           } else {
-            _errorMessage = 'Unable to load questions. Invalid data format.';
-             // If API fails but cache exists (unlikely with forceRefresh=true, but possible on initial fetch),
-             // we already cleared questions/selectedAnswers/questions list.
-             // We could potentially re-load from cached here if API failed and cache was initially NOT empty.
-             // But for this use case (always clear on entering exam), leaving it empty is fine.
+            apiAttemptError = 'API returned invalid data format for exam $examId.';
+            debugPrint(apiAttemptError);
           }
         } else {
-          _errorMessage = 'Server responded with status ${response.statusCode}. Unable to load questions.';
+          apiAttemptError = 'API responded with status ${response.statusCode} for exam $examId.';
+           debugPrint(apiAttemptError);
         }
       } catch (e) {
         // Handle network errors specifically
         if (e is SocketException || e is TimeoutException) {
-          _errorMessage = 'No internet connection. Please connect and try again.';
+          apiAttemptError = 'Network error: Could not reach server to fetch exam $examId questions.';
         } else {
-          _errorMessage = 'Error fetching questions: $e';
+          apiAttemptError = 'Error fetching exam $examId questions from API: $e';
         }
-        debugPrint('Error during question fetch: $e');
+        debugPrint('API Fetch failed for exam $examId: $e');
       }
+
+    // --- If API fetch was successful, update state and cache ---
+    if (loadedFromApi) {
+        _questions = fetchedQuestions;
+        _errorMessage = null; // Clear any previous error
+        // Cache in SQLite - Clear old questions for this exam first
+        await _dbHelper.delete('questions', where: 'examId = ?', whereArgs: [examId]);
+        for (var question in _questions) {
+          await _dbHelper.upsert('questions', question.toMap());
+        }
+        debugPrint('Cached ${_questions.length} questions for exam $examId.');
+
+    } else {
+       // --- API failed (or returned empty), attempt to load from Cache as fallback ---
+       debugPrint('API fetch failed or empty data. Attempting to load questions for exam $examId from cache...');
+       final cached = await _dbHelper.query('questions', where: 'examId = ?', whereArgs: [examId]);
+
+       if (cached.isNotEmpty) {
+         _questions = cached.map((e) => Question.fromJson(e)).toList();
+         // If we successfully loaded from cache after an API failure, clear the error message
+         _errorMessage = null;
+         debugPrint('Successfully loaded ${_questions.length} questions for exam $examId from cache as fallback.');
+       } else {
+         // API failed AND cache was empty/failed. Set the error message from the API attempt or a generic one.
+         _errorMessage = apiAttemptError ?? 'No questions found in API or cache for exam $examId.';
+         debugPrint('Cache is also empty for exam $examId. Error: $_errorMessage');
+       }
+    }
+
 
     // Ensure selected answers are cleared if no questions are loaded (Redundant now, but harmless)
     if (_questions.isEmpty) {
@@ -129,27 +145,25 @@ class QuestionProvider with ChangeNotifier {
         return;
      }
 
-     final bool hasAnswered = _selectedAnswers.containsKey(questionId);
+     // Check if the exam allows changing answers after the first selection (isAnswerBeforeExam=true means answers are final once chosen)
+     // We don't have the Exam object directly here, but the QuestionCard itself should enforce this via its state
+     // and only call `selectAnswer` when allowed.
+     // The provider just records the selection.
 
-     // Assume exam.isAnswerBefore is available via the Exam object somehow if needed here,
-     // but for now, the ChoiceCard handles tapability based on isAnswerBeforeExam and selectedAnswer state.
-     // The provider's selectAnswer method should just record the selection if called.
-
-     // If the same answer is tapped again, deselect it - Removed this feature based on ChoiceCard onTap logic change
-     // If (_selectedAnswers[questionId] == choiceLabel) {
-     //   _selectedAnswers.remove(questionId);
-     // } else {
-        // Allow selecting/changing answer if not submitted and rules allow
-         // The ChoiceCard onTap logic handles the "static" part when isAnswerBefore=true
-        if (['A', 'B', 'C', 'D'].contains(choiceLabel)) {
-             _selectedAnswers[questionId] = choiceLabel;
-        } else {
-             debugPrint('Invalid choice label: $choiceLabel for question $questionId');
-        }
-     // }
+     if (['A', 'B', 'C', 'D'].contains(choiceLabel)) {
+           // If the same answer is tapped again, deselect it
+            if (_selectedAnswers.containsKey(questionId) && _selectedAnswers[questionId] == choiceLabel) {
+                _selectedAnswers.remove(questionId);
+                 debugPrint('Answer deselected: QID $questionId');
+            } else {
+              _selectedAnswers[questionId] = choiceLabel;
+              debugPrint('Answer selected: QID $questionId, Choice $choiceLabel.');
+            }
+     } else {
+          debugPrint('Invalid choice label: $choiceLabel for question $questionId');
+     }
 
      notifyListeners();
-     debugPrint('Answer selected: QID $questionId, Choice $choiceLabel. Selected state: ${_selectedAnswers[questionId]}');
   }
 
   // This method is now redundant if fetchQuestions always clears _selectedAnswers
@@ -170,8 +184,7 @@ class QuestionProvider with ChangeNotifier {
     _errorMessage = null;
     _currentExamId = null;
     _selectedAnswers.clear();
-    // Decide if you want to clear DB cache on logout
-    // await _dbHelper.delete('questions'); // Clear questions from DB cache
+  
     notifyListeners();
   }
 }
