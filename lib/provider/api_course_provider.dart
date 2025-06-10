@@ -1,9 +1,9 @@
+// provider/api_course_provider.dart
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:path/path.dart' as path;
 import 'package:mgw_tutorial/models/api_course.dart';
 import 'package:mgw_tutorial/services/database_helper.dart';
@@ -27,265 +27,204 @@ class ApiCourseProvider with ChangeNotifier {
   static const String _failedToLoadCoursesMessage = "Failed to load courses.";
 
   Future<void> fetchCourses({bool forceRefresh = false}) async {
-    print("ApiCourseProvider: fetchCourses called (forceRefresh: $forceRefresh)");
-
-    bool showLoading = _courses.isEmpty || forceRefresh;
-    if (showLoading) {
+    if (!forceRefresh && _courses.isNotEmpty) {
+       // If not force refreshing and we already have data,
+       // show current data immediately and fetch in the background.
+       // We'll update the UI later if the network data is different.
+       // Do NOT set isLoading = true here as it would show a spinner
+       // over existing data unnecessarily.
+    } else {
+      // If force refreshing or no data, clear current data and show loading
       _isLoading = true;
-      if (_courses.isEmpty || forceRefresh) {
-        _error = null;
-      }
+      _error = null;
+      _courses = []; // Clear to show loading indicator clearly
       notifyListeners();
-      print("ApiCourseProvider: Loading state set.");
-    } else {
-      print("ApiCourseProvider: Courses already loaded and not forcing refresh. Skipping initial fetch state update.");
     }
 
-    // Load cached courses from database
-    List<ApiCourse> cachedCourses = [];
+
+    List<ApiCourse> fetchedCourses = [];
+    bool networkAttempted = false;
+    bool networkSuccess = false;
+    String? networkError;
+
     try {
-      print("ApiCourseProvider: Attempting to load courses from DB...");
-      final List<Map<String, dynamic>> courseMaps = await _dbHelper.query('courses', orderBy: 'title ASC');
-      cachedCourses = courseMaps.map((map) => ApiCourse.fromMap(map)).toList();
-
-      print("ApiCourseProvider: Loaded ${cachedCourses.length} courses from DB.");
-      if (cachedCourses.isNotEmpty) {
-        // Validate local thumbnail paths
-        for (var course in cachedCourses) {
-          if (course.localThumbnailPath != null) {
-            final file = File(course.localThumbnailPath!);
-            if (!await file.exists()) {
-              print("ApiCourseProvider: Local thumbnail missing for course ${course.id}. Setting to null.");
-              course.localThumbnailPath = null;
-            }
-          }
-        }
-        _courses = cachedCourses;
-        _error = null;
-        _isLoading = forceRefresh;
-        for (int i = 0; i < cachedCourses.length && i < 5; i++) {
-          print("ApiCourseProvider: Cached Course ${cachedCourses[i].id} local path: ${cachedCourses[i].localThumbnailPath}");
-        }
-        notifyListeners();
-      } else {
-        print("ApiCourseProvider: No courses found in DB.");
-        _courses = [];
-        _error = null;
-        _isLoading = true;
-        notifyListeners();
-      }
-    } catch (e, s) {
-      print("ApiCourseProvider: Error loading courses from DB: $e\n$s");
-      _courses = [];
-      _isLoading = forceRefresh;
-      notifyListeners();
-    }
-
-    // Perform network fetch if forced refresh or no cached data
-    if (forceRefresh || _courses.isEmpty) {
-      print("ApiCourseProvider: Attempting network fetch from $_apiBaseUrl/course");
+      networkAttempted = true;
       final url = Uri.parse('$_apiBaseUrl/course');
+      final response = await http.get(url, headers: {
+        "Accept": "application/json",
+      }).timeout(const Duration(seconds: 45));
 
-      try {
-        final response = await http.get(url, headers: {
-          "Accept": "application/json",
-        }).timeout(const Duration(seconds: 45));
+      if (response.statusCode == 200) {
+        final dynamic decodedBody = json.decode(response.body);
+        List<dynamic> extractedData = [];
 
-        print("ApiCourseProvider: Network Response Status: ${response.statusCode}");
+        if (decodedBody is List) {
+          extractedData = decodedBody;
+        } else if (decodedBody is Map<String, dynamic> && decodedBody.containsKey('courses') && decodedBody['courses'] is List) {
+          extractedData = decodedBody['courses'];
+        } else {
+          throw Exception("API response format is unexpected.");
+        }
 
-        if (response.statusCode == 200) {
-          final dynamic decodedBody = json.decode(response.body);
-          List<dynamic> extractedData = [];
+        fetchedCourses = extractedData
+            .map((courseJson) {
+              try {
+                return ApiCourse.fromJson(courseJson as Map<String, dynamic>);
+              } catch (e, s) {
+                print("Error parsing individual course JSON: ${e.runtimeType}: $e\n$s\nProblematic JSON: $courseJson");
+                return null;
+              }
+            })
+            .whereType<ApiCourse>()
+            .toList();
 
-          if (decodedBody is List) {
-            extractedData = decodedBody;
-            print("ApiCourseProvider: API returned a list directly.");
-          } else if (decodedBody is Map<String, dynamic> && decodedBody.containsKey('courses') && decodedBody['courses'] is List) {
-            extractedData = decodedBody['courses'];
-            print("ApiCourseProvider: API returned object with 'courses' key.");
-          } else {
-            String parseError = "Failed to load courses: API response format is unexpected.";
-            print("ApiCourseProvider: $parseError Body: ${response.body}");
-            if (_courses.isEmpty) {
-              _error = parseError;
-              _isLoading = false;
-              notifyListeners();
-            } else {
-              print("ApiCourseProvider: Network response parse error after showing cached data.");
-              _error = null;
-            }
-            return;
-          }
-
-          final List<ApiCourse> fetchedCourses = extractedData
-              .map((courseJson) {
-                try {
-                  return ApiCourse.fromJson(courseJson as Map<String, dynamic>);
-                } catch (e, s) {
-                  print("ApiCourseProvider: Error parsing individual course JSON: ${e.runtimeType}: $e");
-                  print("Stacktrace: $s");
-                  print("Problematic course JSON: $courseJson");
-                  return null;
-                }
-              })
-              .whereType<ApiCourse>()
-              .toList();
-
-          // Check if fetched data is different from cached data
-          if (!listEquals(_courses, fetchedCourses) || forceRefresh) {
-            print("ApiCourseProvider: Network data is different or force refresh. Saving and updating state.");
-
-            // Download thumbnails and set local paths
+        // Only update DB and state if fetched data is different or force refreshing
+        if (forceRefresh || !listEquals(_courses, fetchedCourses)) {
             await _downloadAndSaveThumbnails(fetchedCourses);
-            print("ApiCourseProvider: Finished thumbnail download/save process.");
+            await _saveCoursesToDb(fetchedCourses);
+            _courses = fetchedCourses;
+            _error = null; // Clear any previous error if fetch was successful
+            networkSuccess = true;
+        } else {
+           // Data is the same, no need to update state or DB
+           networkSuccess = true;
+           _error = null; // Clear any previous error if fetch was successful
+        }
 
-            for (int i = 0; i < fetchedCourses.length && i < 5; i++) {
-              print("ApiCourseProvider: Fetched Course ${fetchedCourses[i].id} local path BEFORE save: ${fetchedCourses[i].localThumbnailPath}");
+      } else {
+        String apiError = '$_failedToLoadCoursesMessage (Status: ${response.statusCode})';
+        try {
+          final errorBody = json.decode(response.body);
+          if (errorBody is Map) {
+            if (errorBody.containsKey('message') && errorBody['message'] != null && errorBody['message'].toString().isNotEmpty) {
+              apiError = errorBody['message'].toString();
+            } else if (errorBody.containsKey('error') && errorBody['error'] != null && errorBody['error'].toString().isNotEmpty) {
+              apiError = errorBody['error'].toString();
             }
-
-            try {
-              await _saveCoursesToDb(fetchedCourses, cachedCourses);
-              print("ApiCourseProvider: Courses saved to DB successfully.");
-
-              _courses = fetchedCourses;
-              _error = null;
-            } catch (dbSaveError, dbSaveStack) {
-              print("ApiCourseProvider: !!! CRITICAL DB SAVE ERROR: $dbSaveError\n$dbSaveStack");
-              if (_courses.isEmpty) {
-                _error = "Failed to save courses locally after fetching. Offline mode may not work correctly.";
-              } else {
-                print("ApiCourseProvider: DB save failed after showing cached data.");
-                _error = null;
-              }
-            }
-          } else {
-            print("ApiCourseProvider: Network data is same as current data. No DB write or state update.");
-            _error = null;
           }
-        } else {
-          String apiError = '$_failedToLoadCoursesMessage (Status: ${response.statusCode})';
-          try {
-            final errorBody = json.decode(response.body);
-            if (errorBody is Map) {
-              if (errorBody.containsKey('message') && errorBody['message'] != null && errorBody['message'].toString().isNotEmpty) {
-                apiError = errorBody['message'].toString();
-              } else if (errorBody.containsKey('error') && errorBody['error'] != null && errorBody['error'].toString().isNotEmpty) {
-                apiError = errorBody['error'].toString();
-              }
-            }
-          } catch (e) {
-            // Ignore JSON decode errors
-          }
-
-          if (_courses.isEmpty) {
-            _error = apiError;
-            print("ApiCourseProvider: Network fetch failed, no cached data. Error set: $_error");
-          } else {
-            print("ApiCourseProvider: Network fetch failed after showing cached data: $apiError");
-            _error = null;
-          }
+        } catch (e) {
+          // Ignore JSON decode errors
         }
-      } on TimeoutException catch (e) {
-        print("ApiCourseProvider: TimeoutException fetching courses: $e");
-        if (_courses.isEmpty) {
-          _error = _timeoutErrorMessage;
-        } else {
-          _error = null;
-        }
-      } on SocketException catch (e) {
-        print("ApiCourseProvider: SocketException fetching courses: $e");
-        if (_courses.isEmpty) {
-          _error = _networkErrorMessage;
-        } else {
-          _error = null;
-        }
-      } on http.ClientException catch (e, s) {
-        print("ApiCourseProvider: HTTP Client Exception: ${e.message}");
-        print("Stacktrace: $s");
-        if (_courses.isEmpty) {
-          _error = "${_networkErrorMessage}: ${e.message}";
-        } else {
-          _error = null;
-        }
-      } catch (e, s) {
-        print("ApiCourseProvider: Generic Exception during fetchCourses: $e");
-        print("Stacktrace: $s");
-        if (_courses.isEmpty) {
-          _error = "${_unexpectedErrorMessage}: ${e.toString()}";
-        } else {
-          _error = null;
-        }
-      } finally {
-        _isLoading = false;
-        notifyListeners();
-        print("ApiCourseProvider: Fetch process finished. Notified listeners. final isLoading=$isLoading, final error=$error, final coursesCount=${_courses.length}");
+        networkError = apiError;
       }
-    } else {
-      print("ApiCourseProvider: Not forcing refresh and courses list is not empty. Skipping network fetch.");
-      _isLoading = false;
-      notifyListeners();
+    } on TimeoutException catch (e) {
+      networkAttempted = true;
+      networkError = _timeoutErrorMessage;
+    } on SocketException catch (e) {
+      networkAttempted = true;
+      networkError = _networkErrorMessage;
+    } on http.ClientException catch (e, s) {
+      networkAttempted = true;
+      print("HTTP Client Exception: ${e.message}\n$s");
+      networkError = "${_networkErrorMessage}: ${e.message}";
+    } catch (e, s) {
+      networkAttempted = true;
+      print("Generic Exception during fetchCourses: $e\n$s");
+      networkError = "${_unexpectedErrorMessage}: ${e.toString()}";
     }
 
-    // Re-download thumbnails for cached courses if missing
-    if (_courses.isNotEmpty && !forceRefresh) {
-      await _downloadAndSaveThumbnails(_courses);
-      await _saveCoursesToDb(_courses, _courses);
+    // If network failed or was not attempted (shouldn't happen with this logic, but defensive),
+    // or if forceRefresh requires potentially clearing old data, load from DB.
+    // Load from DB also happens if network was successful but fetched data was the same,
+    // to ensure local paths are re-validated/set correctly for existing items.
+     if (!networkSuccess || _courses.isEmpty) { // _courses could be empty if network failed OR if network succeeded but returned empty list
+        try {
+            final List<Map<String, dynamic>> courseMaps = await _dbHelper.query('courses', orderBy: 'title ASC');
+            _courses = courseMaps.map((map) => ApiCourse.fromMap(map)).toList();
+
+            // Re-validate local thumbnail paths for loaded courses
+            for (var course in _courses) {
+              if (course.localThumbnailPath != null) {
+                final file = File(course.localThumbnailPath!);
+                if (!await file.exists()) {
+                   course.localThumbnailPath = null;
+                   // Optionally update DB here if path is null, but doing it
+                   // during a save transaction is safer/more efficient.
+                }
+              }
+            }
+
+            if (_courses.isEmpty) {
+               // No courses from network AND none from DB
+               _error = networkAttempted ? (networkError ?? _failedToLoadCoursesMessage) : _failedToLoadCoursesMessage;
+            } else {
+               // Courses loaded from DB (after network fail or if network returned same data)
+               _error = networkAttempted && networkError != null ? "Could not get latest courses from network ($networkError). Showing cached data." : null;
+            }
+
+          } catch (dbError, dbStack) {
+            print("Error loading courses from DB after network failure: $dbError\n$dbStack");
+            _courses = [];
+            _error = networkAttempted ? (networkError ?? "Failed to load courses from database.") : "Failed to load courses from database.";
+            if (networkAttempted && networkError != null) {
+               _error = "$networkError\nAlso failed to load from database.";
+            } else {
+               _error = "Failed to load courses from database.";
+            }
+          }
     }
+
+
+    _isLoading = false;
+    notifyListeners();
   }
 
-  Future<void> _saveCoursesToDb(List<ApiCourse> coursesToSave, List<ApiCourse> cachedCourses) async {
-    print("ApiCourseProvider: Starting DB save process...");
+  Future<void> _saveCoursesToDb(List<ApiCourse> coursesToSave) async {
     try {
       final db = await _dbHelper.database;
       List<String> oldThumbnailPaths = [];
       List<String> newCourseIds = coursesToSave.map((c) => c.id.toString()).toList();
 
-      // Only delete thumbnails for courses that are no longer in the new data
-      print("ApiCourseProvider: Determining which thumbnails to delete...");
       try {
         await db.transaction((txn) async {
           oldThumbnailPaths = await _dbHelper.getOldThumbnailPathsInTxn(txn);
-          await txn.delete('courses', where: 'id NOT IN (${newCourseIds.map((_) => '?').join(',')})', whereArgs: newCourseIds);
+          if (newCourseIds.isNotEmpty) {
+             await txn.delete('courses', where: 'id NOT IN (${newCourseIds.map((_) => '?').join(',')})', whereArgs: newCourseIds);
+          } else {
+             await txn.delete('courses'); // Delete all if the new list is empty
+          }
         });
-        print("ApiCourseProvider: Deleted courses not in new data. ${oldThumbnailPaths.length} paths collected for file deletion.");
       } catch (e, s) {
-        print("ApiCourseProvider: Error during old course deletion transaction: $e\n$s");
+        print("Error during old course deletion transaction: $e\n$s");
         rethrow;
       }
 
-      if (oldThumbnailPaths.isNotEmpty) {
-        // Only delete thumbnails that are no longer needed
-        List<String> thumbnailsToDelete = oldThumbnailPaths.where((path) {
+      List<String> thumbnailsToDelete = oldThumbnailPaths.where((path) {
+        if (path.isEmpty) return false;
+        try {
           final fileName = path.split('/').last;
-          final courseId = fileName.split('_')[1];
-          return !newCourseIds.contains(courseId);
-        }).toList();
+          final parts = fileName.split('_');
+          if (parts.length > 1) {
+              final courseIdPart = parts[1].split('.').first;
+               if (int.tryParse(courseIdPart) != null) {
+                 return !newCourseIds.contains(courseIdPart);
+               }
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+        return false; // Default to not deleting if parsing fails
+      }).toList();
 
-        print("ApiCourseProvider: Deleting ${thumbnailsToDelete.length} old thumbnail files...");
+      if (thumbnailsToDelete.isNotEmpty) {
         await _dbHelper.deleteThumbnailFiles(thumbnailsToDelete);
-        print("ApiCourseProvider: Old thumbnail files deletion attempted.");
-      } else {
-        print("ApiCourseProvider: No old thumbnail files to delete.");
       }
 
+
       if (coursesToSave.isEmpty) {
-        print("ApiCourseProvider: No new courses to save to DB.");
         return;
       }
 
-      print("ApiCourseProvider: Saving ${coursesToSave.length} new courses to DB...");
       try {
         await db.transaction((txn) async {
           await _dbHelper.insertCoursesInTxn(txn, coursesToSave);
         });
-        print("ApiCourseProvider: New courses saved to DB successfully.");
       } catch (e, s) {
-        print("ApiCourseProvider: Error during new course insertion transaction: $e\n$s");
+        print("Error during new course insertion transaction: $e\n$s");
         rethrow;
       }
     } catch (e, s) {
-      print("ApiCourseProvider: Overall Error during _saveCoursesToDb process: $e");
-      print("Stacktrace: $s");
+      print("Overall Error during _saveCoursesToDb process: $e\n$s");
       rethrow;
     }
   }
@@ -293,6 +232,7 @@ class ApiCourseProvider with ChangeNotifier {
   bool listEquals(List<ApiCourse> a, List<ApiCourse> b) {
     if (a.length != b.length) return false;
     for (int i = 0; i < a.length; i++) {
+      // Compare fields relevant for detecting changes that require a DB update
       if (a[i].id != b[i].id ||
           a[i].title != b[i].title ||
           a[i].shortDescription != b[i].shortDescription ||
@@ -303,7 +243,7 @@ class ApiCourseProvider with ChangeNotifier {
           a[i].price != b[i].price ||
           a[i].discountFlag != b[i].discountFlag ||
           a[i].discountedPrice != b[i].discountedPrice ||
-          a[i].thumbnail != b[i].thumbnail ||
+          a[i].thumbnail != b[i].thumbnail || // Important to check thumbnail URL change
           a[i].videoUrl != b[i].videoUrl ||
           a[i].isTopCourse != b[i].isTopCourse ||
           a[i].status != b[i].status ||
@@ -331,16 +271,13 @@ class ApiCourseProvider with ChangeNotifier {
     return true;
   }
 
+
   Future<void> _downloadAndSaveThumbnails(List<ApiCourse> courses) async {
     if (courses.isEmpty) {
-      print("ApiCourseProvider: No courses to download thumbnails for.");
       return;
     }
     final thumbnailDir = await _dbHelper.getThumbnailDirectory();
     final client = http.Client();
-    int downloadedCount = 0;
-    int skippedCount = 0;
-    int failedCount = 0;
 
     try {
       for (final course in courses) {
@@ -351,15 +288,11 @@ class ApiCourseProvider with ChangeNotifier {
             try {
               uri = Uri.parse(imageUrl);
               if (!uri.hasScheme || !(uri.scheme == 'http' || uri.scheme == 'https')) {
-                print("ApiCourseProvider: Invalid scheme for thumbnail URL for course ${course.id}: $imageUrl");
                 course.localThumbnailPath = null;
-                failedCount++;
                 continue;
               }
             } catch (e) {
-              print("ApiCourseProvider: Invalid thumbnail URL for course ${course.id}: $imageUrl. Error: $e");
               course.localThumbnailPath = null;
-              failedCount++;
               continue;
             }
 
@@ -370,62 +303,46 @@ class ApiCourseProvider with ChangeNotifier {
               fileExtension = pathSegment.substring(lastDot + 1).split('?').first;
             } else if (uri.queryParameters.containsKey('format')) {
               fileExtension = uri.queryParameters['format']!;
-            } else {
-              print("ApiCourseProvider: Could not determine file extension for thumbnail URL: $imageUrl. Using default '$fileExtension'.");
             }
 
             final fileName = 'course_${course.id}_thumb.${fileExtension}';
             final localPath = path.join(thumbnailDir.path, fileName);
             final localFile = File(localPath);
 
+            // Check if a file with the same name already exists and is likely the correct one
             if (await localFile.exists()) {
+              // Add a basic size check? Or trust filename uniqueness based on course ID?
+              // For simplicity, we'll trust the filename based on course ID and original extension/format hint.
               course.localThumbnailPath = localPath;
-              skippedCount++;
-              continue;
+              continue; // Skip download if file exists
             }
 
-            print("ApiCourseProvider: Downloading thumbnail for course ${course.id} from $imageUrl");
             final response = await client.get(uri).timeout(const Duration(seconds: 15));
 
             if (response.statusCode == 200) {
               await localFile.writeAsBytes(response.bodyBytes);
               course.localThumbnailPath = localPath;
-              downloadedCount++;
-              print("ApiCourseProvider: Successfully saved thumbnail for course ${course.id} to $localPath");
             } else {
-              print("ApiCourseProvider: Failed to download thumbnail for course ${course.id} (Status: ${response.statusCode}): $imageUrl");
               course.localThumbnailPath = null;
-              failedCount++;
             }
           } on TimeoutException catch (e) {
-            print("ApiCourseProvider: Timeout downloading thumbnail for course ${course.id} ($imageUrl): $e");
-            course.localThumbnailPath = null;
-            failedCount++;
+             course.localThumbnailPath = null;
           } on http.ClientException catch (e) {
-            print("ApiCourseProvider: HTTP Client Error downloading thumbnail for course ${course.id} ($imageUrl): ${e.message}");
-            course.localThumbnailPath = null;
-            failedCount++;
+             course.localThumbnailPath = null;
           } catch (e, s) {
-            print("ApiCourseProvider: Generic Error downloading/saving thumbnail for course ${course.id} ($imageUrl): $e");
-            print("Stacktrace: $s");
-            course.localThumbnailPath = null;
-            failedCount++;
+             course.localThumbnailPath = null;
           }
         } else {
-          print("ApiCourseProvider: No thumbnail URL for course ${course.id}");
           course.localThumbnailPath = null;
-          skippedCount++;
         }
       }
     } finally {
       client.close();
-      print("ApiCourseProvider: Thumbnail download summary: Downloaded $downloadedCount, Skipped $skippedCount, Failed $failedCount.");
     }
   }
 
   @override
   void dispose() {
-    print("ApiCourseProvider: Dispose called.");
     super.dispose();
   }
 }

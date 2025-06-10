@@ -1,3 +1,4 @@
+// screens/library/library_content_view.dart
 import 'package:flutter/material.dart';
 import 'package:mgw_tutorial/widgets/library/course_card.dart';
 import 'package:mgw_tutorial/screens/library/course_sections_screen.dart';
@@ -20,11 +21,15 @@ class _LibraryContentViewState extends State<LibraryContentView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Call fetchCourses without forceRefresh.
+      // The provider will attempt network first, show loading if needed,
+      // and fall back to DB if network fails.
       Provider.of<ApiCourseProvider>(context, listen: false).fetchCourses();
     });
   }
 
   Future<void> _refreshCourses() async {
+    // Pull-to-refresh should force a network refresh
     await Provider.of<ApiCourseProvider>(context, listen: false).fetchCourses(forceRefresh: true);
   }
 
@@ -38,10 +43,12 @@ class _LibraryContentViewState extends State<LibraryContentView> {
     final bool isLoading = courseProvider.isLoading;
     final String? error = courseProvider.error;
 
+    // Show loading indicator if currently loading AND there are no courses to display yet
     if (isLoading && displayCourses.isEmpty) {
       return Center(child: CircularProgressIndicator(color: theme.colorScheme.primary));
     }
 
+    // Show error message if an error occurred AND there are no courses to display
     if (error != null && displayCourses.isEmpty) {
       return Center(
         child: Padding(
@@ -52,9 +59,9 @@ class _LibraryContentViewState extends State<LibraryContentView> {
               Icon(Icons.error_outline, color: theme.colorScheme.error, size: 50),
               const SizedBox(height: 16),
               Text(
-                 l10n.appTitle.contains("መጂወ") && error!.contains("Failed to load courses") ?
+                 l10n.appTitle.contains("መጂወ") && error.contains("Failed to load courses") ?
                  "ኮርሶችን መጫን አልተሳካም።\n$error" :
-                 error!,
+                 error,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
               ),
@@ -74,6 +81,7 @@ class _LibraryContentViewState extends State<LibraryContentView> {
       );
     }
 
+    // Show empty state if no courses are loaded, not loading, and no error
     if (displayCourses.isEmpty && !isLoading && error == null) {
       return Center(
         child: Column(
@@ -101,6 +109,7 @@ class _LibraryContentViewState extends State<LibraryContentView> {
       );
     }
 
+    // Display courses if available
     return RefreshIndicator(
       onRefresh: _refreshCourses,
       color: theme.colorScheme.primary,

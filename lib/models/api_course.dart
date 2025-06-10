@@ -1,3 +1,4 @@
+// models/api_course.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' show join;
@@ -104,11 +105,9 @@ class ApiCourse {
            final file = File(localThumbnailPath!);
            if (file.existsSync()) {
              return localThumbnailPath;
-           } else {
-              print("ApiCourse(${id}): Local thumbnail file not found: $localThumbnailPath. Falling back to network.");
            }
          } catch (e) {
-            print("ApiCourse(${id}): Error checking local thumbnail file: $e. Falling back to network.");
+           // Error checking file existence, fall back to network URL
          }
      }
      return fullThumbnailUrl;
@@ -123,7 +122,7 @@ class ApiCourse {
             return decoded.map((item) => item.toString()).toList();
           }
         } catch (e) {
-          print("Could not parse string list JSON: $jsonField, error: $e");
+          // Could not parse string list JSON
         }
       } else if (jsonField is List) {
         return jsonField.map((item) => item.toString()).toList();
@@ -138,12 +137,12 @@ class ApiCourse {
         return null;
     }
 
-     DateTime parseSafeDate(dynamic dateValue, String fieldName) {
+     DateTime parseSafeDate(dynamic dateValue) {
       if (dateValue is String && dateValue.isNotEmpty) {
         try {
           return DateTime.parse(dateValue).toLocal();
         } catch (e) {
-          print("Error parsing date for Course field '$fieldName': $dateValue. Error: $e. Using current time as fallback.");
+          // Error parsing date string
           return DateTime.now();
         }
       }
@@ -171,8 +170,8 @@ class ApiCourse {
       isFreeCourse: parseBoolFromString(json['is_free_course']),
       multiInstructor: parseBoolFromString(json['multi_instructor']),
       creator: json['creator'] as String?,
-      createdAt: parseSafeDate(json['createdAt'], 'createdAt'),
-      updatedAt: parseSafeDate(json['updatedAt'], 'updatedAt'),
+      createdAt: parseSafeDate(json['createdAt']),
+      updatedAt: parseSafeDate(json['updatedAt']),
       category: json['category'] != null && json['category'] is Map<String, dynamic>
           ? CourseCategoryInfo.fromJson(json['category'] as Map<String, dynamic>)
           : null,
@@ -181,7 +180,6 @@ class ApiCourse {
   }
 
   Map<String, dynamic> toMap() {
-     // Helper to convert boolean to int (0 or 1) for DB
      int? boolToInt(bool? b) => b == null ? null : (b ? 1 : 0);
 
     return {
@@ -195,15 +193,15 @@ class ApiCourse {
       'section': section,
       'requirements': jsonEncode(requirements),
       'price': price,
-      'discountFlag': boolToInt(discountFlag), // Correctly uses boolToInt
+      'discountFlag': boolToInt(discountFlag),
       'discountedPrice': discountedPrice,
       'thumbnail': thumbnail,
       'videoUrl': videoUrl,
-      'isTopCourse': boolToInt(isTopCourse), // Correctly uses boolToInt
+      'isTopCourse': boolToInt(isTopCourse),
       'status': status,
-      'isVideoCourse': boolToInt(isVideoCourse), // Correctly uses boolToInt
-      'isFreeCourse': boolToInt(isFreeCourse), // CORRECTED: Was intToBool, changed to boolToInt
-      'multiInstructor': boolToInt(multiInstructor), // CORRECTED: Was intToBool, changed to boolToInt
+      'isVideoCourse': boolToInt(isVideoCourse),
+      'isFreeCourse': boolToInt(isFreeCourse),
+      'multiInstructor': boolToInt(multiInstructor),
       'creator': creator,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -214,12 +212,12 @@ class ApiCourse {
   }
 
   factory ApiCourse.fromMap(Map<String, dynamic> map) {
-     DateTime parseSafeDateFromDb(dynamic dateValue, String fieldName) {
+     DateTime parseSafeDateFromDb(dynamic dateValue) {
       if (dateValue is String && dateValue.isNotEmpty) {
         try {
           return DateTime.parse(dateValue).toLocal();
         } catch (e) {
-          print("Error parsing date from DB for Course field '$fieldName': $dateValue. Error: $e. Using current time as fallback.");
+          // Error parsing date string from DB
           return DateTime.now();
         }
       }
@@ -234,13 +232,12 @@ class ApiCourse {
             return decoded.map((item) => item.toString()).toList();
           }
         } catch (e) {
-           print("Could not parse DB string list: $dbField, error: $e");
+           // Could not parse DB string list JSON
         }
       }
       return [];
     }
 
-     // Helper to convert int (0 or 1) or string to boolean
      bool? intToBool(dynamic value) {
       if (value is int) return value == 1;
       if (value is String) return value.toLowerCase() == 'true' || value == '1';
@@ -276,8 +273,8 @@ class ApiCourse {
       isFreeCourse: intToBool(map['isFreeCourse']),
       multiInstructor: intToBool(map['multiInstructor']),
       creator: map['creator'] as String?,
-      createdAt: parseSafeDateFromDb(map['createdAt'], 'createdAt'),
-      updatedAt: parseSafeDateFromDb(map['updatedAt'], 'updatedAt'),
+      createdAt: parseSafeDateFromDb(map['createdAt']),
+      updatedAt: parseSafeDateFromDb(map['updatedAt']),
       category: categoryInfo,
       localThumbnailPath: map['localThumbnailPath'] as String?,
     );
