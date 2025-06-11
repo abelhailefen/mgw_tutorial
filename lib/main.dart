@@ -44,7 +44,7 @@ import 'package:mgw_tutorial/screens/sidebar/weekly_exams_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/chapter_list_screen.dart';
 import 'package:mgw_tutorial/screens/sidebar/exam_list_screen.dart'; 
 import 'package:mgw_tutorial/screens/sidebar/exam_taking_screen.dart';
-
+import 'package:mgw_tutorial/screens/splash_screen.dart';
 
 // Models
 import 'package:mgw_tutorial/models/post.dart';
@@ -397,7 +397,7 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const LoginScreen(),
+      home: const SplashScreen(),
       routes: {
         '/main': (ctx) => const MainScreen(),
         '/login': (ctx) => const LoginScreen(),

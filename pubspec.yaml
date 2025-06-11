@@ -65,7 +65,7 @@ flutter:
   #   - assets/fonts/
   assets:
     - assets/fonts/ # This makes all files in assets/fonts/ available
-
+    - assets/images/
   # ------------------- FONTS DECLARATION --------------------
   # This declares the NotoSansEthiopic font family and points to the
   # NotoSansEthiopic-Regular.ttf file as its primary (and only, in this scenario) asset.
