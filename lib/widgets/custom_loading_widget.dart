@@ -50,10 +50,10 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget> with SingleTi
             scale: _animation.drive(Tween(begin: 0.8, end: 1.0)), // Scale animation
             child: FadeTransition(
               opacity: _animation, // Fade animation
-              child: Icon(
-                Icons.school_outlined, // You can replace this with your app logo image
-                size: 80.0,
-                color: primaryColor,
+              child: Image.asset(
+                'assets/images/logo.jpg', // You can replace this with your app logo image
+                width: 200.0,
+                height: 200.0,
               ),
             ),
           ),
@@ -66,18 +66,6 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget> with SingleTi
             ),
           ),
           const SizedBox(height: 30),
-          // A simple linear progress indicator or custom animation
-          SizedBox(
-             width: 150, // Adjust width as needed
-             child: LinearProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                backgroundColor: primaryColor.withOpacity(0.3),
-             ),
-          ),
-          // Or a CircularProgressIndicator if preferred below the logo
-          // CircularProgressIndicator(
-          //   valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-          // ),
         ],
       ),
     );

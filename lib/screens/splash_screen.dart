@@ -24,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen> {
     });
   }
 
-  // Optional: If you need to load data or check auth status during splash
+  // If you need to load data or check auth status during splash
   // Future<void> _performAppInitialization() async {
   //    // Example: Check auth status
   //    final authProvider = Provider.of<AuthProvider>(context, listen: false);
