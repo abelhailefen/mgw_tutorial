@@ -51,7 +51,7 @@ class _CustomLoadingWidgetState extends State<CustomLoadingWidget> with SingleTi
             child: FadeTransition(
               opacity: _animation, // Fade animation
               child: Image.asset(
-                'assets/images/logo.jpg', // You can replace this with your app logo image
+                'assets/images/logo.png', // You can replace this with your app logo image
                 width: 200.0,
                 height: 200.0,
               ),
