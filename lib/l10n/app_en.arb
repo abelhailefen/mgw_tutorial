@@ -422,5 +422,7 @@
   "fileDownloadedTooltip": "File downloaded",
   "couldNotLoadItem": "Could not load",
   "submitExam": "Submit Exam",
-  "noSemestersAvailable": "No semesters available."
+  "noSemestersAvailable": "No semesters available.",
+  "notificationsTitle": "Notifications",
+  "noNotificationsMessage": "You have no notifications yet"
 }

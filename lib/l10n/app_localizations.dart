@@ -1943,6 +1943,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No semesters available.'**
   String get noSemestersAvailable;
+
+  /// No description provided for @notificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notificationsTitle;
+
+  /// No description provided for @noNotificationsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You have no notifications yet'**
+  String get noNotificationsMessage;
 }
 
 class _AppLocalizationsDelegate

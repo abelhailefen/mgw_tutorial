@@ -1006,4 +1006,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noSemestersAvailable => 'No semesters available.';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get noNotificationsMessage => 'You have no notifications yet';
 }
