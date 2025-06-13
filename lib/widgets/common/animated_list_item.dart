@@ -6,7 +6,7 @@ class AnimatedListItem extends StatefulWidget {
   const AnimatedListItem({
     Key? key,
     required this.child,
-    this.duration = const Duration(milliseconds: 400),
+    this.duration = const Duration(milliseconds: 600),
     this.curve = Curves.easeOut,
     this.scaleStart = 0.9, // Start slightly smaller
   }) : super(key: key);
