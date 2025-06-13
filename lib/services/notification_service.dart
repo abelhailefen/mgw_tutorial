@@ -4,11 +4,11 @@ import 'package:http/http.dart' as http;
 import 'package:mgw_tutorial/models/blog.dart'; // CORRECTED import path
 
 class NotificationService {
-  final String _baseUrl = "https://usersservicefx.amtprinting19.com/api";
+  final String _baseUrl = "https://mgw-backend.onrender.com/api";
 
   Future<List<Blog>> fetchNotifications() async {
     try {
-      final url = Uri.parse('$_baseUrl/notification');
+      final url = Uri.parse('$_baseUrl/notifications');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {

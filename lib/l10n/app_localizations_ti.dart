@@ -9,34 +9,34 @@ class AppLocalizationsTi extends AppLocalizations {
   AppLocalizationsTi([String locale = 'ti']) : super(locale);
 
   @override
-  String get downloadDocumentTooltip => 'Download PDF';
+  String get downloadDocumentTooltip => 'PDF ኣውርድ';
 
   @override
-  String get downloadedDocumentTooltip => 'Open downloaded PDF';
+  String get downloadedDocumentTooltip => 'ዝወረደ PDF ክፈት';
 
   @override
-  String get notesItemType => 'Notes';
+  String get notesItemType => 'መዘኻኸሪታት';
 
   @override
-  String get examsItemType => 'Exams';
+  String get examsItemType => 'ፈተናታት';
 
   @override
-  String get noNotesAvailable => 'No notes available for this section';
+  String get noNotesAvailable => 'ንዚ ክፍል እዚ ዝኾነ መዘኻኸሪ የብሉን።';
 
   @override
-  String get noExamsAvailable => 'No exams available for this section';
+  String get noExamsAvailable => 'ንዚ ክፍል እዚ ዝኾነ ፈተና የብሉን።';
 
   @override
-  String get appTitle => 'መጂወ መምህር';
+  String get appTitle => 'MGW ትምህርቲ';
 
   @override
   String get home => 'መበገሲ';
 
   @override
-  String get library => 'ቤተ-መጽሐፍቲ';
+  String get library => 'ላይብረሪ';
 
   @override
-  String get notifications => 'ናይ መጠንቀቕታ መልእኽታት';
+  String get notifications => 'መልእኽቲ';
 
   @override
   String get account => 'ሕሳብ';
@@ -45,7 +45,7 @@ class AppLocalizationsTi extends AppLocalizations {
   String get aboutUs => 'ብዛዕባና';
 
   @override
-  String get settings => 'ቅጥዕታት';
+  String get settings => 'ቅንብራት';
 
   @override
   String get logout => 'ውጻእ';
@@ -66,31 +66,31 @@ class AppLocalizationsTi extends AppLocalizations {
   String get afaanOromo => 'ኣፋን ኦሮሞ';
 
   @override
-  String get welcomeMessage => 'እንቋዕ ናብ መጂወ መምህር ብደሓን መጻእኩም!';
+  String get welcomeMessage => 'እንኳን ናብ MGW ትምህርቲ ብደሓን መጻእኩም!';
 
   @override
-  String get testimonials => 'ምስክር ወሃብቲ';
+  String get testimonials => 'ምስክርነት';
 
   @override
-  String get registerforcourses => 'ንኮርስታት ተመዝገብ';
+  String get registerforcourses => 'ንኮርሳት ተመዝገብ';
 
   @override
-  String get mycourses => 'ናተይ ኮርስታት';
+  String get mycourses => 'ኮርሰታተይ';
 
   @override
-  String get weeklyexam => 'ናይ ሰሙን ፈተናታት';
+  String get weeklyexam => 'ሰሙናዊ ፈተና';
 
   @override
-  String get sharetheapp => 'ኣፕሊኬሽን ኣካፍል';
+  String get sharetheapp => 'ኣፕ ኣካፍል';
 
   @override
-  String get joinourtelegram => 'ቴሌግራምና ተጸንበር';
+  String get joinourtelegram => 'ናይ ቴሌግራምና ተጸምበር';
 
   @override
-  String get discussiongroup => 'ጉጅለ ዘተ';
+  String get discussiongroup => 'ጉጅለ ምይይጥ';
 
   @override
-  String get contactus => 'ተራኸቡና';
+  String get contactus => 'ተጸንብሩና';
 
   @override
   String get refresh => 'ኣሕድስ';
@@ -102,31 +102,31 @@ class AppLocalizationsTi extends AppLocalizations {
   String get studentNameLabel => 'ሽም ተማሃራይ';
 
   @override
-  String get studentNameValidationError => 'እባኽ ኣትሽም ተማሃራይ ኣስገብ';
+  String get studentNameValidationError => 'እባኽኻ ሽም ተማሃራይ ኣእትው።';
 
   @override
   String get fatherNameLabel => 'ሽም ኣቦ';
 
   @override
-  String get fatherNameValidationError => 'እባኽ ኣትሽም ኣቦ ኣስገብ';
+  String get fatherNameValidationError => 'እባኽኻ ሽም ኣቦ ኣእትው።';
 
   @override
-  String get streamLabel => 'ዲፓርትመንት';
+  String get streamLabel => 'ብርኪ ትምህርቲ';
 
   @override
-  String get naturalStream => 'ተፈጥሮ';
+  String get naturalStream => 'ተፈጥሮኣዊ';
 
   @override
   String get socialStream => 'ማሕበራዊ';
 
   @override
-  String get institutionLabel => 'ተቋም';
+  String get institutionLabel => 'ትካል';
 
   @override
-  String get selectInstitutionHint => 'ተቋም ምረጽ';
+  String get selectInstitutionHint => 'ትካል ምረጽ';
 
   @override
-  String get institutionValidationError => 'እባኽ ኣተቋም ምረጽ';
+  String get institutionValidationError => 'እባኽኻ ትካል ምረጽ።';
 
   @override
   String get genderLabel => 'ጾታ';
@@ -138,17 +138,17 @@ class AppLocalizationsTi extends AppLocalizations {
   String get femaleGender => 'ጓል';
 
   @override
-  String get selectServiceLabel => 'ዓይነት ኣገልግሎት ምረጽ';
+  String get selectServiceLabel => 'ኣገልግሎት ምረጽ';
 
   @override
-  String get selectServiceHint => 'ዓይነት ኣገልግሎት ምረጽ';
+  String get selectServiceHint => 'ኣገልግሎት ምረጽ';
 
   @override
-  String get serviceValidationError => 'እባኽ ኣትዓይነት ኣገልግሎት ምረጽ';
+  String get serviceValidationError => 'እባኽኻ ኣገልግሎት ምረጽ።';
 
   @override
   String get paymentInstruction =>
-      'ክፍሊት ምስ ፈጸምካ፣ በጃኻ ሽም እቲ ዝኸፈልካሉ ባንክ ኣብ ታሕቲ ኣእቱ እሞ ስእሊ መረጋገጺ ክፍሊት ኣመዝግብ። ዝርዝር ሕሳብ ባንክና፡\n • CBE: 1000 XXX XXXX XXXX (ደበበ ወ.)\n • Telebirr: 09XX XXX XXX (ደበበ ወ.)';
+      'ክፍሊት ምስ ፈጸምካ፡ እባኽኻ ዝተጠቀምካሉ ሽም ባንኪ ኣብ ታሕቲ ኣእትው እሞ ንመኽፈሊ ዝኾነ ስክሪንሾት ኣጽመድ። ዝርዝራት ሕሳብ ባንኪና:\n • CBE: 1000 XXX XXXX XXXX (ደበበ ወ.)\n • ተለብር: 09XX XXX XXX (ደበበ ወ.)';
 
   @override
   String get bankAccountLabel => 'ሕሳብ';
@@ -158,119 +158,119 @@ class AppLocalizationsTi extends AppLocalizations {
 
   @override
   String copiedToClipboardMessage(String accountNumber) {
-    return '$accountNumber ናብ ክሊፕቦርድ ተቐዲሑ!';
+    return '$accountNumber ናብ ክሊፕቦርድ ተቐዲሑ።';
   }
 
   @override
   String couldNotOpenFileError(String error) {
-    return 'ፋይል ክኸፈት ኣይከኣለን: $error';
+    return 'ፋይል ክኸፍቶ ኣይከኣልኩን: $error';
   }
 
   @override
-  String get couldNotFindDownloadedFileError => 'ዝወረደ ፋይል ክትረክብ ኣይከኣልካን።';
+  String get couldNotFindDownloadedFileError => 'ዝወረደ ፋይል ክርክቦ ኣይከኣልኩን።';
 
   @override
-  String get videoIsDownloadingMessage => 'ቪዲዮ ይወርድ ኣሎ። በጃኻም ጽበዩ።';
+  String get videoIsDownloadingMessage => 'ቪድዮ ይወርድ ኣሎ። እባኽኻ ጽናሕ።';
 
   @override
   String get videoDownloadFailedMessage =>
-      'ምውራድ ቪዲዮ ኣይተዓወተን። እንደገና ንምፍታን አዝራር ምውራድ ጠውቕ።';
+      'ምውራድ ቪድዮ ኣይተዓወተን። ንምድጋም ኣዝራር ምውራድ ጠውቕ።';
 
   @override
-  String get videoDownloadCancelledMessage => 'ምውራድ ቪዲዮ ተሰሪዙ።';
+  String get videoDownloadCancelledMessage => 'ምውራድ ቪድዮ ተሰሪዙ።';
 
   @override
-  String get notImplementedMessage => 'ኣይተፈጸመን።';
+  String get notImplementedMessage => 'ኣይተተግብረን';
 
   @override
-  String get noTextContent => 'ጽሑፋዊ ትሕዝቶ የለን።';
+  String get noTextContent => 'ዝኾነ ትሕዝቶ ጽሑፍ የብሉን።';
 
   @override
-  String get closeButtonText => 'ዕጾ';
+  String get closeButtonText => 'ዕጸው';
 
   @override
-  String get downloadVideoTooltip => 'ቪዲዮ ኣውርድ';
+  String get downloadVideoTooltip => 'ንኸተማልእ ዝኾነ ቪድዮ ኣውርድ';
 
   @override
-  String get downloadedVideoTooltip => 'ቪዲዮ ወሪዱ። ንምጽዋት ጠውቕ፣ ንምስራዝ ነዊሕ ጠውቕ።';
+  String get downloadedVideoTooltip => 'ቪድዮ ወሪዱ። ንምጽዋት ጠውቕ፡ ንምሕዛእ ነዊሕ ጠውቕ።';
 
   @override
-  String get downloadFailedTooltip => 'ምውራድ ኣይተዓወተን። እንደገና ንምፍታን ጠውቕ።';
+  String get downloadFailedTooltip => 'ምውራድ ኣይተዓወተን። ንምድጋም ጠውቕ።';
 
   @override
   String get deleteDownloadedFileTooltip => 'ዝወረደ ፋይል ሰርዝ';
 
   @override
-  String get couldNotDeleteFileError => 'ፋይል ክስረዝ ኣይከኣለን፡ ግጉይ ዝርዝር ትምህርቲ።';
+  String get couldNotDeleteFileError => 'ፋይል ክሰርዝ ኣይከኣልኩን: ትርጉም ዘይብሉ ዳታ ትምህርቲ።';
 
   @override
-  String get fileDeletedSuccessfully => 'ፋይል ብዕዉት ተሰሪዙ።';
+  String get fileDeletedSuccessfully => 'ፋይል ብዓወት ተሰሪዙ።';
 
   @override
-  String get fileNotFoundOrFailedToDelete => 'ፋይል ኣይተረኽበን ወይ ክፍለቕ ኣይተኻእለን።';
+  String get fileNotFoundOrFailedToDelete => 'ፋይል ኣይተረኽበን ወይ ድማ ምውራድ ኣይተዓወተን።';
 
   @override
-  String get attachScreenshotButton => 'ስእሊ ስክሪን ኣመዝግብ';
+  String get attachScreenshotButton => 'ስክሪንሾት ኣያይዝ';
 
   @override
-  String get screenshotAttachedButton => 'ስእሊ ስክሪን ተመዝጊቡ!';
+  String get screenshotAttachedButton => 'ስክሪንሾት ተያይዙ!';
 
   @override
   String get fileNamePrefix => 'ፋይል';
 
   @override
-  String get termsAndConditionsAgreement => 'ብምቕጻልካ ምስ እዚ ';
+  String get termsAndConditionsAgreement => 'ብምቕጻልካ ምስ ';
 
   @override
-  String get termsAndConditionsLink => 'ውዕላት ከምኡውን ኩነታት';
+  String get termsAndConditionsLink => 'ውዕል ኣገልግሎት';
 
   @override
-  String get termsAndConditionsAnd => ' ከምኡውን እዚ ';
+  String get termsAndConditionsAnd => ' ከምኡ\'ውን ምስ ';
 
   @override
-  String get privacyPolicyLink => 'ፖሊሲ ምስጢር';
+  String get privacyPolicyLink => 'ፖሊሲ ግላዊነት';
 
   @override
   String get submitButton => 'ሕሳብ ፍጠር';
 
   @override
   String errorPickingImage(String errorMessage) {
-    return 'ስእሊ ኣብ ምምራጽ ጌጋ፡ $errorMessage';
+    return 'ምስሊ ኣብ ምርጫ ዘጋጠመ ጌጋ: $errorMessage';
   }
 
   @override
-  String get pleaseSelectStreamError => 'እባኽ ኣትዲፓርትመንት ምረጽ።';
+  String get pleaseSelectStreamError => 'እባኽኻ ብርኪ ትምህርቲ ምረጽ።';
 
   @override
-  String get pleaseSelectInstitutionError => 'እባኽ ኣትተቋም ምረጽ።';
+  String get pleaseSelectInstitutionError => 'እባኽኻ ትካል ምረጽ።';
 
   @override
-  String get pleaseSelectGenderError => 'እባኽ ኣትጾታኻ ምረጽ።';
+  String get pleaseSelectGenderError => 'እባኽኻ ጾታኻ ምረጽ።';
 
   @override
-  String get pleaseSelectServiceError => 'እባኽ ኣትዓይነት ኣገልግሎት ምረጽ።';
+  String get pleaseSelectServiceError => 'እባኽኻ ኣገልግሎት ምረጽ።';
 
   @override
-  String get pleaseAttachScreenshotError => 'እባኽ ኣትስእሊ ክፍሊት ኣመዝግብ።';
+  String get pleaseAttachScreenshotError => 'እባኽኻ ናይ ክፍሊት ስክሪንሾት ኣያይዝ።';
 
   @override
-  String get pleaseAgreeToTermsError => 'እባኽ ኣትምስ ውዕላት ከምኡውን ኩነታት ተሰማማዕ።';
+  String get pleaseAgreeToTermsError => 'እባኽኻ ምስ ውዕል ኣገልግሎት ተሰማማዕ።';
 
   @override
-  String get notRegisteredTitle => 'ኣይተመዝገብካን ዝመስል።';
+  String get notRegisteredTitle => 'ገና ዘይተመዝገብካ ትመስል';
 
   @override
   String get notRegisteredSubtitle =>
-      'ኣብቲ ቅጥዒ ምላእ እሞ ንትምህርታዊ ንብረትና ተመዝገብ እሞ ንውጽኢትካ ኣዐብዮ።';
+      'ንኽትመዝገብ እሞ ነቲ ኣድማዒ ትምህርታዊ መርበብ ሓበሬታና ተጠቒምካ ንውጽኢትካ ከምእተዕብዮ ቅጥዕቲ ምላእ።';
 
   @override
   String get getRegisteredNowButton => 'ሕጂ ተመዝገብ';
 
   @override
-  String get mgwTutorialTitle => 'መጂወ መምህር';
+  String get mgwTutorialTitle => 'MGW ትምህርቲ';
 
   @override
-  String get signUpToStartLearning => 'ምምሃር ንምጅማር ተመዝገብ';
+  String get signUpToStartLearning => 'ንምምሃር ንምጅማር ተመዝገብ';
 
   @override
   String get signUpTitle => 'ሕሳብ ፍጠር';
@@ -279,23 +279,23 @@ class AppLocalizationsTi extends AppLocalizations {
   String get createAccountButton => 'ሕሳብ ፍጠር';
 
   @override
-  String get alreadyHaveAccount => 'ቅድሚ ሕጂ ሕሳብ ኣሎካ?';
+  String get alreadyHaveAccount => 'ቅድሚ ሕጂ ሕሳብ ኣለካ?';
 
   @override
   String get signInLink => 'እቶ';
 
   @override
-  String get signUpSuccessMessage => 'ሕሳብ ብዕዉት ተፈጢሩ! ሕጂ ክትኣቱ ትኽእል ኢኻ።';
+  String get signUpSuccessMessage => 'ሕሳብ ብዓወት ተፈጢሩ! ሕጂ ክትኣቱ ትኽእል ኢኻ።';
 
   @override
-  String get signUpFailedErrorGeneral => 'ምምዝጋብ ኣይተዓወተን። እባኽ እንደገና ፈትን።';
+  String get signUpFailedErrorGeneral => 'ምዝገባ ኣይተዓወተን። እባኽኻ እንደገና ፈትን።';
 
   @override
   String get loginTitle => 'እቶ';
 
   @override
   String get loginToContinue =>
-      'እንቋዕ ናብ MGW ብደሓን መጻእኩም፣ ናትኩም በሊሕ ናይ ሓደሽቲ ተማሃሮ መንገዲ ናብ A+/A’s ኣብ ነፍሲ ወከፍ ኮርስ።';
+      'እንኳን ናብ MGW ብደሓን መጻእኩም፣ ብዝሑር መንገዲ ንመጀመርታ ዓመት ዝኾነ ንኹሉ ኮርስ A+/A ንምውጻእ።';
 
   @override
   String get signInButton => 'እቶ';
@@ -304,7 +304,7 @@ class AppLocalizationsTi extends AppLocalizations {
   String get dontHaveAccount => 'ሕሳብ የብልካን?';
 
   @override
-  String get signUpLinkText => 'ሕጂ ተመዝገብ';
+  String get signUpLinkText => 'ሕጂ ፍጠር';
 
   @override
   String get phoneNumberLabel => 'ቁጽሪ ስልኪ';
@@ -313,112 +313,112 @@ class AppLocalizationsTi extends AppLocalizations {
   String get phoneNumberHint => '912 345 678';
 
   @override
-  String get phoneNumberValidationErrorRequired => 'እባኽ ኣትቁጽሪ ስልኪ ኣስገብ';
+  String get phoneNumberValidationErrorRequired => 'እባኽኻ ቁጽሪ ስልኪኻ ኣእትው።';
 
   @override
-  String get phoneNumberValidationErrorInvalid => 'ትክክለኛ 9-ኣሃዝ ቁጽሪ ስልኪ ኣእቱ';
+  String get phoneNumberValidationErrorInvalid => 'ትኽክለኛ 9-ዲጂት ቁጽሪ ስልኪ ኣእትው።';
 
   @override
-  String get passwordLabel => 'ሕቡእ ቃል';
+  String get passwordLabel => 'ሕሉፍ ቃል';
 
   @override
-  String get passwordHint => 'ሕቡእ ቃልካ ኣስገብ';
+  String get passwordHint => 'ሕሉፍ ቃልካ ኣእትው';
 
   @override
-  String get passwordValidationErrorRequired => 'እባኽ ኣትሕቡእ ቃልካ ኣስገብ';
+  String get passwordValidationErrorRequired => 'እባኽኻ ሕሉፍ ቃልካ ኣእትው።';
 
   @override
-  String get passwordValidationErrorLength => 'ሕቡእ ቃል ቢያንስ 6 ቁምፊታት ክኸውን ኣለዎ';
+  String get passwordValidationErrorLength => 'ሕሉፍ ቃል ቢያንስ 6 ፊደላት ክኸውን ኣለዎ።';
 
   @override
-  String get accountCreationSimulatedMessage => 'ምፍጣር ሕሳብ ተሰሪሑ። ኮንሶል ኣረጋግጽ።';
+  String get accountCreationSimulatedMessage => 'ምፍጣር ሕሳብ ተሞክሩ። ኮንሶል ተመልከት።';
 
   @override
-  String get loginSuccessMessage => 'ምእታው ብዕዉት ተፈጺሙ! ብደሓን ምጻእ።';
+  String get loginSuccessMessage => 'ምእታው ብዓወት ተፈጺሙ! ብደሓን ምጻእ።';
 
   @override
   String get signInFailedErrorGeneral =>
-      'ምእታው ኣይተዓወተን። በጃኻም መረጃኻ ኣረጋግጽ እሞ እንደገና ፈትኖ።';
+      'ምእታው ኣይተዓወተን። እባኽኻ ዝርዝራትካ ኣረጋግጽ እሞ እንደገና ፈትን።';
 
   @override
-  String get changeProfilePictureButton => 'ስእሊ መገለጺ ቀይር';
+  String get changeProfilePictureButton => 'ስእሊ ፕሮፋይል ቀይር';
 
   @override
-  String get profilePictureSelectedMessage => 'ስእሊ መገለጺ ተመሪጹ! (ኣይተሰቕለን)';
+  String get profilePictureSelectedMessage => 'ስእሊ ፕሮፋይል ተመሪጹ! (ኣይተሰቕለን)';
 
   @override
   String get accountPhoneNumberLabel => 'ቁጽሪ ስልኪ';
 
   @override
   String get changePhoneNumberNotImplementedMessage =>
-      'ቁጽሪ ስልኪ ንምቕያር ተጠዊቑ (ኣይተፈጸመን)';
+      'ቁጽሪ ስልኪ ቀይር ተጠዊቑ (ኣይተተግብረን)';
 
   @override
-  String get accountPasswordLabel => 'ሕቡእ ቃል';
+  String get accountPasswordLabel => 'ሕሉፍ ቃል';
 
   @override
   String get changePasswordNotImplementedMessage =>
-      'ሕቡእ ቃል ንምቕያር ተጠዊቑ (ኣይተፈጸመን)';
+      'ሕሉፍ ቃል ቀይር ተጠዊቑ (ኣይተተግብረን)';
 
   @override
-  String get notificationsEnabledMessage => 'ናይ መጠንቀቕታ መልእኽታት ንቑሑት ኣለዉ';
+  String get notificationsEnabledMessage => 'ማሳወቂያታት ዝነቐሎ';
 
   @override
-  String get notificationsDisabledMessage => 'ናይ መጠንቀቕታ መልእኽታት ደዊኖም ኣለዉ';
+  String get notificationsDisabledMessage => 'ማሳወቂያታት ዝተዓገቱ';
 
   @override
   String get changeButton => 'ቀይር';
 
   @override
-  String get phoneNumberCannotBeEmptyError => 'ቁጽሪ ስልኪ ባዶ ክኸውን ኣይከኣልን።';
+  String get phoneNumberCannotBeEmptyError => 'ቁጽሪ ስልኪ ባዶ ክኸውን ኣይክእልን።';
 
   @override
   String get invalidPhoneNumberFormatError =>
-      'ግጉይ ቅርጺ ቁጽሪ ስልኪ። 09...፣ 9...፣ ወይ +2519... ተጠቐም።';
+      'ትኽክለኛ ዘይኮነ ፎርማት ቁጽሪ ስልኪ። 09..., 9..., ወይ +2519... ተጠቀም።';
 
   @override
   String get registrationSuccessMessage =>
-      'ምምዝጋብ ብዕዉት ተፈጺሙ! በጃኻም ንፍቓድ ኣድሚን ጽበዩ።';
+      'ምዝገባ ብዓወት ተዓዊቱ! እባኽኻ ምትእምማን ኣድሚን ጽናሕ።';
 
   @override
   String get registrationFailedDefaultMessage =>
-      'ምምዝጋብ ኣይተዓወተን። እባኽ እንደገና ፈትን።';
+      'ምዝገባ ኣይተዓወተን። እባኽኻ እንደገና ፈትን።';
 
   @override
-  String get selectDepartmentHint => 'ዲፓርትመንት / ስትሪም ምረጽ';
+  String get selectDepartmentHint => 'ብርኪ ትምህርቲ / ስትሪም ምረጽ';
 
   @override
-  String get yearLabel => 'ዓመት ትምህርቲ';
+  String get yearLabel => 'ዓመተ ትምህርቲ';
 
   @override
-  String get yearValidationErrorEmpty => 'እባኽ ኣትዓመት ኣስገብ።';
+  String get yearValidationErrorEmpty => 'እባኽኻ ዓመት ኣእትው።';
 
   @override
-  String get yearValidationErrorInvalid => 'እባኽ ኣትትክክለኛ ዓመት ኣስገብ።';
+  String get yearValidationErrorInvalid => 'እባኽኻ ትኽክለኛ ዓመት ኣእትው።';
 
   @override
-  String get departmentLabel => 'ዲፓርትመንት';
+  String get departmentLabel => 'ብርኪ ትምህርቲ';
 
   @override
-  String get pleaseSelectDepartmentError => 'እባኽ ኣትዲፓርትመንት ምረጽ።';
+  String get pleaseSelectDepartmentError => 'እባኽኻ ብርኪ ትምህርቲ ምረጽ።';
 
   @override
   String get selectYearHint => 'ዓመት ምረጽ';
 
   @override
-  String get pleaseSelectYearError => 'እባኽ ኣትዓመት ትምህርቲኻ ምረጽ።';
+  String get pleaseSelectYearError => 'እባኽኻ ዓመተ ትምህርቲኻ ምረጽ።';
 
   @override
-  String get guestUser => 'ዕዱም ተጠቀም';
+  String get guestUser => 'ተጠቃሚ እንግዳ';
 
   @override
-  String get pleaseLoginOrRegister => 'እባኽ ኣትእቶ ወይ ተመዝገብ';
+  String get pleaseLoginOrRegister => 'እባኽኻ እቶ ወይ ተመዝገብ';
 
   @override
-  String get registeredUser => 'ዝተመዝገበ ተጠቀም';
+  String get registeredUser => 'ዝተመዝገበ ተጠቃሚ';
 
   @override
-  String get logoutSuccess => 'ብዕዉት ወጺእካ።';
+  String get logoutSuccess => 'ብዓወት ወጺኻ።';
 
   @override
   String get selectSemesterLabel => 'ሴሚስተር ምረጽ';
@@ -427,293 +427,292 @@ class AppLocalizationsTi extends AppLocalizations {
   String get selectSemesterHint => 'ሴሚስተር ምረጽ';
 
   @override
-  String get pleaseSelectSemesterError => 'እባኽ ኣትሴሚስተር ምረጽ።';
+  String get pleaseSelectSemesterError => 'እባኽኻ ሴሚስተር ምረጽ።';
 
   @override
-  String get deviceInfoNotAvailable =>
-      'ዝርዝር ብዛዕባ መሳርሒ የለን። በጃኻም ጽበይ እሞ እንደገና ፈትን።';
+  String get deviceInfoNotAvailable => 'ሓበሬታ መሳርሒ የለን። እባኽኻ ጽናሕ እሞ እንደገና ፈትን።';
 
   @override
   String get deviceInfoProcessing =>
-      'ዝርዝር ብዛዕባ መሳርሒ ይካየድ ኣሎ። በጃኻም ድሕሪ ቁሩብ ግዜ እንደገና ፈትኖ።';
+      'ሓበሬታ መሳርሒ ይቕጽል ኣሎ። እባኽኻ ድሕሪ ሒደት ግዜ እንደገና ምእታው ፈትን።';
 
   @override
-  String get deviceInfoInitializing => 'ጅምር ይገብር ኣሎ... በጃኻም እንደገና ንምእታው ፈትን።';
+  String get deviceInfoInitializing => 'ይጅምር ኣሎ... እባኽኻ እንደገና ምእታው ፈትን።';
 
   @override
-  String get deviceInfoProceedingDefault =>
-      'ዝርዝር ብዛዕባ መሳርሒ ምሉእ ብምሉእ ክትረክብ ኣይከኣለን።';
+  String get deviceInfoProceedingDefault => 'ሓበሬታ መሳርሒ ብምሉእ ክውሰን ኣይከኣልኩን።';
 
   @override
-  String get initializing => 'ጅምር ይገብር ኣሎ...';
+  String get initializing => 'ይጅምር ኣሎ...';
 
   @override
   String enrollForSemesterTitle(String semesterName) {
-    return 'ን $semesterName ተመዝገብ';
+    return 'ን$semesterName ተመዝገብ';
   }
 
   @override
-  String get selectedSemesterLabel => 'ዝተመርጸ ሴሚስተር:';
+  String get selectedSemesterLabel => 'ዝተመዘመ ሴሚስተር:';
 
   @override
   String get priceLabel => 'ዋጋ:';
 
   @override
-  String get coursesIncludedLabel => 'ዝተሓወሱ ኮርስታት:';
+  String get coursesIncludedLabel => 'ዝተመዝገቡ ኮርሳት:';
 
   @override
-  String get bankNamePaymentLabel => 'ሽም ባንክ ክፍሊት';
+  String get bankNamePaymentLabel => 'ሽም ባንኪ ክፍሊት';
 
   @override
-  String get bankNamePaymentHint => 'ኣብነት፡ ኮመርሻል ባንክ ኦፍ ኢትዮጵያ፣ ኣዋሽ ባንክ';
+  String get bankNamePaymentHint => 'ምሳሌ: ንግድ ባንኪ ኢትዮጵያ, ኣዋሽ ባንኪ';
 
   @override
-  String get bankNameValidationError => 'እባኽ ኣትሽም ባንክ ኣስገብ።';
+  String get bankNameValidationError => 'እባኽኻ ሽም ባንኪ ኣእትው።';
 
   @override
-  String get enrollmentRequestSuccess => 'ናይ ምምዝጋብ ሕቶ ብዕዉት ቀሪቡ! በጃኻም ንፍቓድ ጽበዩ።';
+  String get enrollmentRequestSuccess => 'ሕቶ ምዝገባ ብዓወት ተቕሪቡ! እባኽኻ ንምትእምማን ጽናሕ።';
 
   @override
-  String get enrollmentRequestFailed => 'ናይ ምምዝጋብ ሕቶ ንምቕራብ ኣይተዓወተን።';
+  String get enrollmentRequestFailed => 'ሕቶ ምዝገባ ከተቕርብ ኣይከኣልካን።';
 
   @override
-  String get selectPaymentBankPrompt => 'እባኽ ኣትናይ ክፍሊት ባንክ ምረጽ።';
+  String get selectPaymentBankPrompt => 'እባኽኻ ንመወከሲ ዝኸውን ባንኪ ክፍሊት ምረጽ።';
 
   @override
   String get goBackButton => 'ተመለስ';
 
   @override
-  String get createPostTitle => 'ሓድሽ ጽሑፍ ፍጠር';
+  String get createPostTitle => 'ሓድሽ ልጥፍ ፍጠር';
 
   @override
-  String get postTitleLabel => 'ናይ ጽሑፍ ኣርእስቲ';
+  String get postTitleLabel => 'ርእሲ ልጥፍ';
 
   @override
-  String get postTitleHint => 'ንጹርን ሓጺርን ኣርእስቲ ኣእቱ';
+  String get postTitleHint => 'ግልጺን ሓጺርን ርእሲ ኣእትው';
 
   @override
-  String get postTitleValidationRequired => 'እባኽ ኣትርእስቲ ኣእቱ።';
+  String get postTitleValidationRequired => 'እባኽኻ ርእሲ ኣእትው።';
 
   @override
-  String get postTitleValidationLength => 'ኣርእስቲ ቢያንስ 5 ቁምፊታት ክኸውን ኣለዎ።';
+  String get postTitleValidationLength => 'ርእሲ ቢያንስ 5 ፊደላት ክኸውን ኣለዎ።';
 
   @override
-  String get postDescriptionLabel => 'ናይ ጽሑፍ መግለጺ';
+  String get postDescriptionLabel => 'መግለጺ ልጥፍ';
 
   @override
   String get postDescriptionHint => 'ሓሳባትካ ወይ ሕቶታትካ ብዝርዝር ኣካፍል...';
 
   @override
-  String get postDescriptionValidationRequired => 'እባኽ ኣትመግለጺ ኣእቱ።';
+  String get postDescriptionValidationRequired => 'እባኽኻ መግለጺ ኣእትው።';
 
   @override
-  String get postDescriptionValidationLength => 'መግለጺ ቢያንስ 10 ቁምፊታት ክኸውን ኣለዎ።';
+  String get postDescriptionValidationLength => 'መግለጺ ቢያንስ 10 ፊደላት ክኸውን ኣለዎ።';
 
   @override
-  String get submitPostButton => 'ጽሑፍ ኣቕርብ';
+  String get submitPostButton => 'ልጥፍ ኣቕርብ';
 
   @override
-  String get postCreatedSuccess => 'ጽሑፍ ብዕዉት ተፈጢሩ!';
+  String get postCreatedSuccess => 'ልጥፍ ብዓወት ተፈጢሩ!';
 
   @override
-  String get postCreateFailed => 'ጽሑፍ ንምፍጣር ኣይተዓወተን። እባኽ እንደገና ፈትን።';
+  String get postCreateFailed => 'ልጥፍ ንምፍጣር ኣይከኣልኩን። እባኽኻ እንደገና ፈትን።';
 
   @override
-  String get editPostTitle => 'ጽሑፍ ኣስተኻኽል';
+  String get editPostTitle => 'ልጥፍ ኣመዓራሪ';
 
   @override
-  String get generalTitleLabel => 'ኣርእስቲ';
+  String get generalTitleLabel => 'ርእሲ';
 
   @override
-  String get generalTitleEmptyValidation => 'ኣርእስቲ ባዶ ክኸውን ኣይክእልን እዩ።';
+  String get generalTitleEmptyValidation => 'ርእሲ ባዶ ክኸውን ኣይክእልን።';
 
   @override
   String get generalDescriptionLabel => 'መግለጺ';
 
   @override
-  String get generalDescriptionEmptyValidation => 'መግለጺ ባዶ ክኸውን ኣይክእልን እዩ።';
+  String get generalDescriptionEmptyValidation => 'መግለጺ ባዶ ክኸውን ኣይክእልን።';
 
   @override
-  String get cancelButton => 'ሰርዝ';
+  String get cancelButton => 'ስርዝ';
 
   @override
   String get saveButton => 'ኣቐምጥ';
 
   @override
-  String get postUpdatedSuccess => 'ጽሑፍ ተሓዲሱ!';
+  String get postUpdatedSuccess => 'ልጥፍ ብዓወት ሓዲሽ ተገይሩ!';
 
   @override
-  String get postUpdateFailed => 'ጽሑፍ ንምሕዳስ ኣይተዓወተን።';
+  String get postUpdateFailed => 'ልጥፍ ንምሕዳስ ኣይከኣልኩን።';
 
   @override
-  String get deletePostTitle => 'ጽሑፍ ሰርዝ';
+  String get deletePostTitle => 'ልጥፍ ሰርዝ';
 
   @override
   String get deletePostConfirmation =>
-      'እዝዩ ጽሑፍን ኩሎም እቶም 댓글ታቱን ንምስራዝ እርግጸኛ ድዩ? እዚ ተግባር ክቕየር ኣይክእልን እዩ።';
+      'ነዚ ልጥፍን ንኹሉ ርኢቶታትን ክትሰርዝ ኢኻ ትደሊ? እዚ ተግባር ክመለስ ኣይክእልን።';
 
   @override
   String get deleteButton => 'ሰርዝ';
 
   @override
-  String get postDeletedSuccess => 'ጽሑፍ ብዕዉት ተሰሪዙ!';
+  String get postDeletedSuccess => 'ልጥፍ ብዓወት ተሰሪዙ!';
 
   @override
-  String get postDeleteFailed => 'ጽሑፍ ንምስራዝ ኣይተዓወተን።';
+  String get postDeleteFailed => 'ልጥፍ ንምስራዝ ኣይከኣልኩን።';
 
   @override
-  String get commentPostedSuccess => '댓글 ብዕዉት ተለጥፉ!';
+  String get commentPostedSuccess => 'ርኢቶ ብዓወት ተሰቒሉ!';
 
   @override
-  String get commentPostFailed => '댓글 ንምልጣፍ ኣይተዓወተን።';
+  String get commentPostFailed => 'ርኢቶ ንምስቓል ኣይከኣልኩን።';
 
   @override
-  String get replyPostedSuccess => 'መልሲ ብዕዉት ተለጥፉ!';
+  String get replyPostedSuccess => 'መልሲ ብዓወት ተሰቒሉ!';
 
   @override
-  String get replyPostFailed => 'መልሲ ንምልጣፍ ኣይተዓወተን።';
+  String get replyPostFailed => 'መልሲ ንምስቓል ኣይከኣልኩን።';
 
   @override
-  String get updateGenericSuccess => 'ምሕዳስ ብዕዉት ተፈጺሙ!';
+  String get updateGenericSuccess => 'ምሕዳስ ብዓወት ተዓዊቱ!';
 
   @override
   String get updateGenericFailed => 'ምሕዳስ ኣይተዓወተን።';
 
   @override
-  String get deleteCommentTitle => '댓글 ሰርዝ';
+  String get deleteCommentTitle => 'ርኢቶ ሰርዝ';
 
   @override
   String get deleteReplyTitle => 'መልሲ ሰርዝ';
 
   @override
   String deleteItemConfirmation(String itemType) {
-    return 'እዝዩ $itemType ንምስራዝ እርግጸኛ ድዩ? እዚ ተግባር ክቕየር ኣይክእልን እዩ።';
+    return 'ነዚ $itemType ክትሰርዝ ኢኻ ትደሊ? እዚ ተግባር ክመለስ ኣይክእልን።';
   }
 
   @override
   String itemDeletedSuccess(String itemType) {
-    return '$itemType ብዕዉት ተሰሪዙ!';
+    return '$itemType ብዓወት ተሰሪዙ!';
   }
 
   @override
   String itemDeleteFailed(String itemType) {
-    return '$itemType ንምስራዝ ኣይተዓወተን።';
+    return '$itemType ንምስራዝ ኣይከኣልኩን።';
   }
 
   @override
-  String get commentsSectionHeader => '댓글ታት';
+  String get commentsSectionHeader => 'ርኢቶታት';
 
   @override
-  String get noCommentsYet => 'ኣብዚ እዋን 댓글 የለን። ቀዳማይኹም ኩኑ!';
+  String get noCommentsYet => 'ገና ዝኾነ ርኢቶ የብሉን። ቀዳማይ ኩን!';
 
   @override
-  String get writeCommentHint => '댓글 ጽሐፍ...';
+  String get writeCommentHint => 'ርኢቶ ጽሓፍ...';
 
   @override
-  String get commentValidationEmpty => '댓글 ባዶ ክኸውን ኣይክእልን እዩ።';
+  String get commentValidationEmpty => 'ርኢቶ ባዶ ክኸውን የብሉን።';
 
   @override
-  String get postCommentTooltip => '댓글 ለጥፍ';
+  String get postCommentTooltip => 'ርኢቶ ኣቕርብ';
 
   @override
-  String get replyButtonLabel => 'መልሲ';
+  String get replyButtonLabel => 'መልሲ ሃብ';
 
   @override
-  String get cancelReplyButtonLabel => 'ሰርዝ';
+  String get cancelReplyButtonLabel => 'ስርዝ';
 
   @override
-  String get writeReplyHint => 'መልሲ ጽሐፍ...';
+  String get writeReplyHint => 'መልሲ ጽሓፍ...';
 
   @override
-  String get replyValidationEmpty => 'መልሲ ባዶ ክኸውን ኣይክእልን እዩ።';
+  String get replyValidationEmpty => 'መልሲ ባዶ ክኸውን የብሉን።';
 
   @override
-  String get editFieldValidationEmpty => 'ባዶ ክኸውን ኣይክእልን እዩ።';
+  String get editFieldValidationEmpty => 'ባዶ ክኸውን ኣይክእልን';
 
   @override
   String get saveChangesButton => 'ለውጥታት ኣቐምጥ';
 
   @override
   String viewAllReplies(String replyCount) {
-    return 'ኩሎም እቶም $replyCount መልስታት ርአ...';
+    return 'ንኹሉ $replyCount መልስታት ተመልከት...';
   }
 
   @override
-  String get commentItemDisplay => '댓글';
+  String get commentItemDisplay => 'ርኢቶ';
 
   @override
   String get replyItemDisplay => 'መልሲ';
 
   @override
-  String get darkModeLabel => 'ጸሊም ሞድ';
+  String get darkModeLabel => 'ጸሊም ሁነታት';
 
   @override
-  String get darkModeSubtitle => 'ጸሊም ገጽ ንቑሕ ግበር ወይ ኣዕጹ';
+  String get darkModeSubtitle => 'ጸሊም ጭርቂ ኣንቃዕ ወይ ኣይትነቅዕ';
 
   @override
-  String get receiveNotificationsSubtitle => 'ኣገዳሲ ሓደስቲ ሓበሬታ ተቐበል';
+  String get receiveNotificationsSubtitle => 'ኣድላዪ ዝኾነ ዝመዓራረዩ ምቕባል';
 
   @override
-  String get pushNotificationsEnabled => 'ናይ ፑሽ ማሳወቂያታት ንቑሕ ኣለዉ';
+  String get pushNotificationsEnabled => 'ፑሽ ማሳወቂያታት ንቑሕ';
 
   @override
-  String get pushNotificationsDisabled => 'ናይ ፑሽ ማሳወቂያታት ደዊኖም ኣለዉ';
+  String get pushNotificationsDisabled => 'ፑሽ ማሳወቂያታት ተዓጊቱ';
 
   @override
-  String get viewPrivacyPolicyAction => 'ፖሊሲ ምስጢር ርአ';
+  String get viewPrivacyPolicyAction => 'ፖሊሲ ግላዊነት ተመልከት';
 
   @override
-  String get viewTermsAction => 'ውዕላት ኣገልግሎት ርአ';
+  String get viewTermsAction => 'ውዕል ኣገልግሎት ተመልከት';
 
   @override
   String actionNotImplemented(String featureName) {
-    return '$featureName: ገና ኣይተፈጸመን';
+    return '$featureName: ገና ኣይተተግብረን';
   }
 
   @override
   String couldNotLaunchUrl(String urlString) {
-    return '$urlString ክትጅምር ኣይከኣለን።';
+    return '$urlString ክጅምር ኣይከኣልኩን';
   }
 
   @override
-  String get shareAppSubject => 'መጂወ መምህር ኣፕ';
+  String get shareAppSubject => 'MGW ትምህርቲ ኣፕ';
 
   @override
   String get emailSupportSubject => 'ሕቶ ደገፍ ኣፕ';
 
   @override
-  String get contactViaEmail => 'ብኢሜል ተራኸቡና';
+  String get contactViaEmail => 'ብኢሜል ተጸንብሩና';
 
   @override
   String get callUs => 'ደውሉልና';
 
   @override
-  String get visitOurWebsite => 'ድረ-ገጽና ጎብኙ';
+  String get visitOurWebsite => 'ናይ ዌብሳይትና ተበጽሑ';
 
   @override
-  String get refreshingData => 'መረጃ ይሕደስ ኣሎ...';
+  String get refreshingData => 'ዳታ ይሕደስ ኣሎ...';
 
   @override
-  String get dataRefreshed => 'መረጃ ተሓዲሱ!';
+  String get dataRefreshed => 'ዳታ ሓዲሽ ተገይሩ!';
 
   @override
-  String get errorRefreshingData => 'መረጃ ኣብ ምሕዳስ ጌጋ። እባኻም መርበብ ኢንተርነትኩም ኣረጋግጹ።';
+  String get errorRefreshingData =>
+      'ዳታ ኣብ ምሕዳስ ዘጋጠመ ጌጋ። እባኽኻ ናይ ኢንተርነትካ ምትእስሳር ኣረጋግጽ።';
 
   @override
-  String get notesSectionTitle => 'ማስታወሻታት';
+  String get notesSectionTitle => 'መዘኻኸሪታት';
 
   @override
-  String get notesSectionDescription => 'ካብ ኩለን ሃገራት ካብ ተማሃሮ ዝሰበሰብናዮም ማስታወሻታት።';
+  String get notesSectionDescription => 'ካብ መላእ ሃገርና ካብ ተማሃሮ ዝተኣከበ መዘኻኸሪታት።';
 
   @override
-  String get notesComingSoon => 'ክፍሊ ማስታወሻታት ቀርባ ይመጽእ!';
+  String get notesComingSoon => 'ክፍሊ መዘኻኸሪታት ቀሪቡ ይመጽእ ኣሎ!';
 
   @override
-  String get coursesDetailsComingSoon => 'ዝርዝር ኮርስታት ቀርባ ይመጽእ።';
+  String get coursesDetailsComingSoon => 'ዝርዝራት ኮርሳት ቀሪቦም ይመጹ ኣለዉ።';
 
   @override
   String semesterCardTapped(String semesterName, String semesterId) {
-    return '$semesterName (መለያ፡ $semesterId) ተጠዊቑ';
+    return '$semesterName (ID: $semesterId) ተጠዊቑ';
   }
 
   @override
@@ -723,62 +722,61 @@ class AppLocalizationsTi extends AppLocalizations {
   String get currencySymbol => 'ብር';
 
   @override
-  String get submitEnrollmentRequestButton => 'ናይ ምምዝጋብ ሕቶ ኣቕርብ';
+  String get submitEnrollmentRequestButton => 'ሕቶ ምዝገባ ኣቕርብ';
 
   @override
-  String get currentPasswordLabel => 'ናይ ሕጂ ሕቡእ ቃል';
+  String get currentPasswordLabel => 'ናይ ሕጂ ሕሉፍ ቃል';
 
   @override
-  String get newPasswordLabel => 'ሓድሽ ሕቡእ ቃል';
+  String get newPasswordLabel => 'ሓድሽ ሕሉፍ ቃል';
 
   @override
-  String get confirmNewPasswordLabel => 'ሓድሽ ሕቡእ ቃል ኣረጋግጽ';
+  String get confirmNewPasswordLabel => 'ሓድሽ ሕሉፍ ቃል ኣረጋግጽ';
 
   @override
-  String get passwordsDoNotMatch => 'ሕቡእ ቃላት ኣይመሳሰሉን';
+  String get passwordsDoNotMatch => 'ሕሉፍ ቃላት ኣይሰማምዑን';
 
   @override
   String get newPhoneNumberLabel => 'ሓድሽ ቁጽሪ ስልኪ';
 
   @override
-  String get otpEnterPrompt => 'OTP ኣእቱ';
+  String get otpEnterPrompt => 'OTP ኣእትው';
 
   @override
-  String get otpValidationErrorRequired => 'እባኽ ኣትOTP ኣእቱ';
+  String get otpValidationErrorRequired => 'እባኽኻ OTP ኣእትው።';
 
   @override
-  String get otpValidationErrorLength => 'OTP 6 ኣሃዝ ክኸውን ኣለዎ';
+  String get otpValidationErrorLength => 'OTP 6 ኣሃዝ ክኸውን ኣለዎ።';
 
   @override
-  String get otpNewPhoneSameAsCurrentError =>
-      'ሓድሽ ቁጽሪ ስልኪ ምስ ናይ ሕጂ ክመሳሰል የብሉን።';
+  String get otpNewPhoneSameAsCurrentError => 'ሓድሽ ቁጽሪ ስልኪ ከም ናይ ሕጂ ክኸውን የብሉን።';
 
   @override
-  String get otpRequestButton => 'OTP ሕተት';
+  String get otpRequestButton => 'OTP ጠይቕ';
 
   @override
   String get otpVerifyButton => 'OTP ኣረጋግጽ';
 
   @override
-  String get passwordChangedSuccess => 'ሕቡእ ቃል ብዕዉት ተቐይሩ!';
+  String get passwordChangedSuccess => 'ሕሉፍ ቃል ብዓወት ተቐይሩ!';
 
   @override
-  String get passwordChangeFailed => 'ሕቡእ ቃል ንምቕያር ኣይተዓወተን።';
+  String get passwordChangeFailed => 'ሕሉፍ ቃል ንምቕያር ኣይከኣልኩን።';
 
   @override
-  String get otpSentSuccess => 'OTP ብዕዉት ተላኢኹ።';
+  String get otpSentSuccess => 'OTP ብዓወት ተላኢኹ።';
 
   @override
-  String get otpRequestFailed => 'OTP ንምሕታት ኣይተዓወተን።';
+  String get otpRequestFailed => 'OTP ንምጥያቕ ኣይከኣልኩን።';
 
   @override
-  String get phoneUpdateSuccess => 'ቁጽሪ ስልኪ ብዕዉት ተሓዲሱ።';
+  String get phoneUpdateSuccess => 'ቁጽሪ ስልኪ ብዓወት ሓዲሽ ተገይሩ።';
 
   @override
-  String get phoneUpdateFailed => 'ቁጽሪ ስልኪ ንምሕዳስ ኣይተዓወተን።';
+  String get phoneUpdateFailed => 'ቁጽሪ ስልኪ ንምሕዳስ ኣይከኣልኩን።';
 
   @override
-  String get videoItemType => 'ቪዲዮ';
+  String get videoItemType => 'ቪድዮ';
 
   @override
   String get documentItemType => 'ሰነድ';
@@ -793,30 +791,30 @@ class AppLocalizationsTi extends AppLocalizations {
   String get unknownItemType => 'ትሕዝቶ';
 
   @override
-  String get noVideosAvailable => 'ኣብዚ ክፍሊ ምንም ቪዲዮታት የለን።';
+  String get noVideosAvailable => 'ኣብዚ ክፍል እዚ ዝኾነ ቪድዮ የብሉን።';
 
   @override
-  String get noDocumentsAvailable => 'ኣብዚ ክፍሊ ምንም ሰነዳት የለን።';
+  String get noDocumentsAvailable => 'ኣብዚ ክፍል እዚ ዝኾነ ሰነድ የብሉን።';
 
   @override
-  String get noTextLessonsAvailable => 'ኣብዚ ክፍሊ ምንም ትምህርቲ ብጽሑፍ የለን።';
+  String get noTextLessonsAvailable => 'ኣብዚ ክፍል እዚ ዝኾነ ትምህርቲ ጽሑፍ የብሉን።';
 
   @override
-  String get noQuizzesAvailable => 'ኣብዚ ክፍሊ ምንም ፈተናታት የለን።';
+  String get noQuizzesAvailable => 'ኣብዚ ክፍል እዚ ዝኾነ ፈተና የብሉን።';
 
   @override
   String itemNotAvailable(String title) {
-    return 'ን $title ምንም ትሕዝቶ የለን።';
+    return 'ን$title ዝኾነ ትሕዝቶ የብሉን።';
   }
 
   @override
   String couldNotLaunchItem(String url) {
-    return '$url ክትጅምር ኣይከኣለን';
+    return '$url ክጅምር ኣይከኣልኩን';
   }
 
   @override
   String noLaunchableContent(String title) {
-    return 'ን $title ምንም ክጅመር ዝኽእል ትሕዝቶ የለን';
+    return 'ን$title ዝኾነ ዝጅምር ትሕዝቶ የብሉን';
   }
 
   @override
@@ -824,43 +822,43 @@ class AppLocalizationsTi extends AppLocalizations {
 
   @override
   String failedToLoadChaptersError(String error) {
-    return 'ምዕራፋት ንምጽዓን ኣይተዓወተን: $error';
+    return 'ምዕራፋት ንምጽዓን ኣይከኣልኩን: $error';
   }
 
   @override
-  String get noChaptersForCourse => 'ንዚ ኮርስ ምንም ምዕራፋት ኣይተረኽቡን።';
+  String get noChaptersForCourse => 'ንዚ ኮርስ እዚ ዝኾነ ምዕራፋት ኣይተረኽበን።';
 
   @override
   String failedToLoadLessonsError(String error) {
-    return 'ትምህርቲ ንምጽዓን ኣይተዓወተን: $error';
+    return 'ትምህርታት ንምጽዓን ኣይከኣልኩን: $error';
   }
 
   @override
-  String get noLessonsInChapter => 'ኣብዚ ምዕራፍ ምንም ትምህርቲ የለን።';
+  String get noLessonsInChapter => 'ኣብዚ ምዕራፍ እዚ ዝኾነ ትምህርቲ የብሉን።';
 
   @override
-  String get noCoursesAvailable => 'ኣብዚ እዋን ምንም ኮርስታት የለን።';
+  String get noCoursesAvailable => 'ሕጂ ዝኾነ ኮርሳት የብሉን።';
 
   @override
   String get shareYourTestimonialTitle => 'ምስክርነትካ ኣካፍል';
 
   @override
-  String get titleLabel => 'ኣርእስቲ';
+  String get titleLabel => 'ርእሲ';
 
   @override
-  String get titleValidationPrompt => 'እባኽ ኣትርእስቲ ኣእቱ';
+  String get titleValidationPrompt => 'እባኽኻ ርእሲ ኣእትው';
 
   @override
-  String get yourExperienceLabel => 'ናይ ንስኻ ተሞክሮ';
+  String get yourExperienceLabel => 'ተሞክሮኻ';
 
   @override
-  String get experienceValidationPrompt => 'እባኽ ኣትተሞክሮኻ ግለጽ';
+  String get experienceValidationPrompt => 'እባኽኻ ተሞክሮኻ ግለጽ';
 
   @override
   String get submitButtonGeneral => 'ኣቕርብ';
 
   @override
-  String get testimonialSubmittedSuccess => 'ምስክርነት ቀሪቡ! ድሕሪ ፍቓድ ክርአ እዩ።';
+  String get testimonialSubmittedSuccess => 'ምስክርነት ተቕሪቡ! ድሕሪ ምትእምማን ክርአ እዩ።';
 
   @override
   String get accountNameLabel => 'ሽም';
@@ -869,119 +867,119 @@ class AppLocalizationsTi extends AppLocalizations {
   String get changeNameLabel => 'ሽም ቀይር';
 
   @override
-  String get firstNameLabel => 'ሽም';
+  String get firstNameLabel => 'ናይ መጀመርያ ሽም';
 
   @override
-  String get lastNameLabel => 'ሽም ኣቦ';
+  String get lastNameLabel => 'ናይ መወዳእታ ሽም';
 
   @override
-  String get firstNameValidationErrorRequired => 'ሽም ኣድላዪ እዩ';
+  String get firstNameValidationErrorRequired => 'ናይ መጀመርያ ሽም የድሊ';
 
   @override
-  String get lastNameValidationErrorRequired => 'ሽም ኣቦ ኣድላዪ እዩ';
+  String get lastNameValidationErrorRequired => 'ናይ መወዳእታ ሽም የድሊ';
 
   @override
-  String get nameChangedSuccess => 'ሽም ብዕዉት ተቐይሩ';
+  String get nameChangedSuccess => 'ሽም ብዓወት ተቐይሩ';
 
   @override
-  String get nameChangeFailed => 'ሽም ንምቕያር ኣይተዓወተን';
+  String get nameChangeFailed => 'ሽም ንምቕያር ኣይከኣልኩን';
 
   @override
-  String get sessionInvalid => 'ምምዝጋብ ሰነድ ኣይተፈተረን። እባኽ እንደገና ፈትን።';
+  String get sessionInvalid => 'ሴሽን ተወዲኡ። እባኽኻ እንደገና እቶ።';
 
   @override
-  String get errorLoadingData => 'ኣብ ምጽዓን ጌጋ';
+  String get errorLoadingData => 'ዳታ ኣብ ምጽዓን ዘጋጠመ ጌጋ';
 
   @override
-  String get retry => 'ዳግማይ ፈትን';
+  String get retry => 'እንደገና ፈትን';
 
   @override
-  String get faqTitle => 'FAQ';
+  String get faqTitle => 'ብተደጋጋሚ ዝጥየቑ ሕቶታት';
 
   @override
-  String get faqNoItems => 'ምንም የተመዘገበ ጥያቄ የለም።';
+  String get faqNoItems => 'ሕጂ ዝኾነ ብተደጋጋሚ ዝጥየቑ ሕቶታት የብሉን።';
 
   @override
-  String get videoPlaybackError => 'ቪዲዮ መጫን ላይ ስህተት።';
+  String get videoPlaybackError => 'ቪድዮ ኣብ ምጽዋት ዘጋጠመ ጌጋ';
 
   @override
-  String get otherItemsTabTitle => 'ሌሎች ይዘቶች';
+  String get otherItemsTabTitle => 'ካልእ ትሕዝቶ';
 
   @override
-  String get noOtherVideosInChapter => 'በዚህ ምዕራፍ ሌሎች ቪዲዮዎች የሉም።';
+  String get noOtherVideosInChapter => 'ኣብዚ ምዕራፍ እዚ ዝኾነ ካልእ ቪድዮታት ኣይተረኽበን።';
 
   @override
-  String get noOtherContentInChapter => 'በዚህ ምዕራፍ ሌሎች ይዘቶች የሉም።';
+  String get noOtherContentInChapter => 'ኣብዚ ምዕራፍ እዚ ዝኾነ ካልእ ትሕዝቶ ኣይተረኽበን።';
 
   @override
-  String get cannotPlayOtherVideoHere => 'ይህን ቪዲዮ እዚህ መጫን አልተቻለም።';
+  String get cannotPlayOtherVideoHere =>
+      'ካልኦት ቪድዮታት ካብዚ ዝርዝር እዚ ክትጻወት ኣይትኽእልን።';
 
   @override
-  String get noOnlineVideoUrlAvailable => ' የቪዲዮው መረጃ በመስመር ላይ አልተገኘም።';
+  String get noOnlineVideoUrlAvailable =>
+      ' ንዚ ንጥረት እዚ ዝኾነ ናይ ኦንላይን ቪድዮ URL የብሉን።';
 
   @override
-  String get playOriginalOnline => 'መስመር ላይ ይጫኑ';
+  String get playOriginalOnline => 'ዋና ኦንላይን ጸውት';
 
   @override
-  String get unexpectedError => 'ያልተጠበቀ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።';
+  String get unexpectedError => 'ዘይተጸበናዮ ጌጋ ኣጋጢሙ: ';
 
   @override
   String get loginFailedNoUserData =>
-      'Login failed: No user data returned by the server. Please try again or contact support.';
+      'ምእታው ኣይተዓወተን: ሰርቨር ዳታ ተጠቃሚ ኣይመለሰን። እባኽኻ እንደገና ፈትን ወይ ድማ ደገፍ ተጸንበር።';
 
   @override
-  String get playDownloadedVideoTooltip => 'Play downloaded video';
+  String get playDownloadedVideoTooltip => 'ዝወረደ ቪድዮ ጸውት';
 
   @override
-  String get openDownloadedDocumentTooltip => 'Open downloaded document';
+  String get openDownloadedDocumentTooltip => 'ዝወረደ ሰነድ ክፈት';
 
   @override
-  String get myExams => 'My Exams';
+  String get myExams => 'ፈተናተይ';
 
   @override
-  String get errorLoadingExams => 'Failed to load exams. Please try again.';
+  String get errorLoadingExams => 'ፈተናታት ንምጽዓን ኣይከኣልኩን። እባኽኻ እንደገና ፈትን።';
 
   @override
-  String get downloadExamTooltip => 'Download Exam';
+  String get downloadExamTooltip => 'ፈተና ኣውርድ';
 
   @override
-  String get cancelDownloadTooltip => 'Cancel Download';
+  String get cancelDownloadTooltip => 'ምውራድ ስርዝ';
 
   @override
-  String get deleteExamTooltip => 'Delete Exam';
+  String get deleteExamTooltip => 'ፈተና ሰርዝ';
 
   @override
-  String get documentIsDownloadingMessage =>
-      'Document is currently downloading...';
+  String get documentIsDownloadingMessage => 'ሰነድ ይወርድ ኣሎ...';
 
   @override
-  String get quizIsDownloadingMessage => 'Exam is currently downloading...';
+  String get quizIsDownloadingMessage => 'ፈተና ይወርድ ኣሎ...';
 
   @override
-  String get couldNotOpenDownloadedFileError =>
-      'Could not open downloaded file';
+  String get couldNotOpenDownloadedFileError => 'ዝወረደ ፋይል ክኸፍቶ ኣይከኣልኩን';
 
   @override
-  String get downloadQuizTooltip => 'Download exam';
+  String get downloadQuizTooltip => 'ፈተና ኣውርድ';
 
   @override
-  String get openDownloadedQuizTooltip => 'Open downloaded exam';
+  String get openDownloadedQuizTooltip => 'ዝወረደ ፈተና ክፈት';
 
   @override
-  String get fileDownloadedTooltip => 'File downloaded';
+  String get fileDownloadedTooltip => 'ፋይል ወሪዱ';
 
   @override
-  String get couldNotLoadItem => 'Could not load';
+  String get couldNotLoadItem => 'ክጽዕን ኣይከኣልኩን';
 
   @override
-  String get submitExam => 'Submit Exam';
+  String get submitExam => 'ፈተና ኣቕርብ';
 
   @override
-  String get noSemestersAvailable => 'No semesters available.';
+  String get noSemestersAvailable => 'ዝኾነ ሴሚስተር የብሉን።';
 
   @override
-  String get notificationsTitle => 'Notifications';
+  String get notificationsTitle => 'ማሳወቂያታት';
 
   @override
-  String get noNotificationsMessage => 'You have no notifications yet';
+  String get noNotificationsMessage => 'እስካሁን ምንም ማሳወቂያዎች የለዎትም';
 }

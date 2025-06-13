@@ -9,981 +9,1018 @@ class AppLocalizationsOr extends AppLocalizations {
   AppLocalizationsOr([String locale = 'or']) : super(locale);
 
   @override
-  String get downloadDocumentTooltip => 'Download PDF';
+  String get downloadDocumentTooltip => 'PDF Buusi';
 
   @override
-  String get downloadedDocumentTooltip => 'Open downloaded PDF';
+  String get downloadedDocumentTooltip => 'PDF Buufame Banaa';
 
   @override
-  String get notesItemType => 'Notes';
+  String get notesItemType => 'Qabxii';
 
   @override
-  String get examsItemType => 'Exams';
+  String get examsItemType => 'Qormaata';
 
   @override
-  String get noNotesAvailable => 'No notes available for this section';
+  String get noNotesAvailable => 'Kutaa kanaaf qabxiin hin jiru.';
 
   @override
-  String get noExamsAvailable => 'No exams available for this section';
+  String get noExamsAvailable => 'Kutaa kanaaf qormaanni hin jiru.';
 
   @override
-  String get appTitle => 'መጂወ አስጠኚ';
+  String get appTitle => 'Hubannoo MGW';
 
   @override
-  String get home => 'መነሻ';
+  String get home => 'Fuula Duraa';
 
   @override
-  String get library => 'ቤተ-መጽሐፍት';
+  String get library => 'Kitaabota';
 
   @override
-  String get notifications => 'ማሳወቂያዎች';
+  String get notifications => 'Beeksisa';
 
   @override
-  String get account => 'መለያ';
+  String get account => 'Akkaawuntii';
 
   @override
-  String get aboutUs => 'ስለ እኛ';
+  String get aboutUs => 'Waa\'ee Keenyaa';
 
   @override
-  String get settings => 'ቅንብሮች';
+  String get settings => 'Faayidaa';
 
   @override
-  String get logout => 'ውጣ';
+  String get logout => 'Ba\'i';
 
   @override
-  String get changeLanguage => 'ቋንቋ ቀይር';
+  String get changeLanguage => 'Afaan Jijjiiri';
 
   @override
-  String get english => 'እንግሊዝኛ';
+  String get english => 'English';
 
   @override
-  String get amharic => 'አማርኛ';
+  String get amharic => 'Amaariffa';
 
   @override
-  String get tigrigna => 'ትግርኛ';
+  String get tigrigna => 'Tigrigna';
 
   @override
-  String get afaanOromo => 'አፋን ኦሮሞ';
+  String get afaanOromo => 'Afaan Oromo';
 
   @override
-  String get welcomeMessage => 'ወደ መጂወ አስጠኚ በደህና መጡ!';
+  String get welcomeMessage => 'Hubannoo MGWtti baga nagaan dhuftan!';
 
   @override
-  String get testimonials => 'ምስክርነት';
+  String get testimonials => 'Ragaawwan';
 
   @override
-  String get registerforcourses => 'ለኮርሶች ይመዝገቡ';
+  String get registerforcourses => 'Koorsootaaf Galmaa\'i';
 
   @override
-  String get mycourses => 'የኔ ኮርስዎች';
+  String get mycourses => 'Koorsoota Kiyya';
 
   @override
-  String get weeklyexam => 'የሳምንቱ ፈተናዎች';
+  String get weeklyexam => 'Qormaata Torbanii';
 
   @override
-  String get sharetheapp => 'አፕሊኬሽኑን ይጋሩ';
+  String get sharetheapp => 'Appilikeeshinii Hiri';
 
   @override
-  String get joinourtelegram => 'ቴሌግራማችንን ይቀላቀሉ';
+  String get joinourtelegram => 'Telegraama Keenyaatti Makami';
 
   @override
-  String get discussiongroup => 'ውይይት ቡድን';
+  String get discussiongroup => 'Maree Garee';
 
   @override
-  String get contactus => 'አግኙን';
+  String get contactus => 'Nu Qunnamaa';
 
   @override
-  String get refresh => 'ማደስ';
+  String get refresh => 'Haaroomsi';
 
   @override
-  String get getRegisteredTitle => 'መለያ ፍጠር';
+  String get getRegisteredTitle => 'Akkaawuntii Uumi';
 
   @override
-  String get studentNameLabel => 'የተማሪ ስም';
+  String get studentNameLabel => 'Maqaa Barataa';
 
   @override
-  String get studentNameValidationError => 'እባኮትን የተማሪ ስም ያስገቡ';
+  String get studentNameValidationError => 'Maqaa barataa galchi.';
 
   @override
-  String get fatherNameLabel => 'የአባት ስም';
+  String get fatherNameLabel => 'Maqaa Abbaa';
 
   @override
-  String get fatherNameValidationError => 'እባኮትን የአባት ስም ያስገቡ';
+  String get fatherNameValidationError => 'Maqaa abbaa galchi.';
 
   @override
-  String get streamLabel => 'የዲፓርትመንት';
+  String get streamLabel => 'Damee Barnootaa';
 
   @override
-  String get naturalStream => 'ተፈጥሮ';
+  String get naturalStream => 'Saayinsii Uumamaa';
 
   @override
-  String get socialStream => 'ማህበራዊ';
+  String get socialStream => 'Saayinsii Hawaasaa';
 
   @override
-  String get institutionLabel => 'ተቋም';
+  String get institutionLabel => 'Mana Barumsaa/Dhaabbata';
 
   @override
-  String get selectInstitutionHint => 'ተቋም ይምረጡ';
+  String get selectInstitutionHint => 'Mana Barumsaa/Dhaabbata Filadhu';
 
   @override
-  String get institutionValidationError => 'እባኮትን ተቋም ይምረጡ';
+  String get institutionValidationError => 'Dhaabbata filadhu.';
 
   @override
-  String get genderLabel => 'ጾታ';
+  String get genderLabel => 'Saala';
 
   @override
-  String get maleGender => 'ወንድ';
+  String get maleGender => 'Dhiira';
 
   @override
-  String get femaleGender => 'ሴት';
+  String get femaleGender => 'Durba';
 
   @override
-  String get selectServiceLabel => 'የአገልግሎት ዓይነት ይምረጡ';
+  String get selectServiceLabel => 'Tajaajila Filadhu';
 
   @override
-  String get selectServiceHint => 'የአገልግሎት ዓይነት ይምረጡ';
+  String get selectServiceHint => 'Tajaajila Filadhu';
 
   @override
-  String get serviceValidationError => 'እባኮትን የአገልግሎት ዓይነት ይምረጡ';
+  String get serviceValidationError => 'Tajaajila filadhu.';
 
   @override
   String get paymentInstruction =>
-      'ክፍያውን ከፈጸሙ በኋላ፣ እባክዎ የከፈሉበትን የባንክ ስም ከዚህ በታች ያስገቡ እና የክፍያ ማረጋገጫ ቅጽበታዊ ገጽ እይታን ያያይዙ። የባንክ ሂሳብ ዝርዝሮቻችን፦\n • ንግድ ባንክ: 1000 XXX XXXX XXXX (ደበበ ወ.)\n • ቴሌብር: 09XX XXX XXX (ደበበ ወ.)';
+      'Erga kaffaltii gootee booda, maqaa baankii ati itti fayyadamte gadiitti galchiitii suuraa kaffaltii mirkaneessu maxxansi. Odeeffannoo Baankii Keenyaa:\n • CBE: 1000 XXX XXXX XXXX (Dabebee W.)\n • Telebirr: 09XX XXX XXX (Dabebee W.)';
 
   @override
-  String get bankAccountLabel => 'መለያ';
+  String get bankAccountLabel => 'Akkaawuntii';
 
   @override
-  String get bankHolderNameLabel => 'ስም';
+  String get bankHolderNameLabel => 'Maqaa';
 
   @override
   String copiedToClipboardMessage(String accountNumber) {
-    return '$accountNumber ወደ ቅንጥብ ሰሌዳ ተቀድቷል!';
+    return '$accountNumber to clipboard waan godhame!';
   }
 
   @override
   String couldNotOpenFileError(String error) {
-    return 'ፋይል መክፈት አልተቻለም፡ $error';
+    return 'Faayilii banuu hin dandeenye: $error';
   }
 
   @override
-  String get couldNotFindDownloadedFileError => 'የወረደውን ፋይል ማግኘት አልተቻለም።';
+  String get couldNotFindDownloadedFileError =>
+      'Faayilii buufame argachuu hin dandeenye.';
 
   @override
-  String get videoIsDownloadingMessage => 'ቪዲዮ በአሁኑ ጊዜ በመውረድ ላይ ነው። እባክዎ ይጠብቁ።';
+  String get videoIsDownloadingMessage =>
+      'Viidiyoon amma bu\'aa jira. Turii eegi.';
 
   @override
   String get videoDownloadFailedMessage =>
-      'ቪዲዮ ማውረድ አልተሳካም። እንደገና ለመሞከር የማውረድ ቁልፍን ይንኩ።';
+      'Viidiyoon bu\'uu hin dandeenye. Deebisee yaaluuf buttana buusuu tuqi.';
 
   @override
-  String get videoDownloadCancelledMessage => 'ቪዲዮ ማውረድ ተሰርዟል።';
+  String get videoDownloadCancelledMessage => 'Viidiyoon buusuu ni hafe.';
 
   @override
-  String get notImplementedMessage => 'አልተተገበረም።';
+  String get notImplementedMessage => 'Hojiirra hin oolle';
 
   @override
-  String get noTextContent => 'ምንም የጽሑፍ ይዘት የለም።';
+  String get noTextContent => 'Qabxii barreeffamaa hin jiru.';
 
   @override
-  String get closeButtonText => 'ዝጋ';
+  String get closeButtonText => 'Cufi';
 
   @override
-  String get downloadVideoTooltip => 'ቪዲዮ አውርድ';
+  String get downloadVideoTooltip => 'Viidiyoo offline ilaaluuf buusi';
 
   @override
-  String get downloadedVideoTooltip => 'ወርዷል። ለማጫወት ነካ ያድርጉ፣ ለማጥፋት በረዥም ይጫኑ።';
+  String get downloadedVideoTooltip =>
+      'Viidiyoo buufameera. Taphachuuf tuqi, haquuf yeroo dheeraaf tuqi.';
 
   @override
-  String get downloadFailedTooltip => 'ማውረድ አልተሳካም። እንደገና ለመሞከር ነካ ያድርጉ።';
+  String get downloadFailedTooltip =>
+      'Buusuun hin milkoofne. Deebisee yaaluuf tuqi.';
 
   @override
-  String get deleteDownloadedFileTooltip => 'የወረደውን ፋይል ሰርዝ';
+  String get deleteDownloadedFileTooltip => 'Faayilii buufame haqi';
 
   @override
   String get couldNotDeleteFileError =>
-      'ፋይል መሰረዝ አልተቻለም፡ ትክክል ያልሆነ የትምህርት መረጃ።';
+      'Faayilii haquu hin dandeenye: Odeeffannoo barnootaa sirrii hin taane.';
 
   @override
-  String get fileDeletedSuccessfully => 'ፋይል በተሳካ ሁኔታ ተሰርዟል።';
+  String get fileDeletedSuccessfully => 'Faayiliin milkaa\'inaan haqameera.';
 
   @override
-  String get fileNotFoundOrFailedToDelete => 'ፋይል አልተገኘም ወይም መሰረዝ አልተሳካም።';
+  String get fileNotFoundOrFailedToDelete =>
+      'Faayiliin hin argamne ykn haquun hin milkoofne.';
 
   @override
-  String get attachScreenshotButton => 'ቅጽበታዊ ገጽ እይታን ያያይዙ';
+  String get attachScreenshotButton => 'Suuraa Maxxansi';
 
   @override
-  String get screenshotAttachedButton => 'ቅጽበታዊ ገጽ እይታ ተያይዟል!';
+  String get screenshotAttachedButton => 'Suuraa Maxxanfameera!';
 
   @override
-  String get fileNamePrefix => 'ፋይል';
+  String get fileNamePrefix => 'Faayilii';
 
   @override
-  String get termsAndConditionsAgreement => 'በመቀጠልዎ በ';
+  String get termsAndConditionsAgreement => 'Itti fufuun kee waliigaltee ';
 
   @override
-  String get termsAndConditionsLink => 'ውሎች እና ሁኔታዎች';
+  String get termsAndConditionsLink => 'waliigaltee fi haalawwan';
 
   @override
-  String get termsAndConditionsAnd => ' እና በ';
+  String get termsAndConditionsAnd => ' fi ';
 
   @override
-  String get privacyPolicyLink => 'የግላዊነት ፖሊሲ';
+  String get privacyPolicyLink => 'seera dhuunfaa';
 
   @override
-  String get submitButton => 'መለያ ፍጠር';
+  String get submitButton => 'Akkaawuntii Uumi';
 
   @override
   String errorPickingImage(String errorMessage) {
-    return 'ምስልን መምረጥ ላይ ስህተት: $errorMessage';
+    return 'Suuraa filachuutti dogoggora: $errorMessage';
   }
 
   @override
-  String get pleaseSelectStreamError => 'እባክዎ ዲፓርትመንት ይምረጡ።';
+  String get pleaseSelectStreamError => 'Damee barnootaa filadhu.';
 
   @override
-  String get pleaseSelectInstitutionError => 'እባክዎ ተቋም ይምረጡ።';
+  String get pleaseSelectInstitutionError => 'Dhaabbata filadhu.';
 
   @override
-  String get pleaseSelectGenderError => 'እባክዎ ጾታዎን ይምረጡ።';
+  String get pleaseSelectGenderError => 'Saala kee filadhu.';
 
   @override
-  String get pleaseSelectServiceError => 'እባክዎ የአገልግሎት ዓይነት ይምረጡ።';
+  String get pleaseSelectServiceError => 'Tajaajila filadhu.';
 
   @override
-  String get pleaseAttachScreenshotError => 'እባክዎ የክፍያ ቅጽበታዊ ገጽ ያያይዙ።';
+  String get pleaseAttachScreenshotError => 'Suuraa kaffaltii maxxansi.';
 
   @override
-  String get pleaseAgreeToTermsError => 'እባክዎ በደንቦቹ እና ሁኔታዎች ይስማሙ።';
+  String get pleaseAgreeToTermsError =>
+      'Waliigaltee fi haalawwaniif tole jedhi.';
 
   @override
-  String get notRegisteredTitle => 'እስካሁን ያልተመዘገቡ ይመስላል።';
+  String get notRegisteredTitle =>
+      'Hanga ammaatti akka hin galmoofne ni fakkaata';
 
   @override
   String get notRegisteredSubtitle =>
-      'ውጤቶቻችሁን ለማሳደግ የትምህርት ሀብቶቻችንን ለመመዝገብ እና ለማግኘት ቅጹን ይሙሉ።';
+      'Galmaa\'uufi madda barnootaa keenya fayyadamuun qabxii kee guddisuuf foormii guuti.';
 
   @override
-  String get getRegisteredNowButton => 'አሁን ይመዝገቡ';
+  String get getRegisteredNowButton => 'Amma Galmaa\'i';
 
   @override
-  String get mgwTutorialTitle => 'መጂወ አስጠኚ';
+  String get mgwTutorialTitle => 'Hubannoo MGW';
 
   @override
-  String get signUpToStartLearning => 'መማር ለመጀመር ይመዝገቡ';
+  String get signUpToStartLearning => 'Barnoota jalqabuuf galmaa\'i';
 
   @override
-  String get signUpTitle => 'መለያ ይፍጠሩ';
+  String get signUpTitle => 'Akkaawuntii Uumi';
 
   @override
-  String get createAccountButton => 'መለያ ይፍጠሩ';
+  String get createAccountButton => 'Akkaawuntii Uumi';
 
   @override
-  String get alreadyHaveAccount => 'አስቀድመው መለያ አለዎት?';
+  String get alreadyHaveAccount => 'Akkaawuntii qabdaa?';
 
   @override
-  String get signInLink => 'ይግቡ';
+  String get signInLink => 'Seeni';
 
   @override
-  String get signUpSuccessMessage => 'መለያ በተሳካ ሁኔታ ተፈጥሯል! አሁን መግባት ይችላሉ።';
+  String get signUpSuccessMessage =>
+      'Akkaawuntiin milkaa\'inaan uumame! Amma seenuu dandeessa.';
 
   @override
-  String get signUpFailedErrorGeneral => 'መለያ መፍጠር አልተሳካም። እባክዎ እንደገና ይሞክሩ።';
+  String get signUpFailedErrorGeneral =>
+      'Galmeessi hin milkoofne. Deebisee yaali.';
 
   @override
-  String get loginTitle => 'ይግቡ';
+  String get loginTitle => 'Seeni';
 
   @override
   String get loginToContinue =>
-      'ወደ MGW እንኳን በደህና መጡ፣ የእርስዎ ብልህ የፍሬሽማን መንገድ ወደ A+/A በእያንዳንዱ ኮርስ።';
+      'Baga gara MGWtti nagaan dhuftan, karaa barattoota haaraa sadarkaa A+/A ta\'uu keessan mirkaneessu.';
 
   @override
-  String get signInButton => 'ይግቡ';
+  String get signInButton => 'Seeni';
 
   @override
-  String get dontHaveAccount => 'መለያ የሎትም?';
+  String get dontHaveAccount => 'Akkaawuntii hin qabdu?';
 
   @override
-  String get signUpLinkText => 'አሁን ይመዝገቡ';
+  String get signUpLinkText => 'Amma Uumi';
 
   @override
-  String get phoneNumberLabel => 'ስልክ ቁጥር';
+  String get phoneNumberLabel => 'Lakkoofsa Bilbilaa';
 
   @override
   String get phoneNumberHint => '912 345 678';
 
   @override
-  String get phoneNumberValidationErrorRequired => 'እባክዎ ስልክ ቁጥርዎን ያስገቡ';
+  String get phoneNumberValidationErrorRequired =>
+      'Lakkoofsa bilbilaa kee galchi.';
 
   @override
-  String get phoneNumberValidationErrorInvalid => 'ትክክለኛ ባለ 9 አሃዝ ስልክ ቁጥር ያስገቡ';
+  String get phoneNumberValidationErrorInvalid =>
+      'Lakkoofsa bilbilaa digit 9 qabu galchi.';
 
   @override
-  String get passwordLabel => 'የይለፍ ቃል';
+  String get passwordLabel => 'Jecha Darbii';
 
   @override
-  String get passwordHint => 'የይለፍ ቃልዎን ያስገቡ';
+  String get passwordHint => 'Jecha darbii kee galchi';
 
   @override
-  String get passwordValidationErrorRequired => 'እባክዎ የይለፍ ቃልዎን ያስገቡ';
+  String get passwordValidationErrorRequired => 'Jecha darbii kee galchi.';
 
   @override
-  String get passwordValidationErrorLength => 'የይለፍ ቃል ቢያንስ 6 ቁምፊዎች መሆን አለበት';
+  String get passwordValidationErrorLength =>
+      'Jechi darbii gabaabduu ta\'uu hin qabu, yoo xiqqaate qubee 6 ta\'uu qaba.';
 
   @override
   String get accountCreationSimulatedMessage =>
-      'የአካውንት አፈጣጠር ተመስሏል። ኮንሶሉን ያረጋግጡ።';
+      'Akkaawuntii uumuun fakkeeffameera. Console ilaali.';
 
   @override
-  String get loginSuccessMessage => 'በተሳካ ሁኔታ ገብተዋል! እንኳን ደህና መጡ።';
+  String get loginSuccessMessage => 'Seenun milkaa\'eera! Baga nagaan deebite.';
 
   @override
   String get signInFailedErrorGeneral =>
-      'መግባት አልተሳካም። እባክዎ መረጃዎን ያረጋግጡና እንደገና ይሞክሩ።';
+      'Seenun hin milkoofne. Odeeffannoo kee mirkaneeffadhuutii deebisee yaali.';
 
   @override
-  String get changeProfilePictureButton => 'የመገለጫ ፎቶ ቀይር';
+  String get changeProfilePictureButton => 'Suuraa Profayilii Jijjiiri';
 
   @override
-  String get profilePictureSelectedMessage => 'የመገለጫ ፎቶ ተመርጧል! (አልተሰቀለም)';
+  String get profilePictureSelectedMessage =>
+      'Suuraan profayilii filatameera! (Hin maxxanfne)';
 
   @override
-  String get accountPhoneNumberLabel => 'ስልክ ቁጥር';
+  String get accountPhoneNumberLabel => 'Lakkoofsa bilbilaa';
 
   @override
   String get changePhoneNumberNotImplementedMessage =>
-      'ስልክ ቁጥር ለመቀየር ተነክቷል (አልተተገበረም)';
+      'Lakkoofsa Bilbilaa Jijjiiri Tuqameera (Hojiirra Hin Oolle)';
 
   @override
-  String get accountPasswordLabel => 'የይለፍ ቃል';
+  String get accountPasswordLabel => 'Jecha Darbii';
 
   @override
   String get changePasswordNotImplementedMessage =>
-      'የይለፍ ቃል ለመቀየር ተነክቷል (አልተተገበረም)';
+      'Jecha Darbii Jijjiiri Tuqameera (Hojiirra Hin Oolle)';
 
   @override
-  String get notificationsEnabledMessage => 'ማሳወቂያዎች ነቅተዋል';
+  String get notificationsEnabledMessage => 'Beeksisni banaa dha';
 
   @override
-  String get notificationsDisabledMessage => 'ማሳወቂያዎች ቆመዋል';
+  String get notificationsDisabledMessage => 'Beeksisni cufaa dha';
 
   @override
-  String get changeButton => 'ቀይር';
+  String get changeButton => 'Jijjiiri';
 
   @override
-  String get phoneNumberCannotBeEmptyError => 'ስልክ ቁጥር ባዶ መሆን አይችልም።';
+  String get phoneNumberCannotBeEmptyError =>
+      'Lakkoofsi bilbilaa duwwaa ta\'uu hin qabu.';
 
   @override
   String get invalidPhoneNumberFormatError =>
-      'የማያገለግል የስልክ ቁጥር ዓይነት። እባክዎ 09...፣ 9...፣ ወይም +2519... ይጠቀሙ።';
+      'Faayila lakkoofsa bilbilaa sirrii hin taane. 09..., 9..., ykn +2519... fayyadami.';
 
   @override
   String get registrationSuccessMessage =>
-      'ምዝገባው ተሳክቷል! እባክዎ የአስተዳዳሪ ማረጋገጫ ይጠብቁ።';
+      'Galmeessi milkaa\'eera! Hayyama admin eegi.';
 
   @override
   String get registrationFailedDefaultMessage =>
-      'ምዝገባ አልተሳካም። እባክዎ እንደገና ይሞክሩ።';
+      'Galmeessi hin milkoofne. Deebisee yaali.';
 
   @override
-  String get selectDepartmentHint => 'ዲፓርትመንት / የትምህርት መስክ ይምረጡ';
+  String get selectDepartmentHint => 'Damee barnootaa/Stream Filadhu';
 
   @override
-  String get yearLabel => 'የትምህርት ዘመን';
+  String get yearLabel => 'Baroota Barnootaa';
 
   @override
-  String get yearValidationErrorEmpty => 'እባክዎ ዓመት ያስገቡ።';
+  String get yearValidationErrorEmpty => 'Waggaa galchi.';
 
   @override
-  String get yearValidationErrorInvalid => 'እባክዎ ትክክለኛ ዓመት ያስገቡ።';
+  String get yearValidationErrorInvalid => 'Waggaa sirrii galchi.';
 
   @override
-  String get departmentLabel => 'ዲፓርትመንት';
+  String get departmentLabel => 'Damee Barnootaa';
 
   @override
-  String get pleaseSelectDepartmentError => 'እባክዎ ዲፓርትመንት ይምረጡ።';
+  String get pleaseSelectDepartmentError => 'Damee barnootaa filadhu.';
 
   @override
-  String get selectYearHint => 'ዓመት ይምረጡ';
+  String get selectYearHint => 'Waggaa Filadhu';
 
   @override
-  String get pleaseSelectYearError => 'እባክዎ የትምህርት ዘመንዎን ይምረጡ።';
+  String get pleaseSelectYearError => 'Waggaa barnootaa kee filadhu.';
 
   @override
-  String get guestUser => 'እንግዳ ተጠቃሚ';
+  String get guestUser => 'Fayyaddamaa Keessummaa';
 
   @override
-  String get pleaseLoginOrRegister => 'እባክዎ ይግቡ ወይም ይመዝገቡ';
+  String get pleaseLoginOrRegister => 'Seeni ykn Galmaa\'i';
 
   @override
-  String get registeredUser => 'የተመዘገበ ተጠቃሚ';
+  String get registeredUser => 'Fayyaddamaa Galmaa\'e';
 
   @override
-  String get logoutSuccess => 'በተሳካ ሁኔታ ወጥተዋል።';
+  String get logoutSuccess => 'Milkaa\'inaan ba\'eera.';
 
   @override
-  String get selectSemesterLabel => 'ሴሚስተር ይምረጡ';
+  String get selectSemesterLabel => 'Semeestara Filadhu';
 
   @override
-  String get selectSemesterHint => 'ሴሚስተር ይምረጡ';
+  String get selectSemesterHint => 'Semeestara Filadhu';
 
   @override
-  String get pleaseSelectSemesterError => 'እባክዎ ሴሚስተር ይምረጡ።';
+  String get pleaseSelectSemesterError => 'Semeestara filadhu.';
 
   @override
-  String get deviceInfoNotAvailable => 'የመሳሪያ መረጃ የለም። እባክዎ ይጠብቁና እንደገና ይሞክሩ።';
+  String get deviceInfoNotAvailable =>
+      'Odeeffannoon meeshaa hin argamu. Eegiitii deebisee yaali.';
 
   @override
   String get deviceInfoProcessing =>
-      'የመሳሪያ መረጃ አሁንም እየተሰራ ነው። እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።';
+      'Odeeffannoon meeshaa hojiirra jira. Turtii deebisee yaali.';
 
   @override
-  String get deviceInfoInitializing => 'በማስጀመር ላይ... እባክዎ እንደገና ለመግባት ይሞክሩ።';
+  String get deviceInfoInitializing =>
+      'Jalqabaa jira... Deebisee seenuuf yaali.';
 
   @override
-  String get deviceInfoProceedingDefault => 'የመሳሪያውን መረጃ ሙሉ በሙሉ ማወቅ አልተቻለም።';
+  String get deviceInfoProceedingDefault =>
+      'Odeeffannoo meeshaa sirriitti adda baasuu hin dandeenye.';
 
   @override
-  String get initializing => 'በማስጀመር ላይ...';
+  String get initializing => 'Jalqabaa jira...';
 
   @override
   String enrollForSemesterTitle(String semesterName) {
-    return 'ለ $semesterName ይመዝገቡ';
+    return '${semesterName}f Galmaa\'i';
   }
 
   @override
-  String get selectedSemesterLabel => 'የተመረጠ ሴሚስተር:';
+  String get selectedSemesterLabel => 'Semeestara Filatame:';
 
   @override
-  String get priceLabel => 'ዋጋ:';
+  String get priceLabel => 'Gatii:';
 
   @override
-  String get coursesIncludedLabel => 'የተካተቱ ኮርሶች:';
+  String get coursesIncludedLabel => 'Koorsoota Keessatti Hammataman:';
 
   @override
-  String get bankNamePaymentLabel => 'የከፈሉበት ባንክ ስም';
+  String get bankNamePaymentLabel => 'Maqaa Baankii Kaffaltii';
 
   @override
-  String get bankNamePaymentHint => 'ለምሳሌ፡ የኢትዮጵያ ንግድ ባንክ፣ አዋሽ ባንክ';
+  String get bankNamePaymentHint =>
+      'fkn, Commercial Bank of Ethiopia, Awash Bank';
 
   @override
-  String get bankNameValidationError => 'እባክዎ የባንክ ስም ያስገቡ።';
+  String get bankNameValidationError => 'Maqaa baankii galchi.';
 
   @override
   String get enrollmentRequestSuccess =>
-      'የምዝገባ ጥያቄዎ በተሳካ ሁኔታ ገብቷል! እባክዎ ይሁንታ ይጠብቁ።';
+      'Gaaffiin galmee milkaa\'inaan dhiyaateera! Hayyama eegi.';
 
   @override
-  String get enrollmentRequestFailed => 'የምዝገባ ጥያቄ ማስገባት አልተሳካም።';
+  String get enrollmentRequestFailed =>
+      'Gaaffii galmee dhiyeessuun hin milkoofne.';
 
   @override
-  String get selectPaymentBankPrompt => 'እባክዎ የክፍያ ባንክ ይምረጡ።';
+  String get selectPaymentBankPrompt => 'Waabiif baankii kaffaltii filadhu.';
 
   @override
-  String get goBackButton => 'ተመለስ';
+  String get goBackButton => 'Duubatti Deebi\'i';
 
   @override
-  String get createPostTitle => 'አዲስ ልጥፍ ፍጠር';
+  String get createPostTitle => 'Barruu Haaraa Uumi';
 
   @override
-  String get postTitleLabel => 'የልጥፍ ርዕስ';
+  String get postTitleLabel => 'Mata Duree Barruu';
 
   @override
-  String get postTitleHint => 'ግልጽ እና አጭር ርዕስ ያስገቡ';
+  String get postTitleHint => 'Mata duree ifaa fi gabaabaa galchi';
 
   @override
-  String get postTitleValidationRequired => 'እባክዎ ርዕስ ያስገቡ።';
+  String get postTitleValidationRequired => 'Mata duree galchi.';
 
   @override
-  String get postTitleValidationLength => 'ርዕስ ቢያንስ 5 ቁምፊዎች መሆን አለበት።';
+  String get postTitleValidationLength =>
+      'Mata dureen gabaabduu ta\'uu hin qabu, yoo xiqqaate qubee 5 ta\'uu qaba.';
 
   @override
-  String get postDescriptionLabel => 'የልጥፍ መግለጫ';
+  String get postDescriptionLabel => 'Ibsa Barruu';
 
   @override
-  String get postDescriptionHint => 'ሀሳቦችዎን ወይም ጥያቄዎችዎን በዝርዝር ያጋሩ...';
+  String get postDescriptionHint => 'Yaada ykn gaaffii kee bal\'inaan hiri...';
 
   @override
-  String get postDescriptionValidationRequired => 'እባክዎ መግለጫ ያስገቡ።';
+  String get postDescriptionValidationRequired => 'Ibsa galchi.';
 
   @override
-  String get postDescriptionValidationLength => 'መግለጫ ቢያንስ 10 ቁምፊዎች መሆን አለበት።';
+  String get postDescriptionValidationLength =>
+      'Ibsi gabaabduu ta\'uu hin qabu, yoo xiqqaate qubee 10 ta\'uu qaba.';
 
   @override
-  String get submitPostButton => 'ልጥፍ አስገባ';
+  String get submitPostButton => 'Barruu Dhiyeessi';
 
   @override
-  String get postCreatedSuccess => 'ልጥፍ በተሳካ ሁኔታ ተፈጥሯል!';
+  String get postCreatedSuccess => 'Barruun milkaa\'inaan uumameera!';
 
   @override
-  String get postCreateFailed => 'ልጥፍ መፍጠር አልተሳካም። እባክዎ እንደገና ይሞክሩ።';
+  String get postCreateFailed => 'Barruu uumuun hin milkoofne. Deebisee yaali.';
 
   @override
-  String get editPostTitle => 'ልጥፍ አስተካክል';
+  String get editPostTitle => 'Barruu Sirreessi';
 
   @override
-  String get generalTitleLabel => 'ርዕስ';
+  String get generalTitleLabel => 'Mata Duree';
 
   @override
-  String get generalTitleEmptyValidation => 'ርዕስ ባዶ መሆን አይችልም';
+  String get generalTitleEmptyValidation =>
+      'Mata dureen duwwaa ta\'uu hin danda\'u';
 
   @override
-  String get generalDescriptionLabel => 'መግለጫ';
+  String get generalDescriptionLabel => 'Ibsa';
 
   @override
-  String get generalDescriptionEmptyValidation => 'መግለጫ ባዶ መሆን አይችልም';
+  String get generalDescriptionEmptyValidation =>
+      'Ibsi duwwaa ta\'uu hin danda\'u';
 
   @override
-  String get cancelButton => 'ሰርዝ';
+  String get cancelButton => 'Haqi';
 
   @override
-  String get saveButton => 'አስቀምጥ';
+  String get saveButton => 'Quusadhu';
 
   @override
-  String get postUpdatedSuccess => 'ልጥፍ ተዘምኗል!';
+  String get postUpdatedSuccess => 'Barruun milkaa\'inaan haaromfameera!';
 
   @override
-  String get postUpdateFailed => 'ልጥፍ ማዘመን አልተሳካም።';
+  String get postUpdateFailed => 'Barruu haaromsuun hin milkoofne.';
 
   @override
-  String get deletePostTitle => 'ልጥፍ ሰርዝ';
+  String get deletePostTitle => 'Barruu Haqii';
 
   @override
   String get deletePostConfirmation =>
-      'ይህንን ልጥፍ እና ሁሉንም አስተያየቶቹን መሰረዝ እርግጠኛ ነዎት? ይህ ድርጊት ሊቀለበስ አይችልም።';
+      'Barruu kanaa fi yaada isaa hunda haquuf mirkanaa\'aa dha? Hojiin kun deebi\'ee sirrachuu hin danda\'u.';
 
   @override
-  String get deleteButton => 'ሰርዝ';
+  String get deleteButton => 'Haqi';
 
   @override
-  String get postDeletedSuccess => 'ልጥፍ በተሳካ ሁኔታ ተሰርዟል!';
+  String get postDeletedSuccess => 'Barruun milkaa\'inaan haqameera!';
 
   @override
-  String get postDeleteFailed => 'ልጥፍ መሰረዝ አልተሳካም።';
+  String get postDeleteFailed => 'Barruu haquun hin milkoofne.';
 
   @override
-  String get commentPostedSuccess => 'አስተያየት ተለጥፏል!';
+  String get commentPostedSuccess => 'Yaadni milkaa\'inaan maxxanfameera!';
 
   @override
-  String get commentPostFailed => 'አስተያየት መለጠፍ አልተሳካም።';
+  String get commentPostFailed => 'Yaada maxxansuun hin milkoofne.';
 
   @override
-  String get replyPostedSuccess => 'መልስ ተለጥፏል!';
+  String get replyPostedSuccess => 'Deebiin milkaa\'inaan maxxanfameera!';
 
   @override
-  String get replyPostFailed => 'መልስ መለጠፍ አልተሳካም።';
+  String get replyPostFailed => 'Deebii maxxansuun hin milkoofne.';
 
   @override
-  String get updateGenericSuccess => 'ዝማኔው ተሳክቷል!';
+  String get updateGenericSuccess => 'Haaroomsuun milkaa\'eera!';
 
   @override
-  String get updateGenericFailed => 'ዝማኔው አልተሳካም።';
+  String get updateGenericFailed => 'Haaroomsuun hin milkoofne.';
 
   @override
-  String get deleteCommentTitle => 'አስተያየት ሰርዝ';
+  String get deleteCommentTitle => 'Yaada Haqii';
 
   @override
-  String get deleteReplyTitle => 'መልስ ሰርዝ';
+  String get deleteReplyTitle => 'Deebii Haqii';
 
   @override
   String deleteItemConfirmation(String itemType) {
-    return 'ይህንን $itemType መሰረዝ እርግጠኛ ነዎት? ይህ ድርጊት ሊቀለበስ አይችልም።';
+    return '$itemType kana haquuf mirkanaa\'aa dha? Hojiin kun deebi\'ee sirrachuu hin danda\'u.';
   }
 
   @override
   String itemDeletedSuccess(String itemType) {
-    return '$itemType በተሳካ ሁኔታ ተሰርዟል!';
+    return '$itemType milkaa\'inaan haqameera!';
   }
 
   @override
   String itemDeleteFailed(String itemType) {
-    return '$itemType መሰረዝ አልተሳካም።';
+    return '$itemType haquun hin milkoofne.';
   }
 
   @override
-  String get commentsSectionHeader => 'አስተያየቶች';
+  String get commentsSectionHeader => 'Yaada';
 
   @override
-  String get noCommentsYet => 'ምንም አስተያየቶች የሉም። የመጀመሪያ ይሁኑ!';
+  String get noCommentsYet =>
+      'Hanga ammaatti yaanni hin jiru. Kan jalqabaa ta\'i!';
 
   @override
-  String get writeCommentHint => 'አስተያየት ይጻፉ...';
+  String get writeCommentHint => 'Yaada barreessi...';
 
   @override
-  String get commentValidationEmpty => 'አስተያየት ባዶ መሆን አይችልም።';
+  String get commentValidationEmpty => 'Yaadni duwwaa ta\'uu hin qabu.';
 
   @override
-  String get postCommentTooltip => 'አስተያየት ለጥፍ';
+  String get postCommentTooltip => 'Yaada Maxxansi';
 
   @override
-  String get replyButtonLabel => 'መልስ';
+  String get replyButtonLabel => 'Deebii Kenni';
 
   @override
-  String get cancelReplyButtonLabel => 'ሰርዝ';
+  String get cancelReplyButtonLabel => 'Haqi';
 
   @override
-  String get writeReplyHint => 'መልስ ይጻፉ...';
+  String get writeReplyHint => 'Deebii barreessi...';
 
   @override
-  String get replyValidationEmpty => 'መልስ ባዶ መሆን አይችልም።';
+  String get replyValidationEmpty => 'Deebiin duwwaa ta\'uu hin qabu.';
 
   @override
-  String get editFieldValidationEmpty => 'ባዶ መሆን አይችልም';
+  String get editFieldValidationEmpty => 'Duwwaa ta\'uu hin danda\'u';
 
   @override
-  String get saveChangesButton => 'ለውጦችን አስቀምጥ';
+  String get saveChangesButton => 'Jijjiirama Quusadhu';
 
   @override
   String viewAllReplies(String replyCount) {
-    return 'ሁሉንም $replyCount መልሶች ይመልከቱ...';
+    return 'Deebii $replyCount hunda ilaali...';
   }
 
   @override
-  String get commentItemDisplay => 'አስተያየት';
+  String get commentItemDisplay => 'Yaada';
 
   @override
-  String get replyItemDisplay => 'መልስ';
+  String get replyItemDisplay => 'Deebii';
 
   @override
-  String get darkModeLabel => 'ጨለማ ገፅታ';
+  String get darkModeLabel => 'Moodii Gurraacha';
 
   @override
-  String get darkModeSubtitle => 'የጨለማ ገፅታን አንቃ ወይም አሰናክል';
+  String get darkModeSubtitle => 'Teema gurraacha banaa ykn cufi';
 
   @override
-  String get receiveNotificationsSubtitle => 'ጠቃሚ ዝመናዎችን ተቀበል';
+  String get receiveNotificationsSubtitle => 'Odeeffannoo barbaachisaa argadhu';
 
   @override
-  String get pushNotificationsEnabled => 'ማሳወቂያዎች ነቅተዋል';
+  String get pushNotificationsEnabled => 'Beeksisni Push banaa dha';
 
   @override
-  String get pushNotificationsDisabled => 'ማሳወቂያዎች ቆመዋል';
+  String get pushNotificationsDisabled => 'Beeksisni Push cufaa dha';
 
   @override
-  String get viewPrivacyPolicyAction => 'የግላዊነት ፖሊሲ ይመልከቱ';
+  String get viewPrivacyPolicyAction => 'Seera Dhuunfaa Ilaali';
 
   @override
-  String get viewTermsAction => 'የአገልግሎት ውሎችን ይመልከቱ';
+  String get viewTermsAction => 'Waliigaltee Tajaajilaa Ilaali';
 
   @override
   String actionNotImplemented(String featureName) {
-    return '$featureName: ገና አልተተገበረም';
+    return '$featureName: Hanga ammaatti Hojiirra Hin Oolle';
   }
 
   @override
   String couldNotLaunchUrl(String urlString) {
-    return '$urlString መክፈት አልተቻለም።';
+    return '$urlString jalqabuu hin dandeenye';
   }
 
   @override
-  String get shareAppSubject => 'መጂወ አስጠኚ መተግበሪያ';
+  String get shareAppSubject => 'Appilikeeshinii Hubannoo MGW';
 
   @override
-  String get emailSupportSubject => 'የመተግበሪያ ድጋፍ ጥያቄ';
+  String get emailSupportSubject => 'Gaaffii Deggersa Appilikeeshinii';
 
   @override
-  String get contactViaEmail => 'በኢሜል ያግኙን';
+  String get contactViaEmail => 'Imeeliin Nu Qunnamaa';
 
   @override
-  String get callUs => 'ይደውሉልን';
+  String get callUs => 'Nu waamaa';
 
   @override
-  String get visitOurWebsite => 'ድረገጻችንን ይጎብኙ';
+  String get visitOurWebsite => 'Marsariitii Keenya Dhaabaa';
 
   @override
-  String get refreshingData => 'ዳታ እየታደሰ ነው...';
+  String get refreshingData => 'Odeeffannoo haaroomsaa jira...';
 
   @override
-  String get dataRefreshed => 'ዳታ ታድሷል!';
+  String get dataRefreshed => 'Odeeffannoon haaromfameera!';
 
   @override
   String get errorRefreshingData =>
-      'ዳታ በማደስ ላይ ስህተት ተፈጥሯል። እባክዎ የበይነመረብ ግንኙነትዎን ያረጋግጡ።';
+      'Odeeffannoo haaromsuutti dogoggora. Intarneetii kee mirkaneeffadhu.';
 
   @override
-  String get notesSectionTitle => 'ማስታወሻዎች';
+  String get notesSectionTitle => 'Qabxii';
 
   @override
-  String get notesSectionDescription => 'ከአገር ዙሪያ ከተማሪዎች የሰበሰብናቸው ማስታወሻዎች።';
+  String get notesSectionDescription =>
+      'Qabxii barattoota biyyaa keessaa walitti qabne.';
 
   @override
-  String get notesComingSoon => 'የማስታወሻዎች ክፍል በቅርቡ ይመጣል!';
+  String get notesComingSoon => 'Kutaan qabxii dafee dhufa!';
 
   @override
-  String get coursesDetailsComingSoon => 'የኮርስ ዝርዝሮች በቅርቡ ይመጣሉ።';
+  String get coursesDetailsComingSoon => 'Ibsi koorsootaa dafee dhufa.';
 
   @override
   String semesterCardTapped(String semesterName, String semesterId) {
-    return '$semesterName (መለያ፡ $semesterId) ተነክቷል';
+    return '$semesterName (ID: $semesterId) Tuqameera';
   }
 
   @override
-  String get enrollNowButton => 'አሁን ይመዝገቡ';
+  String get enrollNowButton => 'Amma Galmaa\'i';
 
   @override
-  String get currencySymbol => 'ብር';
+  String get currencySymbol => 'ETB';
 
   @override
-  String get submitEnrollmentRequestButton => 'የምዝገባ ጥያቄ አስገባ';
+  String get submitEnrollmentRequestButton => 'Gaaffii Galmee Dhiyeessi';
 
   @override
-  String get currentPasswordLabel => 'የአሁኑ የይለፍ ቃል';
+  String get currentPasswordLabel => 'Jecha Darbii Ammaa';
 
   @override
-  String get newPasswordLabel => 'አዲስ የይለፍ ቃል';
+  String get newPasswordLabel => 'Jecha Darbii Haaraa';
 
   @override
-  String get confirmNewPasswordLabel => 'አዲስ የይለፍ ቃል አረጋግጥ';
+  String get confirmNewPasswordLabel => 'Jecha Darbii Haaraa Mirkaneessi';
 
   @override
-  String get passwordsDoNotMatch => 'የይለፍ ቃሎች አይዛመዱም';
+  String get passwordsDoNotMatch => 'Jechi darbii hin walsimne.';
 
   @override
-  String get newPhoneNumberLabel => 'አዲስ ስልክ ቁጥር';
+  String get newPhoneNumberLabel => 'Lakkoofsa Bilbilaa Haaraa';
 
   @override
-  String get otpEnterPrompt => 'OTP ያስገቡ';
+  String get otpEnterPrompt => 'OTP Galchi';
 
   @override
-  String get otpValidationErrorRequired => 'እባክዎ OTP ያስገቡ';
+  String get otpValidationErrorRequired => 'OTP galchi.';
 
   @override
-  String get otpValidationErrorLength => 'OTP 6 አሃዝ መሆን አለበት';
+  String get otpValidationErrorLength => 'OTP digit 6 ta\'uu qaba.';
 
   @override
   String get otpNewPhoneSameAsCurrentError =>
-      'አዲስ ስልክ ቁጥር ከአሁኑ ጋር አንድ መሆን የለበትም';
+      'Lakkoofsi bilbilaa haaraan isa ammaa wajjin tokko ta\'uu hin qabu.';
 
   @override
-  String get otpRequestButton => 'OTP ጠይቅ';
+  String get otpRequestButton => 'OTP gaafadhu';
 
   @override
-  String get otpVerifyButton => 'OTP አረጋግጥ';
+  String get otpVerifyButton => 'OTP mirkaneessi';
 
   @override
-  String get passwordChangedSuccess => 'የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል!';
+  String get passwordChangedSuccess =>
+      'Jechi darbii milkaa\'inaan jijjiirameera!';
 
   @override
-  String get passwordChangeFailed => 'የይለፍ ቃል መቀየር አልተሳካም።';
+  String get passwordChangeFailed => 'Jecha darbii jijjiiruun hin milkoofne.';
 
   @override
-  String get otpSentSuccess => 'OTP በተሳካ ሁኔታ ተልኳል።';
+  String get otpSentSuccess => 'OTP milkaa\'inaan ergameera.';
 
   @override
-  String get otpRequestFailed => 'OTP መጠየቅ አልተሳካም።';
+  String get otpRequestFailed => 'OTP gaafachuun hin milkoofne.';
 
   @override
-  String get phoneUpdateSuccess => 'ስልክ ቁጥር በተሳካ ሁኔታ ተዘምኗል።';
+  String get phoneUpdateSuccess =>
+      'Lakkoofsi bilbilaa milkaa\'inaan haaromfameera.';
 
   @override
-  String get phoneUpdateFailed => 'ስልክ ቁጥር ማዘመን አልተሳካም።';
+  String get phoneUpdateFailed =>
+      'Lakkoofsa bilbilaa haaromsuun hin milkoofne.';
 
   @override
-  String get videoItemType => 'ቪዲዮ';
+  String get videoItemType => 'Viidiyoo';
 
   @override
-  String get documentItemType => 'ሰነድ';
+  String get documentItemType => 'Sanada';
 
   @override
-  String get quizItemType => 'ፈተና';
+  String get quizItemType => 'Qormaata';
 
   @override
-  String get textItemType => 'ጽሑፍ';
+  String get textItemType => 'Barreeffama';
 
   @override
-  String get unknownItemType => 'ይዘት';
+  String get unknownItemType => 'Qabxii';
 
   @override
-  String get noVideosAvailable => 'በዚህ ክፍል ምንም ቪዲዮዎች የሉም።';
+  String get noVideosAvailable => 'Kutaa kana keessatti viidiyoo hin jiru.';
 
   @override
-  String get noDocumentsAvailable => 'በዚህ ክፍል ምንም ሰነዶች የሉም።';
+  String get noDocumentsAvailable => 'Kutaa kana keessatti sanada hin jiru.';
 
   @override
-  String get noTextLessonsAvailable => 'በዚህ ክፍል ምንም የጽሑፍ ትምህርቶች የሉም።';
+  String get noTextLessonsAvailable =>
+      'Kutaa kana keessatti barnoota barreeffamaa hin jiru.';
 
   @override
-  String get noQuizzesAvailable => 'በዚህ ክፍል ምንም ፈተናዎች የሉም።';
+  String get noQuizzesAvailable => 'Kutaa kana keessatti qormaata hin jiru.';
 
   @override
   String itemNotAvailable(String title) {
-    return 'ለ $title ምንም ይዘት የለም።';
+    return 'Qabxiin ${title}f hin argamu.';
   }
 
   @override
   String couldNotLaunchItem(String url) {
-    return '$url መክፈት አልተቻለም';
+    return '$url jalqabuu hin dandeenye';
   }
 
   @override
   String noLaunchableContent(String title) {
-    return 'ለ $title ምንም ሊከፈት የሚችል ይዘት የለም';
+    return 'Qabxiin ${title}f jalqabuu danda\'u hin jiru';
   }
 
   @override
-  String get chaptersTitle => 'ምዕራፎች';
+  String get chaptersTitle => 'Boqonnaawwan';
 
   @override
   String failedToLoadChaptersError(String error) {
-    return 'ምዕራፎችን መጫን አልተሳካም: $error';
+    return 'Boqonnaawwan fe\'uun hin milkoofne: $error';
   }
 
   @override
-  String get noChaptersForCourse => 'ለዚህ ኮርስ ምንም ምዕራፎች አልተገኙም።';
+  String get noChaptersForCourse => 'Koorsoo kanaaf boqonnaawwan hin argamne.';
 
   @override
   String failedToLoadLessonsError(String error) {
-    return 'ትምህርቶችን መጫን አልተሳካም: $error';
+    return 'Barnoota fe\'uun hin milkoofne: $error';
   }
 
   @override
-  String get noLessonsInChapter => 'በዚህ ምዕራፍ ምንም ትምህርቶች የሉም።';
+  String get noLessonsInChapter =>
+      'Boqonnaa kana keessatti barnoonni hin jiru.';
 
   @override
-  String get noCoursesAvailable => 'በአሁኑ ሰዓት ምንም ኮርሶች የሉም።';
+  String get noCoursesAvailable => 'Yeroo ammaa koorsoon hin jiru.';
 
   @override
-  String get shareYourTestimonialTitle => 'ምስክርነትዎን ያጋሩ';
+  String get shareYourTestimonialTitle => 'Ragaa Kee Hiri';
 
   @override
-  String get titleLabel => 'ርዕስ';
+  String get titleLabel => 'Mata Duree';
 
   @override
-  String get titleValidationPrompt => 'እባክዎ ርዕስ ያስገቡ';
+  String get titleValidationPrompt => 'Mata duree galchi.';
 
   @override
-  String get yourExperienceLabel => 'የእርስዎ ተሞክሮ';
+  String get yourExperienceLabel => 'Muuxannoo Kee';
 
   @override
-  String get experienceValidationPrompt => 'እባክዎ ተሞክሮዎን ይግለጹ';
+  String get experienceValidationPrompt => 'Muuxannoo kee ibsi.';
 
   @override
-  String get submitButtonGeneral => 'አስገባ';
+  String get submitButtonGeneral => 'Dhiyeessi';
 
   @override
-  String get testimonialSubmittedSuccess => 'ምስክርነት ገብቷል! ከማረጋገጫ በኋላ ይታያል።';
+  String get testimonialSubmittedSuccess =>
+      'Ragaa dhiyaateera! Erga hayyamamee booda ni mul\'ata.';
 
   @override
-  String get accountNameLabel => 'ስም';
+  String get accountNameLabel => 'Maqaa';
 
   @override
-  String get changeNameLabel => 'ስም ቀይር';
+  String get changeNameLabel => 'Maqaa Jijjiiri';
 
   @override
-  String get firstNameLabel => 'የመጀመሪያ ስም';
+  String get firstNameLabel => 'Maqaa Duraa';
 
   @override
-  String get lastNameLabel => 'የአባት ስም';
+  String get lastNameLabel => 'Maqaa Abbaa/Akkakoo';
 
   @override
-  String get firstNameValidationErrorRequired => 'የመጀመሪያ ስም ያስፈልጋል';
+  String get firstNameValidationErrorRequired =>
+      'Maqaan duraa barbaachisaa dha';
 
   @override
-  String get lastNameValidationErrorRequired => 'የአባት ስም ያስፈልጋል';
+  String get lastNameValidationErrorRequired =>
+      'Maqaan abbaa/akkakoo barbaachisaa dha';
 
   @override
-  String get nameChangedSuccess => 'ስም በተሳካ ሁኔታ ተቀይሯል';
+  String get nameChangedSuccess => 'Maqaan milkaa\'inaan jijjiirameera';
 
   @override
-  String get nameChangeFailed => 'ስም መቀየር አልተሳካም';
+  String get nameChangeFailed => 'Maqaa jijjiiruun hin milkoofne';
 
   @override
-  String get sessionInvalid => 'የስብሰባ ጊዜ ተጠናቋል። እባክዎ ወደ መጀመሪያ ገፅ ይመለሱ።';
+  String get sessionInvalid => 'Sessiini darbeera. Deebisee seeni.';
 
   @override
-  String get errorLoadingData => 'መጫን ላይ ስህተት';
+  String get errorLoadingData => 'Odeeffannoo fe\'uutti dogoggora';
 
   @override
-  String get retry => 'እንደገና ይሞክሩ';
+  String get retry => 'Deebisee Yaali';
 
   @override
-  String get faqTitle => 'FAQ';
+  String get faqTitle => 'Gaaffilee Yoo Baay\'ee Gaafataman';
 
   @override
-  String get faqNoItems => 'ምንም የተመዘገበ ጥያቄ የለም።';
+  String get faqNoItems => 'Yeroo ammaa gaaffilee hin jiru.';
 
   @override
-  String get videoPlaybackError => 'ቪዲዮ መጫን ላይ ስህተት።';
+  String get videoPlaybackError => 'Viidiyoo taphachuutti dogoggora';
 
   @override
-  String get otherItemsTabTitle => 'ሌሎች ይዘቶች';
+  String get otherItemsTabTitle => 'Qabxii Biraa';
 
   @override
-  String get noOtherVideosInChapter => 'በዚህ ምዕራፍ ሌሎች ቪዲዮዎች የሉም።';
+  String get noOtherVideosInChapter =>
+      'Boqonnaa kana keessatti viidiyoo biroo hin argamne.';
 
   @override
-  String get noOtherContentInChapter => 'በዚህ ምዕራፍ ሌሎች ይዘቶች የሉም።';
+  String get noOtherContentInChapter =>
+      'Boqonnaa kana keessatti qabxii biroo hin argamne.';
 
   @override
-  String get cannotPlayOtherVideoHere => 'ይህን ቪዲዮ እዚህ መጫን አልተቻለም።';
+  String get cannotPlayOtherVideoHere =>
+      'Viidiyoowwan biroo tarree kana irraa taphachuu hin danda\'u.';
 
   @override
-  String get noOnlineVideoUrlAvailable => ' የቪዲዮው መረጃ በመስመር ላይ አልተገኘም።';
+  String get noOnlineVideoUrlAvailable =>
+      ' Qabxii kanaaf URL viidiyoo online hin jiru.';
 
   @override
-  String get playOriginalOnline => 'መስመር ላይ ይጫኑ';
+  String get playOriginalOnline => 'Isa Jalqabaa Online Taphachiisi';
 
   @override
-  String get unexpectedError => 'ያልተጠበቀ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።';
+  String get unexpectedError => 'Dogoggora hin eegamne raawwate: ';
 
   @override
   String get loginFailedNoUserData =>
-      'Login failed: No user data returned by the server. Please try again or contact support.';
+      'Seenun hin milkoofne: Server odeeffannoo fayyaddamaa hin deebifne. Deebisee yaali ykn deggarsa qunnamaa.';
 
   @override
-  String get playDownloadedVideoTooltip => 'Play downloaded video';
+  String get playDownloadedVideoTooltip => 'Viidiyoo buufame taphachiisi';
 
   @override
-  String get openDownloadedDocumentTooltip => 'Open downloaded document';
+  String get openDownloadedDocumentTooltip => 'Sanada buufame banaa';
 
   @override
-  String get myExams => 'My Exams';
+  String get myExams => 'Qormaata Kiyya';
 
   @override
-  String get errorLoadingExams => 'Failed to load exams. Please try again.';
+  String get errorLoadingExams =>
+      'Qormaata fe\'uun hin milkoofne. Deebisee yaali.';
 
   @override
-  String get downloadExamTooltip => 'Download Exam';
+  String get downloadExamTooltip => 'Qormaata Buusi';
 
   @override
-  String get cancelDownloadTooltip => 'Cancel Download';
+  String get cancelDownloadTooltip => 'Buusuu Haqi';
 
   @override
-  String get deleteExamTooltip => 'Delete Exam';
+  String get deleteExamTooltip => 'Qormaata Haqii';
 
   @override
-  String get documentIsDownloadingMessage =>
-      'Document is currently downloading...';
+  String get documentIsDownloadingMessage => 'Sanadiin bu\'aa jira...';
 
   @override
-  String get quizIsDownloadingMessage => 'Exam is currently downloading...';
+  String get quizIsDownloadingMessage => 'Qormaanni bu\'aa jira...';
 
   @override
   String get couldNotOpenDownloadedFileError =>
-      'Could not open downloaded file';
+      'Faayilii buufame banuu hin dandeenye';
 
   @override
-  String get downloadQuizTooltip => 'Download exam';
+  String get downloadQuizTooltip => 'Qormaata buusi';
 
   @override
-  String get openDownloadedQuizTooltip => 'Open downloaded exam';
+  String get openDownloadedQuizTooltip => 'Qormaata buufame banaa';
 
   @override
-  String get fileDownloadedTooltip => 'File downloaded';
+  String get fileDownloadedTooltip => 'Faayiliin buufameera';
 
   @override
-  String get couldNotLoadItem => 'Could not load';
+  String get couldNotLoadItem => 'Fe\'uu hin dandeenye';
 
   @override
-  String get submitExam => 'Submit Exam';
+  String get submitExam => 'Qormaata Dhiyeessi';
 
   @override
-  String get noSemestersAvailable => 'No semesters available.';
+  String get noSemestersAvailable => 'Semeestaroonni hin jiran.';
 
   @override
-  String get notificationsTitle => 'Notifications';
+  String get notificationsTitle => 'Beeksisa';
 
   @override
-  String get noNotificationsMessage => 'You have no notifications yet';
+  String get noNotificationsMessage => 'Hanga ammaatti beeksisni hin jiru';
 }
