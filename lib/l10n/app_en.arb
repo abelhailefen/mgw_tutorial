@@ -421,5 +421,6 @@
   "openDownloadedQuizTooltip": "Open downloaded exam",
   "fileDownloadedTooltip": "File downloaded",
   "couldNotLoadItem": "Could not load",
-  "submitExam": "Submit Exam"
+  "submitExam": "Submit Exam",
+  "noSemestersAvailable": "No semesters available."
 }

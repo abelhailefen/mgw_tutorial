@@ -1003,4 +1003,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get submitExam => 'Submit Exam';
+
+  @override
+  String get noSemestersAvailable => 'No semesters available.';
 }

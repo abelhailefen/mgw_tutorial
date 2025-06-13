@@ -1937,6 +1937,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Submit Exam'**
   String get submitExam;
+
+  /// No description provided for @noSemestersAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No semesters available.'**
+  String get noSemestersAvailable;
 }
 
 class _AppLocalizationsDelegate
