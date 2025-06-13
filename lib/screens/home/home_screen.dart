@@ -1,11 +1,13 @@
 // lib/screens/home/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:mgw_tutorial/widgets/home/semesters_card.dart';
-import 'package:mgw_tutorial/widgets/home/notes_card.dart';
+import 'package:mgw_tutorial/widgets/home/notes_card.dart'; // This import seems unused in the provided code
 import 'package:mgw_tutorial/provider/semester_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/models/semester.dart';
 import 'package:mgw_tutorial/l10n/app_localizations.dart';
+// Import the new animated item widget
+import 'package:mgw_tutorial/widgets/common/animated_list_item.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -74,43 +76,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       ));
                 }
 
+                // Wrap each SemesterCard with AnimatedListItem
                 return Column(
                   children: semesterProvider.semesters.map((semester) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: SemestersCard(
-                        semester: semester,
+                    // Use ValueKey for proper list item animation state management
+                    return AnimatedListItem(
+                      key: ValueKey(semester.id), // Assuming Semester model has an 'id'
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: SemestersCard(
+                          semester: semester,
+                        ),
                       ),
                     );
                   }).toList(),
                 );
               },
             ),
-            const SizedBox(height: 16),
-            NotesCard( // CORRECTED: Added parameters
-              title: l10n.appTitle.contains("መጂወ") ? 'ማስታወሻዎች' : 'Notes',
-              description: l10n.appTitle.contains("መጂወ") ? 'ከአገር ዙሪያ ከተማሪዎች የሰበሰብናቸው ማስታወሻዎች።' : 'Notes we have collected from students all around the country.',
-              imageUrl: 'https://via.placeholder.com/600x200.png?text=Notes+Preview',
-              onTap: () {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(l10n.appTitle.contains("መጂወ") ? 'የማስታወሻዎች ክፍል በቅርቡ ይመጣል!' : 'Notes section coming soon!', style: TextStyle(color: theme.colorScheme.onSecondaryContainer)),
-                        backgroundColor: theme.colorScheme.secondaryContainer,
-                        behavior: SnackBarBehavior.floating,
-                    ),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            Padding( // CORRECTED: Added padding
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
-                l10n.appTitle.contains("መጂወ") ? 'ውጤታቸውን እያሳደጉ ካሉ ከ4,000 በላይ ተማሪዎች ጋር ይቀላቀሉ' : 'Join over 4,000 students who are already boosting their grades',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onBackground.withOpacity(0.8)),
-              ),
-            ),
-            const SizedBox(height: 20),
+           
+           
           ],
         ),
       ),

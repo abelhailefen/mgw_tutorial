@@ -6,6 +6,8 @@ import 'package:mgw_tutorial/models/api_course.dart';
 import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/api_course_provider.dart';
+// Import the new animated item widget
+import 'package:mgw_tutorial/widgets/common/animated_list_item.dart';
 
 
 class LibraryContentView extends StatefulWidget {
@@ -119,17 +121,22 @@ class _LibraryContentViewState extends State<LibraryContentView> {
           itemCount: displayCourses.length,
           itemBuilder: (context, index) {
             final course = displayCourses[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: CourseCard(
-                course: course,
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    CourseSectionsScreen.routeName,
-                    arguments: course,
-                  );
-                },
+            // Wrap the item with the animated widget
+            return AnimatedListItem(
+              // Using ValueKey is good practice in lists with animations/stateful items
+              key: ValueKey(course.id),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: CourseCard(
+                  course: course,
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      CourseSectionsScreen.routeName,
+                      arguments: course,
+                    );
+                  },
+                ),
               ),
             );
           },
