@@ -71,6 +71,14 @@ flutter:
     - assets/images/progress_chart.png
     - assets/images/exam_student.png
     - assets/images/explore_features.png
+    - assets/images/mpesa.png
+    - assets/images/telebirr.png
+    - assets/images/cbe.png
+    - assets/images/mpesa.png
+    - assets/images/kacha.png
+    - assets/images/enatbank.png
+    
+
   # ------------------- FONTS DECLARATION --------------------
   # This declares the NotoSansEthiopic font family and points to the
   # NotoSansEthiopic-Regular.ttf file as its primary (and only, in this scenario) asset.

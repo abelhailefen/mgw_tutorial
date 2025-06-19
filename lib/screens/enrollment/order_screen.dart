@@ -1,10 +1,7 @@
-// lib/screens/enrollment/order_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // For Clipboard
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/provider/auth_provider.dart';
-// import 'package:mgw_tutorial/provider/semester_provider.dart'; // Used Consumer directly
 import 'package:mgw_tutorial/provider/order_provider.dart';
 import 'package:mgw_tutorial/models/user.dart';
 import 'package:mgw_tutorial/models/semester.dart';
@@ -13,12 +10,12 @@ import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import 'package:mgw_tutorial/screens/main_screen.dart';
 import 'package:mgw_tutorial/provider/semester_provider.dart';
 
-
 class OrderScreen extends StatefulWidget {
   static const routeName = '/order-semester';
   final Semester semesterToEnroll;
+  final String? bankName;
 
-  const OrderScreen({super.key, required this.semesterToEnroll});
+  const OrderScreen({super.key, required this.semesterToEnroll, this.bankName});
 
   @override
   State<OrderScreen> createState() => _OrderScreenState();
@@ -26,7 +23,6 @@ class OrderScreen extends StatefulWidget {
 
 class _OrderScreenState extends State<OrderScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _bankNameController = TextEditingController();
   XFile? _pickedScreenshotFile;
   final ImagePicker _picker = ImagePicker();
   bool _agreedToTerms = false;
@@ -35,20 +31,13 @@ class _OrderScreenState extends State<OrderScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch semesters if not already loaded (e.g. if user directly navigates here somehow without Home screen)
-    // This is more of a fallback.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final semesterProvider = Provider.of<SemesterProvider>(context, listen: false);
-      if (semesterProvider.semesters.isEmpty) { // Only fetch if list is completely empty
+      final semesterProvider =
+          Provider.of<SemesterProvider>(context, listen: false);
+      if (semesterProvider.semesters.isEmpty) {
         semesterProvider.fetchSemesters();
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _bankNameController.dispose();
-    super.dispose();
   }
 
   Future<void> _pickScreenshot() async {
@@ -56,14 +45,18 @@ class _OrderScreenState extends State<OrderScreen> {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     try {
-      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      final XFile? pickedFile =
+          await _picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null && mounted) {
-        setState(() { _pickedScreenshotFile = pickedFile; });
+        setState(() {
+          _pickedScreenshotFile = pickedFile;
+        });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(l10n.errorPickingImage(e.toString()), style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+          content: Text(l10n.errorPickingImage(e.toString()),
+              style: TextStyle(color: theme.colorScheme.onErrorContainer)),
           backgroundColor: theme.colorScheme.errorContainer,
           behavior: SnackBarBehavior.floating,
         ));
@@ -82,7 +75,8 @@ class _OrderScreenState extends State<OrderScreen> {
     final User? currentUser = authProvider.currentUser;
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(l10n.pleaseLoginOrRegister, style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+        content: Text(l10n.pleaseLoginOrRegister,
+            style: TextStyle(color: theme.colorScheme.onErrorContainer)),
         backgroundColor: theme.colorScheme.errorContainer,
         behavior: SnackBarBehavior.floating,
       ));
@@ -90,19 +84,32 @@ class _OrderScreenState extends State<OrderScreen> {
     }
 
     orderProvider.clearError();
-    setState(() { _hasAttemptedSubmit = true; });
+    setState(() {
+      _hasAttemptedSubmit = true;
+    });
 
-    if (!_formKey.currentState!.validate()) return;
+    // No bank name field, skip validation for it
 
     if (_pickedScreenshotFile == null) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.pleaseAttachScreenshotError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(l10n.pleaseAttachScreenshotError,
+              style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+          backgroundColor: theme.colorScheme.errorContainer,
+          behavior: SnackBarBehavior.floating,
+        ));
       return;
     }
     if (!_agreedToTerms) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.pleaseAgreeToTermsError, style: TextStyle(color: theme.colorScheme.onErrorContainer)), backgroundColor: theme.colorScheme.errorContainer, behavior: SnackBarBehavior.floating,));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(l10n.pleaseAgreeToTermsError,
+              style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+          backgroundColor: theme.colorScheme.errorContainer,
+          behavior: SnackBarBehavior.floating,
+        ));
       return;
     }
-    // Bank name validation is handled by TextFormField
 
     List<AppOrder.OrderSelectionItem> orderSelections = [
       AppOrder.OrderSelectionItem(
@@ -112,14 +119,15 @@ class _OrderScreenState extends State<OrderScreen> {
     ];
 
     String phoneForOrder = currentUser.phone;
-    if (currentUser.phone.startsWith('+251') && currentUser.phone.length == 13) {
-        phoneForOrder = '0${currentUser.phone.substring(4)}';
+    if (currentUser.phone.startsWith('+251') &&
+        currentUser.phone.length == 13) {
+      phoneForOrder = '0${currentUser.phone.substring(4)}';
     }
 
     final AppOrder.Order orderPayload = AppOrder.Order(
       fullName: '${currentUser.firstName} ${currentUser.lastName}'.trim(),
       phone: phoneForOrder,
-      bankName: _bankNameController.text.trim(),
+      bankName: widget.bankName ?? "",
       type: "semester_enrollment",
       status: "pending_approval",
       selections: orderSelections,
@@ -135,19 +143,21 @@ class _OrderScreenState extends State<OrderScreen> {
     if (orderCreationSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.enrollmentRequestSuccess, style: TextStyle(color: theme.colorScheme.onPrimaryContainer)),
+          content: Text(l10n.enrollmentRequestSuccess,
+              style: TextStyle(color: theme.colorScheme.onPrimaryContainer)),
           backgroundColor: theme.colorScheme.primaryContainer,
           behavior: SnackBarBehavior.floating,
         ),
       );
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const MainScreen()),
-            (Route<dynamic> route) => false,
+        (Route<dynamic> route) => false,
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(orderProvider.error ?? l10n.enrollmentRequestFailed, style: TextStyle(color: theme.colorScheme.onErrorContainer)),
+          content: Text(orderProvider.error ?? l10n.enrollmentRequestFailed,
+              style: TextStyle(color: theme.colorScheme.onErrorContainer)),
           backgroundColor: theme.colorScheme.errorContainer,
           duration: const Duration(seconds: 5),
           behavior: SnackBarBehavior.floating,
@@ -164,11 +174,13 @@ class _OrderScreenState extends State<OrderScreen> {
 
     if (authProvider.currentUser == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-          if(mounted) Navigator.of(context).pop();
+        if (mounted) Navigator.of(context).pop();
       });
       return Scaffold(
         appBar: AppBar(title: Text(l10n.registerforcourses)),
-        body: Center(child: Text(l10n.pleaseLoginOrRegister, style: theme.textTheme.titleLarge)),
+        body: Center(
+            child: Text(l10n.pleaseLoginOrRegister,
+                style: theme.textTheme.titleLarge)),
       );
     }
 
@@ -180,11 +192,14 @@ class _OrderScreenState extends State<OrderScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          autovalidateMode: _hasAttemptedSubmit ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
+          autovalidateMode: _hasAttemptedSubmit
+              ? AutovalidateMode.onUserInteraction
+              : AutovalidateMode.disabled,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(l10n.selectedSemesterLabel, style: theme.textTheme.titleMedium),
+              Text(l10n.selectedSemesterLabel,
+                  style: theme.textTheme.titleMedium),
               const SizedBox(height: 4),
               Card(
                 elevation: 2,
@@ -195,7 +210,9 @@ class _OrderScreenState extends State<OrderScreen> {
                     children: [
                       Text(
                         "${widget.semesterToEnroll.name} - ${widget.semesterToEnroll.year}",
-                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -204,8 +221,13 @@ class _OrderScreenState extends State<OrderScreen> {
                       ),
                       if (widget.semesterToEnroll.courses.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        Text(l10n.coursesIncludedLabel, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                        ...widget.semesterToEnroll.courses.map((course) => Text("- ${course.name}", style: theme.textTheme.bodyMedium)).toList(),
+                        Text(l10n.coursesIncludedLabel,
+                            style: theme.textTheme.labelLarge
+                                ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                        ...widget.semesterToEnroll.courses
+                            .map((course) => Text("- ${course.name}",
+                                style: theme.textTheme.bodyMedium))
+                            .toList(),
                       ]
                     ],
                   ),
@@ -216,48 +238,39 @@ class _OrderScreenState extends State<OrderScreen> {
               Text(l10n.paymentInstruction, style: theme.textTheme.bodyMedium),
               const SizedBox(height: 16),
 
-              TextFormField(
-                controller: _bankNameController,
-                decoration: InputDecoration(
-                  labelText: l10n.bankNamePaymentLabel,
-                  hintText: l10n.bankNamePaymentHint,
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return l10n.bankNameValidationError;
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
+              // Bank name field is now hidden/commented out
 
               OutlinedButton.icon(
-                  icon: Icon(Icons.attach_file, color: theme.colorScheme.primary),
+                  icon: Icon(Icons.attach_file,
+                      color: theme.colorScheme.primary),
                   label: Text(
-                      _pickedScreenshotFile == null ? l10n.attachScreenshotButton : l10n.screenshotAttachedButton,
-                      style: TextStyle(color: theme.colorScheme.primary),
+                    _pickedScreenshotFile == null
+                        ? l10n.attachScreenshotButton
+                        : l10n.screenshotAttachedButton,
+                    style: TextStyle(color: theme.colorScheme.primary),
                   ),
                   onPressed: _pickScreenshot,
                   style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      textStyle: const TextStyle(fontSize: 16),
-                      side: BorderSide(color: theme.colorScheme.primary),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-                  )
-              ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    textStyle: const TextStyle(fontSize: 16),
+                    side: BorderSide(color: theme.colorScheme.primary),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0)),
+                  )),
               if (_pickedScreenshotFile != null)
                 Padding(
                     padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                        '${l10n.fileNamePrefix}: ${_pickedScreenshotFile!.name}',
+                    child: Text('${l10n.fileNamePrefix}: ${_pickedScreenshotFile!.name}',
                         style: TextStyle(color: theme.colorScheme.secondary),
                         textAlign: TextAlign.center,
                         overflow: TextOverflow.ellipsis)),
               if (_hasAttemptedSubmit && _pickedScreenshotFile == null)
-                 Padding(
-                   padding: const EdgeInsets.only(top: 8.0, left: 12.0),
-                   child: Text(l10n.pleaseAttachScreenshotError, style: TextStyle(color: theme.colorScheme.error, fontSize: 12)),
-                 ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                  child: Text(l10n.pleaseAttachScreenshotError,
+                      style: TextStyle(
+                          color: theme.colorScheme.error, fontSize: 12)),
+                ),
               const SizedBox(height: 24),
 
               CheckboxListTile(
@@ -266,21 +279,32 @@ class _OrderScreenState extends State<OrderScreen> {
                         style: theme.textTheme.bodyMedium,
                         children: [
                       TextSpan(text: l10n.termsAndConditionsAgreement),
-                      TextSpan(text: l10n.termsAndConditionsLink, style: TextStyle(color: theme.colorScheme.primary, decoration: TextDecoration.underline)),
+                      TextSpan(
+                          text: l10n.termsAndConditionsLink,
+                          style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              decoration: TextDecoration.underline)),
                       TextSpan(text: l10n.termsAndConditionsAnd),
-                      TextSpan(text: l10n.privacyPolicyLink, style: TextStyle(color: theme.colorScheme.primary, decoration: TextDecoration.underline))
+                      TextSpan(
+                          text: l10n.privacyPolicyLink,
+                          style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              decoration: TextDecoration.underline))
                     ])),
                 value: _agreedToTerms,
-                onChanged: (bool? value) => setState(() => _agreedToTerms = value ?? false),
+                onChanged: (bool? value) =>
+                    setState(() => _agreedToTerms = value ?? false),
                 controlAffinity: ListTileControlAffinity.leading,
                 activeColor: theme.colorScheme.primary,
                 contentPadding: EdgeInsets.zero,
               ),
               if (_hasAttemptedSubmit && !_agreedToTerms)
-                 Padding(
-                   padding: const EdgeInsets.only(top: 8.0, left: 12.0),
-                   child: Text(l10n.pleaseAgreeToTermsError, style: TextStyle(color: theme.colorScheme.error, fontSize: 12)),
-                 ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                  child: Text(l10n.pleaseAgreeToTermsError,
+                      style:
+                          TextStyle(color: theme.colorScheme.error, fontSize: 12)),
+                ),
               const SizedBox(height: 30),
 
               Center(
@@ -291,15 +315,17 @@ class _OrderScreenState extends State<OrderScreen> {
                         : SizedBox(
                             width: MediaQuery.of(context).size.width * 0.8,
                             child: ElevatedButton(
-                              onPressed: _submitOrder,
-                              style: theme.elevatedButtonTheme.style?.copyWith(
-                                padding: MaterialStateProperty.all(const EdgeInsets.symmetric(vertical: 16)),
-                              ),
-                              child: Text(
-                                l10n.submitEnrollmentRequestButton,
-                                textAlign: TextAlign.center,
-                              )
-                            ),
+                                onPressed: _submitOrder,
+                                style: theme.elevatedButtonTheme.style
+                                    ?.copyWith(
+                                  padding: MaterialStateProperty.all(
+                                      const EdgeInsets.symmetric(
+                                          vertical: 16)),
+                                ),
+                                child: Text(
+                                  l10n.submitEnrollmentRequestButton,
+                                  textAlign: TextAlign.center,
+                                )),
                           );
                   },
                 ),

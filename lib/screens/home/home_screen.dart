@@ -1,7 +1,6 @@
 // lib/screens/home/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:mgw_tutorial/widgets/home/semesters_card.dart';
-import 'package:mgw_tutorial/widgets/home/notes_card.dart'; // Still unused in the snippet, keeping for consistency
 import 'package:mgw_tutorial/provider/semester_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:mgw_tutorial/models/semester.dart';
