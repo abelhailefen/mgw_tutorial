@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mgw_tutorial/screens/intro_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:media_kit/media_kit.dart';
@@ -401,6 +402,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/main': (ctx) => const MainScreen(),
         '/login': (ctx) => const LoginScreen(),
+        '/intro': (ctx) => const IntroScreen(),
         AboutUsScreen.routeName: (ctx) => const AboutUsScreen(),
         SettingsScreen.routeName: (ctx) => const SettingsScreen(),
         DiscussionGroupScreen.routeName: (ctx) => const DiscussionGroupScreen(),

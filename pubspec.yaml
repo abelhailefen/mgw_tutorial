@@ -68,6 +68,9 @@ flutter:
   assets:
     - assets/fonts/ # This makes all files in assets/fonts/ available
     - assets/images/logo.png
+    - assets/images/progress_chart.png
+    - assets/images/exam_student.png
+    - assets/images/explore_features.png
   # ------------------- FONTS DECLARATION --------------------
   # This declares the NotoSansEthiopic font family and points to the
   # NotoSansEthiopic-Regular.ttf file as its primary (and only, in this scenario) asset.
