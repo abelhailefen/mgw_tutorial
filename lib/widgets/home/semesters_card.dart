@@ -94,11 +94,11 @@ class SemestersCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8.0),
                     child: Image.network(
                       displayImageUrl,
-                      height: 150,
+                      height:180,
                       width: double.infinity,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.fill,
                       errorBuilder: (context, error, stackTrace) => Container(
-                        height: 150,
+                        height: 160,
                         color: theme.colorScheme.surfaceVariant,
                         child: Center(
                             child: Icon(Icons.broken_image,
