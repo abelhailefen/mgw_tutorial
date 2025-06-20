@@ -59,10 +59,11 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             _isLoading = false;
           });
         } else {
-          throw FileSystemException("Downloaded PDF not found at path: ${widget.pdfUrl}");
+          throw FileSystemException(
+              "Downloaded PDF not found at path: ${widget.pdfUrl}");
         }
       } else {
-        const String baseUrl = "https://lessonservice.amtprinting19.com";
+        const String baseUrl = "https://lessonservice.mgwcommunity.com";
         final String fullUrl = widget.pdfUrl.startsWith("http")
             ? widget.pdfUrl
             : "$baseUrl${widget.pdfUrl}";
@@ -75,7 +76,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           }
 
           final tempDir = await getTemporaryDirectory();
-          final safeFileName = widget.title.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');
+          final safeFileName = widget.title
+              .replaceAll(RegExp(r'[^\w\s-]'), '')
+              .replaceAll(' ', '_');
           final tempFile = File('${tempDir.path}/$safeFileName.pdf');
 
           try {

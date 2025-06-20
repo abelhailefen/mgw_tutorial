@@ -1,6 +1,5 @@
 // lib/widgets/library/course_card.dart
 import 'package:flutter/material.dart';
-import 'package:mgw_tutorial/l10n/app_localizations.dart';
 import 'package:mgw_tutorial/models/api_course.dart';
 import 'dart:io'; // Needed for File
 

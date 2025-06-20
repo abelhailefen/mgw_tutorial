@@ -112,7 +112,7 @@ class _LessonListScreenState extends State<LessonListScreen> with SingleTickerPr
         else if ((lesson.lessonType == LessonType.quiz || lesson.lessonType == LessonType.text) && lesson.htmlUrl != null && lesson.htmlUrl!.isNotEmpty) contentUrl = lesson.htmlUrl;
     }
 
-    const String baseUrl = "https://lessonservice.amtprinting19.com";
+    const String baseUrl = "https://lessonservice.mgwcommunity.com";
      if (!isLocal && contentUrl != null && contentUrl.isNotEmpty && !contentUrl.startsWith("http")) {
         contentUrl = "$baseUrl$contentUrl";
      }
