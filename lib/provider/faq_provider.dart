@@ -9,12 +9,14 @@ class FaqProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  List<Faq> get faqs => _faqs.where((faq) => faq.isActive).toList(); // Only show active FAQs
-  List<Faq> get allFaqs => _faqs; // If you need to access all, e.g., for an admin panel
+  List<Faq> get faqs =>
+      _faqs.where((faq) => faq.isActive).toList(); // Only show active FAQs
+  List<Faq> get allFaqs =>
+      _faqs; // If you need to access all, e.g., for an admin panel
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  final String _apiUrl = "https://courseservice.anbesgames.com/api/faqs";
+  final String _apiUrl = "https://courseservice.mgwcommunity.com/api/faqs";
 
   Future<void> fetchFaqs({bool forceRefresh = false}) async {
     if (_faqs.isNotEmpty && !forceRefresh && _error == null) {
@@ -28,7 +30,6 @@ class FaqProvider with ChangeNotifier {
     // Or notify if you have a dedicated loading UI that depends on this initial state
     // notifyListeners();
 
-
     try {
       final response = await http.get(Uri.parse(_apiUrl));
 
@@ -40,7 +41,8 @@ class FaqProvider with ChangeNotifier {
         // Attempt to parse error message from backend
         try {
           final errorData = json.decode(response.body);
-          _error = errorData['message'] ?? 'Failed to load FAQs. Status code: ${response.statusCode}';
+          _error = errorData['message'] ??
+              'Failed to load FAQs. Status code: ${response.statusCode}';
         } catch (e) {
           _error = 'Failed to load FAQs. Status code: ${response.statusCode}';
         }

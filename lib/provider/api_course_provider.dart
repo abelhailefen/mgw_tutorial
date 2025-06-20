@@ -19,16 +19,18 @@ class ApiCourseProvider with ChangeNotifier {
 
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  static const String _apiBaseUrl = "https://courseservice.anbesgames.com/api";
+  static const String _apiBaseUrl =
+      "https://courseservice.mgwcommunity.com/api";
 
-  static const String _networkErrorMessage = "Sorry, there seems to be a network error. Please check your connection and try again.";
-  static const String _timeoutErrorMessage = "The request timed out. Please check your connection or try again later.";
+  static const String _networkErrorMessage =
+      "Sorry, there seems to be a network error. Please check your connection and try again.";
+  static const String _timeoutErrorMessage =
+      "The request timed out. Please check your connection or try again later.";
   static const String _unexpectedErrorMessage = "An unexpected error occurred.";
   static const String _failedToLoadCoursesMessage = "Failed to load courses.";
 
   Future<void> fetchCourses({bool forceRefresh = false}) async {
     if (!forceRefresh && _courses.isNotEmpty) {
- 
     } else {
       // If force refreshing or no data, clear current data and show loading
       _isLoading = true;
@@ -49,7 +51,8 @@ class ApiCourseProvider with ChangeNotifier {
     if (!isOnline) {
       // Device is offline, skip API, load from DB immediately.
       try {
-        final List<Map<String, dynamic>> courseMaps = await _dbHelper.query('courses', orderBy: 'title ASC');
+        final List<Map<String, dynamic>> courseMaps =
+            await _dbHelper.query('courses', orderBy: 'title ASC');
         _courses = courseMaps.map((map) => ApiCourse.fromMap(map)).toList();
 
         // Re-validate local thumbnail paths for loaded courses
@@ -64,9 +67,7 @@ class ApiCourseProvider with ChangeNotifier {
           }
         }
 
-        _error = _courses.isEmpty
-            ? _failedToLoadCoursesMessage
-            : null;
+        _error = _courses.isEmpty ? _failedToLoadCoursesMessage : null;
       } catch (dbError) {
         _courses = [];
         _error = "Failed to load courses from database.";
@@ -89,7 +90,9 @@ class ApiCourseProvider with ChangeNotifier {
 
         if (decodedBody is List) {
           extractedData = decodedBody;
-        } else if (decodedBody is Map<String, dynamic> && decodedBody.containsKey('courses') && decodedBody['courses'] is List) {
+        } else if (decodedBody is Map<String, dynamic> &&
+            decodedBody.containsKey('courses') &&
+            decodedBody['courses'] is List) {
           extractedData = decodedBody['courses'];
         } else {
           throw Exception("API response format is unexpected.");
@@ -100,7 +103,8 @@ class ApiCourseProvider with ChangeNotifier {
               try {
                 return ApiCourse.fromJson(courseJson as Map<String, dynamic>);
               } catch (e, s) {
-                print("Error parsing individual course JSON: ${e.runtimeType}: $e\n$s\nProblematic JSON: $courseJson");
+                print(
+                    "Error parsing individual course JSON: ${e.runtimeType}: $e\n$s\nProblematic JSON: $courseJson");
                 return null;
               }
             })
@@ -119,15 +123,19 @@ class ApiCourseProvider with ChangeNotifier {
           networkSuccess = true;
           _error = null; // Clear any previous error if fetch was successful
         }
-
       } else {
-        String apiError = '$_failedToLoadCoursesMessage (Status: ${response.statusCode})';
+        String apiError =
+            '$_failedToLoadCoursesMessage (Status: ${response.statusCode})';
         try {
           final errorBody = json.decode(response.body);
           if (errorBody is Map) {
-            if (errorBody.containsKey('message') && errorBody['message'] != null && errorBody['message'].toString().isNotEmpty) {
+            if (errorBody.containsKey('message') &&
+                errorBody['message'] != null &&
+                errorBody['message'].toString().isNotEmpty) {
               apiError = errorBody['message'].toString();
-            } else if (errorBody.containsKey('error') && errorBody['error'] != null && errorBody['error'].toString().isNotEmpty) {
+            } else if (errorBody.containsKey('error') &&
+                errorBody['error'] != null &&
+                errorBody['error'].toString().isNotEmpty) {
               apiError = errorBody['error'].toString();
             }
           }
@@ -156,9 +164,11 @@ class ApiCourseProvider with ChangeNotifier {
     // or if forceRefresh requires potentially clearing old data, load from DB.
     // Load from DB also happens if network was successful but fetched data was the same,
     // to ensure local paths are re-validated/set correctly for existing items.
-    if (!networkSuccess || _courses.isEmpty) { // _courses could be empty if network failed OR if network succeeded but returned empty list
+    if (!networkSuccess || _courses.isEmpty) {
+      // _courses could be empty if network failed OR if network succeeded but returned empty list
       try {
-        final List<Map<String, dynamic>> courseMaps = await _dbHelper.query('courses', orderBy: 'title ASC');
+        final List<Map<String, dynamic>> courseMaps =
+            await _dbHelper.query('courses', orderBy: 'title ASC');
         _courses = courseMaps.map((map) => ApiCourse.fromMap(map)).toList();
 
         // Re-validate local thumbnail paths for loaded courses
@@ -185,7 +195,8 @@ class ApiCourseProvider with ChangeNotifier {
               : null;
         }
       } catch (dbError, dbStack) {
-        print("Error loading courses from DB after network failure: $dbError\n$dbStack");
+        print(
+            "Error loading courses from DB after network failure: $dbError\n$dbStack");
         _courses = [];
         _error = networkAttempted
             ? (networkError ?? "Failed to load courses from database.")
@@ -206,13 +217,16 @@ class ApiCourseProvider with ChangeNotifier {
     try {
       final db = await _dbHelper.database;
       List<String> oldThumbnailPaths = [];
-      List<String> newCourseIds = coursesToSave.map((c) => c.id.toString()).toList();
+      List<String> newCourseIds =
+          coursesToSave.map((c) => c.id.toString()).toList();
 
       try {
         await db.transaction((txn) async {
           oldThumbnailPaths = await _dbHelper.getOldThumbnailPathsInTxn(txn);
           if (newCourseIds.isNotEmpty) {
-            await txn.delete('courses', where: 'id NOT IN (${newCourseIds.map((_) => '?').join(',')})', whereArgs: newCourseIds);
+            await txn.delete('courses',
+                where: 'id NOT IN (${newCourseIds.map((_) => '?').join(',')})',
+                whereArgs: newCourseIds);
           } else {
             await txn.delete('courses'); // Delete all if the new list is empty
           }
@@ -275,7 +289,8 @@ class ApiCourseProvider with ChangeNotifier {
           a[i].price != b[i].price ||
           a[i].discountFlag != b[i].discountFlag ||
           a[i].discountedPrice != b[i].discountedPrice ||
-          a[i].thumbnail != b[i].thumbnail || // Important to check thumbnail URL change
+          a[i].thumbnail !=
+              b[i].thumbnail || // Important to check thumbnail URL change
           a[i].videoUrl != b[i].videoUrl ||
           a[i].isTopCourse != b[i].isTopCourse ||
           a[i].status != b[i].status ||
@@ -283,8 +298,10 @@ class ApiCourseProvider with ChangeNotifier {
           a[i].isFreeCourse != b[i].isFreeCourse ||
           a[i].multiInstructor != b[i].multiInstructor ||
           a[i].creator != b[i].creator ||
-          a[i].createdAt.toIso8601String() != b[i].createdAt.toIso8601String() ||
-          a[i].updatedAt.toIso8601String() != b[i].updatedAt.toIso8601String() ||
+          a[i].createdAt.toIso8601String() !=
+              b[i].createdAt.toIso8601String() ||
+          a[i].updatedAt.toIso8601String() !=
+              b[i].updatedAt.toIso8601String() ||
           !listEqualsString(a[i].outcomes, b[i].outcomes) ||
           !listEqualsString(a[i].requirements, b[i].requirements) ||
           a[i].category?.id != b[i].category?.id ||
@@ -318,7 +335,8 @@ class ApiCourseProvider with ChangeNotifier {
             Uri? uri;
             try {
               uri = Uri.parse(imageUrl);
-              if (!uri.hasScheme || !(uri.scheme == 'http' || uri.scheme == 'https')) {
+              if (!uri.hasScheme ||
+                  !(uri.scheme == 'http' || uri.scheme == 'https')) {
                 course.localThumbnailPath = null;
                 continue;
               }
@@ -331,7 +349,8 @@ class ApiCourseProvider with ChangeNotifier {
             String pathSegment = uri.path;
             int lastDot = pathSegment.lastIndexOf('.');
             if (lastDot != -1 && pathSegment.length > lastDot + 1) {
-              fileExtension = pathSegment.substring(lastDot + 1).split('?').first;
+              fileExtension =
+                  pathSegment.substring(lastDot + 1).split('?').first;
             } else if (uri.queryParameters.containsKey('format')) {
               fileExtension = uri.queryParameters['format']!;
             }
@@ -346,7 +365,8 @@ class ApiCourseProvider with ChangeNotifier {
               continue; // Skip download if file exists
             }
 
-            final response = await client.get(uri).timeout(const Duration(seconds: 15));
+            final response =
+                await client.get(uri).timeout(const Duration(seconds: 15));
 
             if (response.statusCode == 200) {
               await localFile.writeAsBytes(response.bodyBytes);

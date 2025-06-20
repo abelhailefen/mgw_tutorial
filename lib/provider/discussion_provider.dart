@@ -14,7 +14,8 @@ class DiscussionProvider with ChangeNotifier {
   late final CommentProvider _commentProvider;
   late final ReplyProvider _replyProvider;
 
-  static const String _apiBaseUrl = "https://courseservice.anbesgames.com/api";
+  static const String _apiBaseUrl =
+      "https://courseservice.mgwcommunity.com/api";
 
   // UI specific error states for submission forms
   String? _submitPostError;
@@ -29,7 +30,6 @@ class DiscussionProvider with ChangeNotifier {
   bool _isSubmittingReply = false;
   bool _isUpdatingItem = false;
   bool _isDeletingItem = false;
-
 
   DiscussionProvider(this._authProvider) {
     _postProvider = PostProvider(_apiBaseUrl, _authProvider);
@@ -63,15 +63,21 @@ class DiscussionProvider with ChangeNotifier {
   bool get isLoadingPosts => _postProvider.isLoading;
   String? get postsError => _postProvider.error;
 
-  List<Comment> commentsForPost(int postId) => _commentProvider.commentsForPost(postId);
-  bool isLoadingCommentsForPost(int postId) => _commentProvider.isLoadingForPost(postId);
-  String? commentErrorForPost(int postId) => _commentProvider.errorForPost(postId);
-  
-  List<Reply> repliesForComment(int commentId) => _replyProvider.repliesForComment(commentId);
-  bool isLoadingRepliesForComment(int commentId) => _replyProvider.isLoadingForComment(commentId);
-  String? replyErrorForComment(int commentId) => _replyProvider.errorForComment(commentId);
-  bool allRepliesLoadedForComment(int commentId) => _replyProvider.allRepliesLoadedForComment(commentId);
+  List<Comment> commentsForPost(int postId) =>
+      _commentProvider.commentsForPost(postId);
+  bool isLoadingCommentsForPost(int postId) =>
+      _commentProvider.isLoadingForPost(postId);
+  String? commentErrorForPost(int postId) =>
+      _commentProvider.errorForPost(postId);
 
+  List<Reply> repliesForComment(int commentId) =>
+      _replyProvider.repliesForComment(commentId);
+  bool isLoadingRepliesForComment(int commentId) =>
+      _replyProvider.isLoadingForComment(commentId);
+  String? replyErrorForComment(int commentId) =>
+      _replyProvider.errorForComment(commentId);
+  bool allRepliesLoadedForComment(int commentId) =>
+      _replyProvider.allRepliesLoadedForComment(commentId);
 
   // --- Getters for UI-specific states ---
   String? get submitPostError => _submitPostError;
@@ -89,20 +95,29 @@ class DiscussionProvider with ChangeNotifier {
   // --- Post Methods ---
   Future<void> fetchPosts() async => await _postProvider.fetchPosts();
 
-  Future<bool> createPost({required String title, required String description}) async {
+  Future<bool> createPost(
+      {required String title, required String description}) async {
     _isSubmittingPost = true;
     _submitPostError = null;
     notifyListeners();
-    final result = await _postProvider.createPost(title: title, description: description);
+    final result =
+        await _postProvider.createPost(title: title, description: description);
     _isSubmittingPost = false;
     if (!result['success']) _submitPostError = result['message'];
     notifyListeners();
     return result['success'];
   }
+
   // ... (Update/Delete Post methods delegating and managing UI state)
-  Future<bool> updatePost({required int postId, required String title, required String description}) async {
-    _isUpdatingItem = true; _updateItemError = null; notifyListeners();
-    final result = await _postProvider.updatePost(postId: postId, title: title, description: description);
+  Future<bool> updatePost(
+      {required int postId,
+      required String title,
+      required String description}) async {
+    _isUpdatingItem = true;
+    _updateItemError = null;
+    notifyListeners();
+    final result = await _postProvider.updatePost(
+        postId: postId, title: title, description: description);
     _isUpdatingItem = false;
     if (!result['success']) _updateItemError = result['message'];
     notifyListeners();
@@ -110,7 +125,9 @@ class DiscussionProvider with ChangeNotifier {
   }
 
   Future<bool> deletePost(int postId) async {
-    _isDeletingItem = true; _deleteItemError = null; notifyListeners();
+    _isDeletingItem = true;
+    _deleteItemError = null;
+    notifyListeners();
     final result = await _postProvider.deletePost(postId);
     _isDeletingItem = false;
     if (!result['success']) _deleteItemError = result['message'];
@@ -118,76 +135,112 @@ class DiscussionProvider with ChangeNotifier {
     return result['success'];
   }
 
-
   // --- Comment Methods ---
-  Future<void> fetchCommentsForPost(int postId, {bool forceRefresh = false}) async {
-      await _commentProvider.fetchCommentsForPost(postId, forceRefresh: forceRefresh);
-      // After fetching comments, iterate and fetch their replies if not already loaded or forced
-      if (forceRefresh || _commentProvider.commentsForPost(postId).any((c) => !_replyProvider.allRepliesLoadedForComment(c.id))) {
-          for (var comment in _commentProvider.commentsForPost(postId)) {
-              await _replyProvider.fetchRepliesForComment(comment.id, forceRefresh: forceRefresh);
-          }
+  Future<void> fetchCommentsForPost(int postId,
+      {bool forceRefresh = false}) async {
+    await _commentProvider.fetchCommentsForPost(postId,
+        forceRefresh: forceRefresh);
+    // After fetching comments, iterate and fetch their replies if not already loaded or forced
+    if (forceRefresh ||
+        _commentProvider
+            .commentsForPost(postId)
+            .any((c) => !_replyProvider.allRepliesLoadedForComment(c.id))) {
+      for (var comment in _commentProvider.commentsForPost(postId)) {
+        await _replyProvider.fetchRepliesForComment(comment.id,
+            forceRefresh: forceRefresh);
       }
+    }
   }
 
-  Future<bool> createTopLevelComment({required int postId, required String commentText}) async {
+  Future<bool> createTopLevelComment(
+      {required int postId, required String commentText}) async {
     _isSubmittingComment = true;
     _submitCommentError = null;
     notifyListeners();
-    final result = await _commentProvider.createComment(postId: postId, commentText: commentText);
+    final result = await _commentProvider.createComment(
+        postId: postId, commentText: commentText);
     _isSubmittingComment = false;
     if (!result['success']) _submitCommentError = result['message'];
     notifyListeners();
     return result['success'];
   }
-   Future<bool> updateComment({required int commentId, required int postId, required String newCommentText}) async {
-    _isUpdatingItem = true; _updateItemError = null; notifyListeners();
-    final result = await _commentProvider.updateComment(commentId: commentId, postId: postId, newCommentText: newCommentText);
+
+  Future<bool> updateComment(
+      {required int commentId,
+      required int postId,
+      required String newCommentText}) async {
+    _isUpdatingItem = true;
+    _updateItemError = null;
+    notifyListeners();
+    final result = await _commentProvider.updateComment(
+        commentId: commentId, postId: postId, newCommentText: newCommentText);
     _isUpdatingItem = false;
     if (!result['success']) _updateItemError = result['message'];
     notifyListeners();
     return result['success'];
   }
 
-  Future<bool> deleteComment({required int commentId, required int postId}) async {
-    _isDeletingItem = true; _deleteItemError = null; notifyListeners();
-    final result = await _commentProvider.deleteComment(commentId: commentId, postId: postId);
+  Future<bool> deleteComment(
+      {required int commentId, required int postId}) async {
+    _isDeletingItem = true;
+    _deleteItemError = null;
+    notifyListeners();
+    final result = await _commentProvider.deleteComment(
+        commentId: commentId, postId: postId);
     _isDeletingItem = false;
     if (!result['success']) _deleteItemError = result['message'];
     notifyListeners();
     return result['success'];
   }
 
-
   // --- Reply Methods ---
-  Future<void> fetchRepliesForComment(int commentId, {bool forceRefresh = false}) async => await _replyProvider.fetchRepliesForComment(commentId, forceRefresh: forceRefresh);
-  
-  Future<bool> createReply({required int parentCommentId, required String content, int? parentReplyId}) async {
+  Future<void> fetchRepliesForComment(int commentId,
+          {bool forceRefresh = false}) async =>
+      await _replyProvider.fetchRepliesForComment(commentId,
+          forceRefresh: forceRefresh);
+
+  Future<bool> createReply(
+      {required int parentCommentId,
+      required String content,
+      int? parentReplyId}) async {
     _isSubmittingReply = true;
     _submitReplyError = null;
     notifyListeners();
     final result = await _replyProvider.createReply(
-        parentCommentId: parentCommentId, 
-        content: content,
-        parentReplyId: parentReplyId,
+      parentCommentId: parentCommentId,
+      content: content,
+      parentReplyId: parentReplyId,
     );
     _isSubmittingReply = false;
     if (!result['success']) _submitReplyError = result['message'];
     notifyListeners();
     return result['success'];
   }
-  Future<bool> updateReply({required int parentCommentId, required int replyId, required String newContent}) async {
-    _isUpdatingItem = true; _updateItemError = null; notifyListeners();
-    final result = await _replyProvider.updateReply(parentCommentId: parentCommentId, replyId: replyId, newContent: newContent);
+
+  Future<bool> updateReply(
+      {required int parentCommentId,
+      required int replyId,
+      required String newContent}) async {
+    _isUpdatingItem = true;
+    _updateItemError = null;
+    notifyListeners();
+    final result = await _replyProvider.updateReply(
+        parentCommentId: parentCommentId,
+        replyId: replyId,
+        newContent: newContent);
     _isUpdatingItem = false;
     if (!result['success']) _updateItemError = result['message'];
     notifyListeners();
     return result['success'];
   }
 
-  Future<bool> deleteReply({required int parentCommentId, required int replyId}) async {
-    _isDeletingItem = true; _deleteItemError = null; notifyListeners();
-    final result = await _replyProvider.deleteReply(parentCommentId: parentCommentId, replyId: replyId);
+  Future<bool> deleteReply(
+      {required int parentCommentId, required int replyId}) async {
+    _isDeletingItem = true;
+    _deleteItemError = null;
+    notifyListeners();
+    final result = await _replyProvider.deleteReply(
+        parentCommentId: parentCommentId, replyId: replyId);
     _isDeletingItem = false;
     if (!result['success']) _deleteItemError = result['message'];
     notifyListeners();

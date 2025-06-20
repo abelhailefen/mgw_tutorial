@@ -15,18 +15,22 @@ class ChapterProvider with ChangeNotifier {
   String? getErrorMessage(int subjectId) => _errorMessages[subjectId];
   List<Chapter>? getChapters(int subjectId) => _chaptersCache[subjectId];
 
-  final String _baseApiUrl = "https://courseservice.anbesgames.com/api/chapters/subject/";
+  final String _baseApiUrl =
+      "https://courseservice.mgwcommunity.com/api/chapters/subject/";
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  Future<void> fetchChaptersForSubject(int subjectId, {bool forceRefresh = false}) async {
+  Future<void> fetchChaptersForSubject(int subjectId,
+      {bool forceRefresh = false}) async {
     _loadingStatus[subjectId] = true;
     _errorMessages[subjectId] = null;
     notifyListeners();
 
     // Check SQLite cache first
-    final cached = await _dbHelper.query('chapters', where: 'subjectId = ?', whereArgs: [subjectId], orderBy: '"order" ASC');
+    final cached = await _dbHelper.query('chapters',
+        where: 'subjectId = ?', whereArgs: [subjectId], orderBy: '"order" ASC');
     if (cached.isNotEmpty && !forceRefresh) {
-      _chaptersCache[subjectId] = cached.map((e) => Chapter.fromJson(e)).toList();
+      _chaptersCache[subjectId] =
+          cached.map((e) => Chapter.fromJson(e)).toList();
       _loadingStatus[subjectId] = false;
       _errorMessages[subjectId] = null;
       notifyListeners();
@@ -37,14 +41,17 @@ class ChapterProvider with ChangeNotifier {
     if (forceRefresh || cached.isEmpty) {
       try {
         final url = '$_baseApiUrl$subjectId';
-        final response = await http.get(Uri.parse(url)).timeout(Duration(seconds: 30));
+        final response =
+            await http.get(Uri.parse(url)).timeout(Duration(seconds: 30));
 
         if (response.statusCode == 200) {
           final Map<String, dynamic> responseData = json.decode(response.body);
 
-          if (responseData.containsKey('data') && responseData['data'] is List) {
+          if (responseData.containsKey('data') &&
+              responseData['data'] is List) {
             List<dynamic> chaptersJson = responseData['data'];
-            List<Chapter> fetchedChapters = chaptersJson.map((json) => Chapter.fromJson(json)).toList();
+            List<Chapter> fetchedChapters =
+                chaptersJson.map((json) => Chapter.fromJson(json)).toList();
 
             fetchedChapters.sort((a, b) => a.order.compareTo(b.order));
             _chaptersCache[subjectId] = fetchedChapters;
@@ -61,20 +68,32 @@ class ChapterProvider with ChangeNotifier {
               });
             }
           } else {
-            _errorMessages[subjectId] = 'Unable to load chapters. Please try again later.';
-            _chaptersCache[subjectId] = cached.isNotEmpty ? cached.map((e) => Chapter.fromJson(e)).toList() : [];
+            _errorMessages[subjectId] =
+                'Unable to load chapters. Please try again later.';
+            _chaptersCache[subjectId] = cached.isNotEmpty
+                ? cached.map((e) => Chapter.fromJson(e)).toList()
+                : [];
           }
         } else {
-          _errorMessages[subjectId] = 'Unable to load chapters. Please check your connection.';
-          _chaptersCache[subjectId] = cached.isNotEmpty ? cached.map((e) => Chapter.fromJson(e)).toList() : [];
+          _errorMessages[subjectId] =
+              'Unable to load chapters. Please check your connection.';
+          _chaptersCache[subjectId] = cached.isNotEmpty
+              ? cached.map((e) => Chapter.fromJson(e)).toList()
+              : [];
         }
       } catch (e) {
         if (e is SocketException || e is TimeoutException) {
-          _errorMessages[subjectId] = cached.isNotEmpty ? null : 'No internet connection. Please connect and try again.';
-          _chaptersCache[subjectId] = cached.isNotEmpty ? cached.map((e) => Chapter.fromJson(e)).toList() : [];
+          _errorMessages[subjectId] = cached.isNotEmpty
+              ? null
+              : 'No internet connection. Please connect and try again.';
+          _chaptersCache[subjectId] = cached.isNotEmpty
+              ? cached.map((e) => Chapter.fromJson(e)).toList()
+              : [];
         } else {
           _errorMessages[subjectId] = 'Error fetching chapters: $e';
-          _chaptersCache[subjectId] = cached.isNotEmpty ? cached.map((e) => Chapter.fromJson(e)).toList() : [];
+          _chaptersCache[subjectId] = cached.isNotEmpty
+              ? cached.map((e) => Chapter.fromJson(e)).toList()
+              : [];
         }
       }
     }

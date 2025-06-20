@@ -17,13 +17,16 @@ class TestimonialProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  static const String apiBaseUrl = "https://courseservice.anbesgames.com/api";
+  static const String apiBaseUrl = "https://courseservice.mgwcommunity.com/api";
 
-  static const String _networkErrorMessage = "Sorry, there seems to be a network error. Please check your connection and try again.";
-  static const String _timeoutErrorMessage = "The request timed out. Please check your connection or try again later.";
+  static const String _networkErrorMessage =
+      "Sorry, there seems to be a network error. Please check your connection and try again.";
+  static const String _timeoutErrorMessage =
+      "The request timed out. Please check your connection or try again later.";
   static const String _unexpectedErrorMessage = "An unexpected error occurred.";
   static const String _failedToLoadMessage = "Failed to load testimonials.";
-  static const String _failedToCreateTestimonialMessage = "Failed to submit testimonial.";
+  static const String _failedToCreateTestimonialMessage =
+      "Failed to submit testimonial.";
 
   Future<void> fetchTestimonials({bool forceRefresh = false}) async {
     if (_isLoading && !forceRefresh) {
@@ -52,7 +55,8 @@ class TestimonialProvider with ChangeNotifier {
           _testimonials = decodedData
               .map((testimonialJson) {
                 try {
-                  return Testimonial.fromJson(testimonialJson as Map<String, dynamic>);
+                  return Testimonial.fromJson(
+                      testimonialJson as Map<String, dynamic>);
                 } catch (e) {
                   // Log individual item parsing error if needed
                   return null;
@@ -64,14 +68,18 @@ class TestimonialProvider with ChangeNotifier {
           _testimonials.sort((a, b) => b.createdAt.compareTo(a.createdAt));
           _error = null;
         } else {
-          _error = '$_failedToLoadMessage: API response was not a list as expected.';
+          _error =
+              '$_failedToLoadMessage: API response was not a list as expected.';
           _testimonials = [];
         }
       } else {
-        String errorMessage = '$_failedToLoadMessage. Status: ${response.statusCode}';
+        String errorMessage =
+            '$_failedToLoadMessage. Status: ${response.statusCode}';
         try {
           final errorData = json.decode(response.body);
-          if (errorData is Map && errorData.containsKey('message') && errorData['message'] != null) {
+          if (errorData is Map &&
+              errorData.containsKey('message') &&
+              errorData['message'] != null) {
             errorMessage = errorData['message'].toString();
           }
         } catch (e) {
@@ -136,7 +144,9 @@ class TestimonialProvider with ChangeNotifier {
           String fileExtension = imageFile.path.split('.').last.toLowerCase();
           MediaType? contentType;
 
-          if (fileExtension == 'jpg' || fileExtension == 'jpeg' || fileExtension == 'jfif') {
+          if (fileExtension == 'jpg' ||
+              fileExtension == 'jpeg' ||
+              fileExtension == 'jfif') {
             contentType = MediaType('image', 'jpeg');
           } else if (fileExtension == 'png') {
             contentType = MediaType('image', 'png');
@@ -157,7 +167,8 @@ class TestimonialProvider with ChangeNotifier {
         }
       }
 
-      var streamedResponse = await request.send().timeout(const Duration(seconds: 45));
+      var streamedResponse =
+          await request.send().timeout(const Duration(seconds: 45));
       var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
@@ -168,10 +179,13 @@ class TestimonialProvider with ChangeNotifier {
         // await fetchTestimonials(forceRefresh: true);
         return true;
       } else {
-        String errorMessage = "$_failedToCreateTestimonialMessage. Status: ${response.statusCode}";
+        String errorMessage =
+            "$_failedToCreateTestimonialMessage. Status: ${response.statusCode}";
         try {
           final errorData = json.decode(response.body);
-          if (errorData is Map && errorData.containsKey('message') && errorData['message'] != null) {
+          if (errorData is Map &&
+              errorData.containsKey('message') &&
+              errorData['message'] != null) {
             errorMessage = errorData['message'].toString();
           }
         } catch (e) {

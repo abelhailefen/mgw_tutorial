@@ -7,10 +7,11 @@ class Course {
   Course({required this.name});
   factory Course.fromJson(dynamic json) {
     if (json is String) return Course(name: json);
-    if (json is Map<String, dynamic>) return Course(name: json['name'] as String? ?? 'Unnamed Course');
+    if (json is Map<String, dynamic>)
+      return Course(name: json['name'] as String? ?? 'Unnamed Course');
     return Course(name: 'Invalid Course Data');
   }
-  Map<String, dynamic> toJson() => {'name': name}; 
+  Map<String, dynamic> toJson() => {'name': name};
   @override
   String toString() => name;
 }
@@ -37,12 +38,13 @@ class Semester {
   });
 
   factory Semester.fromJson(Map<String, dynamic> json) {
-    var imageList = (json['images'] as List<dynamic>?)
-            ?.map((e) => e.toString())
-            .toList() ??
-        [];
-    if (kDebugMode) { // Only print in debug mode
-      print("Semester.fromJson - Raw images for semester ID ${json['id']}: $imageList");
+    var imageList =
+        (json['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+            [];
+    if (kDebugMode) {
+      // Only print in debug mode
+      print(
+          "Semester.fromJson - Raw images for semester ID ${json['id']}: $imageList");
     }
 
     var courseListRaw = json['courses'] as List<dynamic>? ?? [];
@@ -56,12 +58,14 @@ class Semester {
       price: json['price'] as String? ?? '0.00',
       images: imageList,
       courses: parsedCourses,
-      createdAt: json['createdAt'] != null && (json['createdAt'] as String).isNotEmpty
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.fromMillisecondsSinceEpoch(0),
-      updatedAt: json['updatedAt'] != null && (json['updatedAt'] as String).isNotEmpty
-          ? DateTime.parse(json['updatedAt'] as String)
-          : DateTime.fromMillisecondsSinceEpoch(0),
+      createdAt:
+          json['createdAt'] != null && (json['createdAt'] as String).isNotEmpty
+              ? DateTime.parse(json['createdAt'] as String)
+              : DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt:
+          json['updatedAt'] != null && (json['updatedAt'] as String).isNotEmpty
+              ? DateTime.parse(json['updatedAt'] as String)
+              : DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -69,35 +73,41 @@ class Semester {
     if (images.isNotEmpty) {
       final imagePath = images.first;
       if (kDebugMode) {
-        print("Semester ID: $id, firstImageUrl getter - Raw imagePath: $imagePath");
+        print(
+            "Semester ID: $id, firstImageUrl getter - Raw imagePath: $imagePath");
       }
 
-      if (imagePath.startsWith('http')) { 
+      if (imagePath.startsWith('http')) {
         if (kDebugMode) {
-          print("Semester ID: $id, firstImageUrl getter - Returning full URL: $imagePath");
+          print(
+              "Semester ID: $id, firstImageUrl getter - Returning full URL: $imagePath");
         }
         return imagePath;
       }
 
-    
-      const String imageBaseUrl = "https://courseservice.anbesgames.com"; 
+      const String imageBaseUrl = "https://courseservice.mgwcommunity.com";
 
-      if (imagePath.startsWith('/')) { // Path like /uploads/image.jpg
+      if (imagePath.startsWith('/')) {
+        // Path like /uploads/image.jpg
         final fullUrl = "$imageBaseUrl$imagePath";
         if (kDebugMode) {
-          print("Semester ID: $id, firstImageUrl getter - Path starts with '/', Generated URL: $fullUrl");
+          print(
+              "Semester ID: $id, firstImageUrl getter - Path starts with '/', Generated URL: $fullUrl");
         }
         return fullUrl;
-      } else { // Path like uploads/image.jpg (needs a leading slash for concatenation)
+      } else {
+        // Path like uploads/image.jpg (needs a leading slash for concatenation)
         final fullUrl = "$imageBaseUrl/$imagePath";
         if (kDebugMode) {
-          print("Semester ID: $id, firstImageUrl getter - Path does NOT start with '/', Generated URL: $fullUrl");
+          print(
+              "Semester ID: $id, firstImageUrl getter - Path does NOT start with '/', Generated URL: $fullUrl");
         }
         return fullUrl;
       }
     }
     if (kDebugMode) {
-      print("Semester ID: $id, firstImageUrl getter - No images found, returning null.");
+      print(
+          "Semester ID: $id, firstImageUrl getter - No images found, returning null.");
     }
     return null;
   }

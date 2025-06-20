@@ -46,31 +46,34 @@ class LessonProvider with ChangeNotifier {
       if (lesson.videoUrl!.contains('youtu.be/') ||
           lesson.videoUrl!.contains('youtube.com/')) {
         try {
-          // Use VideoId constructor directly and access .value
           final videoIdString = VideoId(lesson.videoUrl!).value;
-          return 'video_${videoIdString}'; // Prefix to distinguish type
+          return 'video_${videoIdString}';
         } catch (e) {
           debugPrint(
               "LessonProvider: Failed to parse YouTube ID from ${lesson.videoUrl}: $e");
-          return null; // Return null if parsing fails
+          return null;
         }
       } else {
-        // For non-YouTube videos, use a hash of the URL
         return 'video_url_${md5.convert(utf8.encode(lesson.videoUrl!)).toString()}';
       }
-    } else if (lesson.lessonType == LessonType.document &&
+    } else if ((lesson.lessonType == LessonType.attachment ||
+            (lesson.lessonType == LessonType.exam &&
+                lesson.examType == ExamType.attachment)) &&
         lesson.attachmentUrl != null &&
         lesson.attachmentUrl!.isNotEmpty) {
-      // Use a hash of the URL for documents
-      return 'document_${md5.convert(utf8.encode(lesson.attachmentUrl!)).toString()}';
-    } else if ((lesson.lessonType == LessonType.quiz ||
-            lesson.lessonType == LessonType.text) &&
-        lesson.htmlUrl != null &&
-        lesson.htmlUrl!.isNotEmpty) {
-      // Use a hash of the URL for HTML content (quiz/text)
-      return 'html_${md5.convert(utf8.encode(lesson.htmlUrl!)).toString()}';
+      return 'attachment_${md5.convert(utf8.encode(lesson.attachmentUrl!)).toString()}';
+    } else if ((lesson.lessonType == LessonType.note ||
+            (lesson.lessonType == LessonType.exam &&
+                lesson.examType == ExamType.note_exam)) &&
+        lesson.richText != null &&
+        lesson.richText!.isNotEmpty) {
+      return 'html_${md5.convert(utf8.encode(lesson.richText!)).toString()}';
+    } else if (lesson.lessonType == LessonType.exam &&
+        lesson.examType == ExamType.video_exam &&
+        lesson.videoUrl != null &&
+        lesson.videoUrl!.isNotEmpty) {
+      return 'exam_video_${md5.convert(utf8.encode(lesson.videoUrl!)).toString()}';
     }
-    // Fallback or unknown types might not be downloadable
     return null;
   }
 
@@ -81,7 +84,6 @@ class LessonProvider with ChangeNotifier {
           lesson.videoUrl == url ||
           lesson.attachmentUrl == url,
       orElse: () => Lesson(
-          // Return a dummy lesson if not found
           id: 0,
           title: '',
           sectionId: 0,
@@ -89,7 +91,6 @@ class LessonProvider with ChangeNotifier {
           updatedAt: DateTime.now()),
     );
     if (lesson.id != 0) {
-      // Use the correct getDownloadId which now includes type prefixes
       return getDownloadId(lesson);
     }
     return null;
@@ -129,7 +130,7 @@ class LessonProvider with ChangeNotifier {
     notifyListeners();
 
     final url = Uri.parse('$_apiBaseUrl/lessons/section/$sectionId');
-    print( "Fetching lessons for section $sectionId from $url");
+    print("Fetching lessons for section $sectionId from $url");
 
     try {
       final response = await http.get(url, headers: {
@@ -195,6 +196,8 @@ class LessonProvider with ChangeNotifier {
             lessonA.attachmentUrl != lessonB.attachmentUrl ||
             lessonA.attachmentTypeString != lessonB.attachmentTypeString ||
             lessonA.lessonTypeString != lessonB.lessonTypeString ||
+            lessonA.examTypeString != lessonB.examTypeString ||
+            lessonA.richText != lessonB.richText ||
             lessonA.duration != lessonB.duration) {
           return false;
         }
@@ -249,6 +252,8 @@ class LessonProvider with ChangeNotifier {
             'attachmentUrl': lesson.attachmentUrl,
             'attachmentTypeString': lesson.attachmentTypeString,
             'lessonTypeString': lesson.lessonTypeString,
+            'examTypeString': lesson.examTypeString,
+            'richText': lesson.richText,
             'duration': lesson.duration,
             'createdAt': lesson.createdAt.toIso8601String(),
             'updatedAt': lesson.updatedAt.toIso8601String(),
@@ -315,7 +320,9 @@ class LessonProvider with ChangeNotifier {
 
     bool success = false;
 
-    if (lesson.lessonType == LessonType.video &&
+    if ((lesson.lessonType == LessonType.video ||
+            (lesson.lessonType == LessonType.exam &&
+                lesson.examType == ExamType.video_exam)) &&
         lesson.videoUrl != null &&
         lesson.videoUrl!.isNotEmpty) {
       if (lesson.videoUrl != null) {
@@ -329,41 +336,30 @@ class LessonProvider with ChangeNotifier {
             "LessonProvider: Video URL is null despite type being video.");
         success = false;
       }
-    } else if ((lesson.lessonType == LessonType.document ||
-            lesson.lessonType == LessonType.text ||
-            lesson.lessonType == LessonType.quiz) &&
-        (lesson.attachmentUrl != null || lesson.htmlUrl != null)) {
-      final url = lesson.htmlUrl ?? lesson.attachmentUrl;
-      if (url != null && url.isNotEmpty) {
-        const String baseUrl = "https://lessonservice.mgwcommunity.com";
-        final fullUrl = url.startsWith("http") ? url : "$baseUrl$url";
-
-        if (lesson.lessonType == LessonType.document) {
-          success = await MediaService.downloadPDFFile(
-            pdfId: downloadId,
-            url: fullUrl,
-            title: lesson.title,
-          );
-        } else if (lesson.lessonType == LessonType.quiz ||
-            lesson.lessonType == LessonType.text) {
-          success = await MediaService.downloadHtmlFile(
-            htmlId: downloadId,
-            url: fullUrl,
-            title: lesson.title,
-          );
-        } else {
-          debugPrint(
-              "LessonProvider: Unhandled lesson type for attachment/html download.");
-          success = false;
-        }
-      } else {
-        final statusNotifier = MediaService.getDownloadStatus(downloadId);
-        final progressNotifier = MediaService.getDownloadProgress(downloadId);
-        statusNotifier.value = DownloadStatus.failed;
-        progressNotifier.value = 0.0;
-        debugPrint("LessonProvider: Attachment/HTML URL is null or empty.");
-        success = false;
-      }
+    } else if ((lesson.lessonType == LessonType.attachment ||
+            (lesson.lessonType == LessonType.exam &&
+                lesson.examType == ExamType.attachment)) &&
+        lesson.attachmentUrl != null &&
+        lesson.attachmentUrl!.isNotEmpty) {
+      const String baseUrl = "https://lessonservice.mgwcommunity.com";
+      final fullUrl = lesson.attachmentUrl!.startsWith("http")
+          ? lesson.attachmentUrl!
+          : "$baseUrl${lesson.attachmentUrl}";
+      success = await MediaService.downloadPDFFile(
+        pdfId: downloadId,
+        url: fullUrl,
+        title: lesson.title,
+      );
+    } else if ((lesson.lessonType == LessonType.note ||
+            (lesson.lessonType == LessonType.exam &&
+                lesson.examType == ExamType.note_exam)) &&
+        lesson.richText != null &&
+        lesson.richText!.isNotEmpty) {
+      success = await MediaService.downloadHtmlFile(
+        htmlId: downloadId,
+        url: lesson.richText!,
+        title: lesson.title,
+      );
     } else {
       debugPrint(
           "LessonProvider: Attempted to download unsupported lesson type.");

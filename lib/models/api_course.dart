@@ -24,7 +24,7 @@ class CourseCategoryInfo {
   }
 
   factory CourseCategoryInfo.fromMap(Map<String, dynamic> map) {
-     return CourseCategoryInfo(
+    return CourseCategoryInfo(
       id: map['id'] as int? ?? 0,
       name: map['name'] as String? ?? 'Unknown Category',
     );
@@ -58,7 +58,8 @@ class ApiCourse {
 
   String? localThumbnailPath;
 
-  static const String thumbnailBaseUrl = "https://courseservice.anbesgames.com";
+  static const String thumbnailBaseUrl =
+      "https://courseservice.mgwcommunity.com";
 
   ApiCourse({
     required this.id,
@@ -100,17 +101,17 @@ class ApiCourse {
   }
 
   String? get displayThumbnailPath {
-     if (localThumbnailPath != null && localThumbnailPath!.isNotEmpty) {
-         try {
-           final file = File(localThumbnailPath!);
-           if (file.existsSync()) {
-             return localThumbnailPath;
-           }
-         } catch (e) {
-           // Error checking file existence, fall back to network URL
-         }
-     }
-     return fullThumbnailUrl;
+    if (localThumbnailPath != null && localThumbnailPath!.isNotEmpty) {
+      try {
+        final file = File(localThumbnailPath!);
+        if (file.existsSync()) {
+          return localThumbnailPath;
+        }
+      } catch (e) {
+        // Error checking file existence, fall back to network URL
+      }
+    }
+    return fullThumbnailUrl;
   }
 
   factory ApiCourse.fromJson(Map<String, dynamic> json) {
@@ -131,13 +132,13 @@ class ApiCourse {
     }
 
     bool? parseBoolFromString(dynamic value) {
-        if (value is bool) return value;
-        if (value is String) return value.toLowerCase() == 'true' || value == '1';
-        if (value is int) return value == 1;
-        return null;
+      if (value is bool) return value;
+      if (value is String) return value.toLowerCase() == 'true' || value == '1';
+      if (value is int) return value == 1;
+      return null;
     }
 
-     DateTime parseSafeDate(dynamic dateValue) {
+    DateTime parseSafeDate(dynamic dateValue) {
       if (dateValue is String && dateValue.isNotEmpty) {
         try {
           return DateTime.parse(dateValue).toLocal();
@@ -172,15 +173,17 @@ class ApiCourse {
       creator: json['creator'] as String?,
       createdAt: parseSafeDate(json['createdAt']),
       updatedAt: parseSafeDate(json['updatedAt']),
-      category: json['category'] != null && json['category'] is Map<String, dynamic>
-          ? CourseCategoryInfo.fromJson(json['category'] as Map<String, dynamic>)
-          : null,
+      category:
+          json['category'] != null && json['category'] is Map<String, dynamic>
+              ? CourseCategoryInfo.fromJson(
+                  json['category'] as Map<String, dynamic>)
+              : null,
       localThumbnailPath: null,
     );
   }
 
   Map<String, dynamic> toMap() {
-     int? boolToInt(bool? b) => b == null ? null : (b ? 1 : 0);
+    int? boolToInt(bool? b) => b == null ? null : (b ? 1 : 0);
 
     return {
       'id': id,
@@ -212,7 +215,7 @@ class ApiCourse {
   }
 
   factory ApiCourse.fromMap(Map<String, dynamic> map) {
-     DateTime parseSafeDateFromDb(dynamic dateValue) {
+    DateTime parseSafeDateFromDb(dynamic dateValue) {
       if (dateValue is String && dateValue.isNotEmpty) {
         try {
           return DateTime.parse(dateValue).toLocal();
@@ -224,7 +227,7 @@ class ApiCourse {
       return DateTime.now();
     }
 
-     List<String> parseStringListFromDb(dynamic dbField) {
+    List<String> parseStringListFromDb(dynamic dbField) {
       if (dbField is String && dbField.isNotEmpty) {
         try {
           final decoded = jsonDecode(dbField);
@@ -232,13 +235,13 @@ class ApiCourse {
             return decoded.map((item) => item.toString()).toList();
           }
         } catch (e) {
-           // Could not parse DB string list JSON
+          // Could not parse DB string list JSON
         }
       }
       return [];
     }
 
-     bool? intToBool(dynamic value) {
+    bool? intToBool(dynamic value) {
       if (value is int) return value == 1;
       if (value is String) return value.toLowerCase() == 'true' || value == '1';
       return null;
@@ -246,10 +249,10 @@ class ApiCourse {
 
     CourseCategoryInfo? categoryInfo;
     if (map['courseCategoryId'] != null && map['courseCategoryName'] != null) {
-       categoryInfo = CourseCategoryInfo(
-         id: map['courseCategoryId'] as int,
-         name: map['courseCategoryName'] as String,
-       );
+      categoryInfo = CourseCategoryInfo(
+        id: map['courseCategoryId'] as int,
+        name: map['courseCategoryName'] as String,
+      );
     }
 
     final course = ApiCourse(

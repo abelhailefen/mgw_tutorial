@@ -16,11 +16,13 @@ class SubjectProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  final String _subjectsApiUrl = "https://courseservice.anbesgames.com/api/subjects";
+  final String _subjectsApiUrl =
+      "https://courseservice.mgwcommunity.com/api/subjects";
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Future<void> fetchSubjects({bool forceRefresh = false}) async {
-    print("SubjectProvider: fetchSubjects called (forceRefresh: $forceRefresh)");
+    print(
+        "SubjectProvider: fetchSubjects called (forceRefresh: $forceRefresh)");
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -28,9 +30,11 @@ class SubjectProvider with ChangeNotifier {
     // Load cached subjects from database
     List<Subject> cachedSubjects = [];
     try {
-      final List<Map<String, dynamic>> cached = await _dbHelper.query('subjects');
+      final List<Map<String, dynamic>> cached =
+          await _dbHelper.query('subjects');
       cachedSubjects = cached.map((e) => Subject.fromJson(e)).toList();
-      print("SubjectProvider: Loaded ${cachedSubjects.length} subjects from DB.");
+      print(
+          "SubjectProvider: Loaded ${cachedSubjects.length} subjects from DB.");
 
       if (cachedSubjects.isNotEmpty && !forceRefresh) {
         // Validate local image paths
@@ -38,7 +42,8 @@ class SubjectProvider with ChangeNotifier {
           if (subject.localImagePath != null) {
             final file = File(subject.localImagePath!);
             if (!file.existsSync()) {
-              print("SubjectProvider: Local image missing for subject ${subject.id}. Setting to null.");
+              print(
+                  "SubjectProvider: Local image missing for subject ${subject.id}. Setting to null.");
               return Subject(
                 id: subject.id,
                 name: subject.name,
@@ -64,16 +69,21 @@ class SubjectProvider with ChangeNotifier {
     // Perform network fetch if forced refresh or no cached data
     if (forceRefresh || cachedSubjects.isEmpty) {
       try {
-        final response = await http.get(Uri.parse(_subjectsApiUrl)).timeout(Duration(seconds: 30));
-        print("SubjectProvider: Network Response Status: ${response.statusCode}");
+        final response = await http
+            .get(Uri.parse(_subjectsApiUrl))
+            .timeout(Duration(seconds: 30));
+        print(
+            "SubjectProvider: Network Response Status: ${response.statusCode}");
 
         if (response.statusCode == 200) {
           final Map<String, dynamic> responseData = json.decode(response.body);
           List<Subject> fetchedSubjects = [];
 
-          if (responseData.containsKey('data') && responseData['data'] is List) {
+          if (responseData.containsKey('data') &&
+              responseData['data'] is List) {
             List<dynamic> subjectsJson = responseData['data'];
-            fetchedSubjects = subjectsJson.map((json) => Subject.fromJson(json)).toList();
+            fetchedSubjects =
+                subjectsJson.map((json) => Subject.fromJson(json)).toList();
 
             // Download and save images
             fetchedSubjects = await _downloadAndSaveImages(fetchedSubjects);
@@ -90,12 +100,15 @@ class SubjectProvider with ChangeNotifier {
             _subjects = cachedSubjects;
           }
         } else {
-          _errorMessage = 'Unable to load subjects. Please check your connection.';
+          _errorMessage =
+              'Unable to load subjects. Please check your connection.';
           _subjects = cachedSubjects;
         }
       } catch (e) {
         if (e is SocketException || e is TimeoutException) {
-          _errorMessage = cachedSubjects.isNotEmpty ? null : 'No internet connection. Please connect and try again.';
+          _errorMessage = cachedSubjects.isNotEmpty
+              ? null
+              : 'No internet connection. Please connect and try again.';
           _subjects = cachedSubjects;
         } else {
           _errorMessage = 'Error fetching subjects: $e';
@@ -105,7 +118,8 @@ class SubjectProvider with ChangeNotifier {
       } finally {
         _isLoading = false;
         notifyListeners();
-        print("SubjectProvider: Fetch process finished. isLoading=$_isLoading, error=$_errorMessage, subjectsCount=${_subjects.length}");
+        print(
+            "SubjectProvider: Fetch process finished. isLoading=$_isLoading, error=$_errorMessage, subjectsCount=${_subjects.length}");
       }
     }
 
@@ -138,7 +152,8 @@ class SubjectProvider with ChangeNotifier {
             String pathSegment = uri.path;
             int lastDot = pathSegment.lastIndexOf('.');
             if (lastDot != -1 && pathSegment.length > lastDot + 1) {
-              fileExtension = pathSegment.substring(lastDot + 1).split('?').first;
+              fileExtension =
+                  pathSegment.substring(lastDot + 1).split('?').first;
             }
 
             final fileName = 'subject_${subject.id}_image.$fileExtension';
@@ -158,8 +173,10 @@ class SubjectProvider with ChangeNotifier {
               continue;
             }
 
-            print("SubjectProvider: Downloading image for subject ${subject.id} from $imageUrl");
-            final response = await client.get(uri).timeout(Duration(seconds: 15));
+            print(
+                "SubjectProvider: Downloading image for subject ${subject.id} from $imageUrl");
+            final response =
+                await client.get(uri).timeout(Duration(seconds: 15));
 
             if (response.statusCode == 200) {
               await localFile.writeAsBytes(response.bodyBytes);
@@ -172,9 +189,11 @@ class SubjectProvider with ChangeNotifier {
                 localImagePath: localPath,
               ));
               downloadedCount++;
-              print("SubjectProvider: Saved image for subject ${subject.id} to $localPath");
+              print(
+                  "SubjectProvider: Saved image for subject ${subject.id} to $localPath");
             } else {
-              print("SubjectProvider: Failed to download image for subject ${subject.id} (Status: ${response.statusCode})");
+              print(
+                  "SubjectProvider: Failed to download image for subject ${subject.id} (Status: ${response.statusCode})");
               updatedSubjects.add(Subject(
                 id: subject.id,
                 name: subject.name,
@@ -186,7 +205,8 @@ class SubjectProvider with ChangeNotifier {
               failedCount++;
             }
           } catch (e) {
-            print("SubjectProvider: Error downloading image for subject ${subject.id} ($imageUrl): $e");
+            print(
+                "SubjectProvider: Error downloading image for subject ${subject.id} ($imageUrl): $e");
             updatedSubjects.add(Subject(
               id: subject.id,
               name: subject.name,
@@ -198,7 +218,8 @@ class SubjectProvider with ChangeNotifier {
             failedCount++;
           }
         } else {
-          print("SubjectProvider: No valid image URL for subject ${subject.id}");
+          print(
+              "SubjectProvider: No valid image URL for subject ${subject.id}");
           updatedSubjects.add(Subject(
             id: subject.id,
             name: subject.name,
@@ -212,23 +233,29 @@ class SubjectProvider with ChangeNotifier {
       }
     } finally {
       client.close();
-      print("SubjectProvider: Image download summary: Downloaded $downloadedCount, Skipped $skippedCount, Failed $failedCount.");
+      print(
+          "SubjectProvider: Image download summary: Downloaded $downloadedCount, Skipped $skippedCount, Failed $failedCount.");
     }
     return updatedSubjects;
   }
 
-  Future<void> _saveSubjectsToDb(List<Subject> subjectsToSave, List<Subject> cachedSubjects) async {
+  Future<void> _saveSubjectsToDb(
+      List<Subject> subjectsToSave, List<Subject> cachedSubjects) async {
     print("SubjectProvider: Starting DB save process...");
     try {
       final db = await _dbHelper.database;
       List<String> oldImagePaths = [];
-      List<String> newSubjectIds = subjectsToSave.map((s) => s.id.toString()).toList();
+      List<String> newSubjectIds =
+          subjectsToSave.map((s) => s.id.toString()).toList();
 
       await db.transaction((txn) async {
         oldImagePaths = await _dbHelper.getOldSubjectImagePathsInTxn(txn);
-        await txn.delete('subjects', where: 'id NOT IN (${newSubjectIds.map((_) => '?').join(',')})', whereArgs: newSubjectIds);
+        await txn.delete('subjects',
+            where: 'id NOT IN (${newSubjectIds.map((_) => '?').join(',')})',
+            whereArgs: newSubjectIds);
       });
-      print("SubjectProvider: Deleted subjects not in new data. ${oldImagePaths.length} paths collected.");
+      print(
+          "SubjectProvider: Deleted subjects not in new data. ${oldImagePaths.length} paths collected.");
 
       if (oldImagePaths.isNotEmpty) {
         List<String> imagesToDelete = oldImagePaths.where((path) {
@@ -236,7 +263,8 @@ class SubjectProvider with ChangeNotifier {
           final subjectId = fileName.split('_')[1];
           return !newSubjectIds.contains(subjectId);
         }).toList();
-        print("SubjectProvider: Deleting ${imagesToDelete.length} old image files...");
+        print(
+            "SubjectProvider: Deleting ${imagesToDelete.length} old image files...");
         await _dbHelper.deleteThumbnailFiles(imagesToDelete);
       }
 
@@ -260,7 +288,8 @@ class SubjectProvider with ChangeNotifier {
     });
     if (oldImagePaths.isNotEmpty) {
       await _dbHelper.deleteThumbnailFiles(oldImagePaths);
-      print("SubjectProvider: Deleted ${oldImagePaths.length} old image files.");
+      print(
+          "SubjectProvider: Deleted ${oldImagePaths.length} old image files.");
     }
     _subjects = [];
     _errorMessage = null;

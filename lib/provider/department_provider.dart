@@ -14,7 +14,8 @@ class DepartmentProvider with ChangeNotifier {
   String? get error => _error;
 
   // API Base URL - ensure this is consistent with your other providers
-  static const String _apiBaseUrl = "https://courseservice.anbesgames.com/api";
+  static const String _apiBaseUrl =
+      "https://courseservice.mgwcommunity.com/api";
 
   Future<void> fetchDepartments() async {
     if (_departments.isNotEmpty) return; // Avoid refetching if already loaded
@@ -37,14 +38,16 @@ class DepartmentProvider with ChangeNotifier {
         final List<dynamic> extractedData = json.decode(response.body);
         if (extractedData is List) {
           _departments = extractedData
-              .map((deptData) => Department.fromJson(deptData as Map<String, dynamic>))
+              .map((deptData) =>
+                  Department.fromJson(deptData as Map<String, dynamic>))
               .toList();
         } else {
           _error = 'Failed to load departments: Response format is not a list.';
           print(_error);
         }
       } else {
-        String errorMessage = 'Failed to load departments. Status: ${response.statusCode}';
+        String errorMessage =
+            'Failed to load departments. Status: ${response.statusCode}';
         try {
           final errorData = json.decode(response.body);
           if (errorData != null && errorData['message'] != null) {

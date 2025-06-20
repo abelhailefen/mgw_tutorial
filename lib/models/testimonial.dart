@@ -11,7 +11,7 @@ class Testimonial {
   final DateTime updatedAt;
   final Author author;
 
-  static const String imageBaseUrl = "https://courseservice.anbesgames.com";
+  static const String imageBaseUrl = "https://courseservice.mgwcommunity.com";
 
   Testimonial({
     required this.id,
@@ -35,8 +35,11 @@ class Testimonial {
 
       // Assume relative path like "uploads/image.jpg" or "/uploads/image.jpg"
       // Ensure imageBaseUrl doesn't end with / and firstImage starts with /
-      final cleanBaseUrl = imageBaseUrl.endsWith('/') ? imageBaseUrl.substring(0, imageBaseUrl.length - 1) : imageBaseUrl;
-      final cleanImagePath = firstImage.startsWith('/') ? firstImage : '/$firstImage';
+      final cleanBaseUrl = imageBaseUrl.endsWith('/')
+          ? imageBaseUrl.substring(0, imageBaseUrl.length - 1)
+          : imageBaseUrl;
+      final cleanImagePath =
+          firstImage.startsWith('/') ? firstImage : '/$firstImage';
 
       return cleanBaseUrl + cleanImagePath;
     }
@@ -65,7 +68,8 @@ class Testimonial {
 
     final authorJson = json['author'];
     if (authorJson == null || authorJson is! Map<String, dynamic>) {
-      throw FormatException("Field 'author' is missing or not a map in Testimonial JSON.");
+      throw FormatException(
+          "Field 'author' is missing or not a map in Testimonial JSON.");
     }
 
     return Testimonial(

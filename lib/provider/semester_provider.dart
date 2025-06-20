@@ -26,19 +26,21 @@ class SemesterProvider with ChangeNotifier {
       "Failed to load semesters. Please try again.";
 
   static const String _apiBaseUrl =
-      "https://courseservice.anbesgames.com/api";
+      "https://courseservice.mgwcommunity.com/api";
 
   final SemesterDB _semesterDb = SemesterDB();
 
   Future<void> fetchSemesters({bool forceRefresh = false}) async {
-    print('[SemesterProvider] fetchSemesters called. forceRefresh: $forceRefresh');
+    print(
+        '[SemesterProvider] fetchSemesters called. forceRefresh: $forceRefresh');
 
     _isLoading = true;
     notifyListeners();
 
     final connectivityResult = await Connectivity().checkConnectivity();
     final isOnline = connectivityResult != ConnectivityResult.none;
-    print('[SemesterProvider] Connectivity check: $connectivityResult, isOnline: $isOnline');
+    print(
+        '[SemesterProvider] Connectivity check: $connectivityResult, isOnline: $isOnline');
 
     if (isOnline) {
       // ONLINE: Fetch from API, save to DB, then display API data
@@ -54,14 +56,17 @@ class SemesterProvider with ChangeNotifier {
           },
         ).timeout(const Duration(seconds: 20));
 
-        print("[SemesterProvider] Semesters API Response Status: ${response.statusCode}");
+        print(
+            "[SemesterProvider] Semesters API Response Status: ${response.statusCode}");
 
         if (response.statusCode == 200) {
           final List<dynamic> extractedData = json.decode(response.body);
-          print("[SemesterProvider] API returned ${extractedData.length} semesters.");
+          print(
+              "[SemesterProvider] API returned ${extractedData.length} semesters.");
           if (extractedData is List) {
             final semestersFromApi = extractedData
-                .map((semesterJson) => Semester.fromJson(semesterJson as Map<String, dynamic>))
+                .map((semesterJson) =>
+                    Semester.fromJson(semesterJson as Map<String, dynamic>))
                 .toList();
 
             // Upsert each semester (replace on conflict)
@@ -71,15 +76,18 @@ class SemesterProvider with ChangeNotifier {
 
             // Always display the latest API data
             _semesters = semestersFromApi;
-            print('[SemesterProvider] Displaying API data, count: ${_semesters.length}');
+            print(
+                '[SemesterProvider] Displaying API data, count: ${_semesters.length}');
             _error = null;
           } else {
-            _error = "Failed to load semesters: Unexpected API response format.";
+            _error =
+                "Failed to load semesters: Unexpected API response format.";
             _semesters = [];
             print('[SemesterProvider] API response was not a List.');
           }
         } else {
-          print('[SemesterProvider] API response status not 200. Handling error.');
+          print(
+              '[SemesterProvider] API response status not 200. Handling error.');
           _handleHttpErrorResponse(response, _failedToLoadSemestersMessage);
           // Try to load from DB if available (fallback)
           await _loadSemestersFromDbIfAny();
@@ -112,19 +120,22 @@ class SemesterProvider with ChangeNotifier {
     }
 
     // OFFLINE: Load from local DB only
-    print('[SemesterProvider] Offline detected. Loading semesters from local SQLite DB...');
+    print(
+        '[SemesterProvider] Offline detected. Loading semesters from local SQLite DB...');
     await _loadSemestersFromDb();
   }
 
   Future<void> _loadSemestersFromDb() async {
     try {
       final cachedSemesters = await _semesterDb.getSemesters();
-      print('[SemesterProvider] Loaded ${cachedSemesters.length} semesters from SQLite.');
+      print(
+          '[SemesterProvider] Loaded ${cachedSemesters.length} semesters from SQLite.');
       if (cachedSemesters.isNotEmpty) {
         _semesters = cachedSemesters;
         _error = null;
       } else {
-        _error = "No cached data available. Please connect to the internet to load semesters.";
+        _error =
+            "No cached data available. Please connect to the internet to load semesters.";
         _semesters = [];
         print('[SemesterProvider] No cached semesters found.');
       }
@@ -139,17 +150,21 @@ class SemesterProvider with ChangeNotifier {
     try {
       final cachedSemesters = await _semesterDb.getSemesters();
       if (cachedSemesters.isNotEmpty) {
-        print('[SemesterProvider] Fallback: Loaded ${cachedSemesters.length} semesters from SQLite after API error.');
+        print(
+            '[SemesterProvider] Fallback: Loaded ${cachedSemesters.length} semesters from SQLite after API error.');
         _semesters = cachedSemesters;
         // Don't clear _error so user knows API failed, but they see cached data
       }
     } catch (e) {
-      print('[SemesterProvider] Fallback: Error loading semesters from SQLite: $e');
+      print(
+          '[SemesterProvider] Fallback: Error loading semesters from SQLite: $e');
     }
   }
 
-  void _handleHttpErrorResponse(http.Response response, String defaultUserMessage) {
-    print('[SemesterProvider] Handling HTTP error response. Status: ${response.statusCode}');
+  void _handleHttpErrorResponse(
+      http.Response response, String defaultUserMessage) {
+    print(
+        '[SemesterProvider] Handling HTTP error response. Status: ${response.statusCode}');
     try {
       final errorBody = json.decode(response.body);
       if (errorBody is Map &&
@@ -160,7 +175,8 @@ class SemesterProvider with ChangeNotifier {
         print('[SemesterProvider] Error message from API: ${_error}');
       } else {
         _error = "$defaultUserMessage (Status: ${response.statusCode})";
-        print('[SemesterProvider] No message in error body, using default error.');
+        print(
+            '[SemesterProvider] No message in error body, using default error.');
       }
     } catch (e) {
       _error =
