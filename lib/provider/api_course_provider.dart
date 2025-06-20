@@ -1,4 +1,3 @@
-// provider/api_course_provider.dart
 import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
@@ -7,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:mgw_tutorial/models/api_course.dart';
 import 'package:mgw_tutorial/services/database_helper.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class ApiCourseProvider with ChangeNotifier {
   List<ApiCourse> _courses = [];
@@ -28,11 +28,7 @@ class ApiCourseProvider with ChangeNotifier {
 
   Future<void> fetchCourses({bool forceRefresh = false}) async {
     if (!forceRefresh && _courses.isNotEmpty) {
-       // If not force refreshing and we already have data,
-       // show current data immediately and fetch in the background.
-       // We'll update the UI later if the network data is different.
-       // Do NOT set isLoading = true here as it would show a spinner
-       // over existing data unnecessarily.
+ 
     } else {
       // If force refreshing or no data, clear current data and show loading
       _isLoading = true;
@@ -41,11 +37,44 @@ class ApiCourseProvider with ChangeNotifier {
       notifyListeners();
     }
 
-
     List<ApiCourse> fetchedCourses = [];
     bool networkAttempted = false;
     bool networkSuccess = false;
     String? networkError;
+
+    // ---- CONNECTIVITY CHECK ----
+    final connectivityResult = await Connectivity().checkConnectivity();
+    final isOnline = connectivityResult != ConnectivityResult.none;
+
+    if (!isOnline) {
+      // Device is offline, skip API, load from DB immediately.
+      try {
+        final List<Map<String, dynamic>> courseMaps = await _dbHelper.query('courses', orderBy: 'title ASC');
+        _courses = courseMaps.map((map) => ApiCourse.fromMap(map)).toList();
+
+        // Re-validate local thumbnail paths for loaded courses
+        for (var course in _courses) {
+          if (course.localThumbnailPath != null) {
+            final file = File(course.localThumbnailPath!);
+            if (!await file.exists()) {
+              course.localThumbnailPath = null;
+              // Optionally update DB here if path is null, but doing it
+              // during a save transaction is safer/more efficient.
+            }
+          }
+        }
+
+        _error = _courses.isEmpty
+            ? _failedToLoadCoursesMessage
+            : null;
+      } catch (dbError) {
+        _courses = [];
+        _error = "Failed to load courses from database.";
+      }
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
 
     try {
       networkAttempted = true;
@@ -80,15 +109,15 @@ class ApiCourseProvider with ChangeNotifier {
 
         // Only update DB and state if fetched data is different or force refreshing
         if (forceRefresh || !listEquals(_courses, fetchedCourses)) {
-            await _downloadAndSaveThumbnails(fetchedCourses);
-            await _saveCoursesToDb(fetchedCourses);
-            _courses = fetchedCourses;
-            _error = null; // Clear any previous error if fetch was successful
-            networkSuccess = true;
+          await _downloadAndSaveThumbnails(fetchedCourses);
+          await _saveCoursesToDb(fetchedCourses);
+          _courses = fetchedCourses;
+          _error = null; // Clear any previous error if fetch was successful
+          networkSuccess = true;
         } else {
-           // Data is the same, no need to update state or DB
-           networkSuccess = true;
-           _error = null; // Clear any previous error if fetch was successful
+          // Data is the same, no need to update state or DB
+          networkSuccess = true;
+          _error = null; // Clear any previous error if fetch was successful
         }
 
       } else {
@@ -127,43 +156,47 @@ class ApiCourseProvider with ChangeNotifier {
     // or if forceRefresh requires potentially clearing old data, load from DB.
     // Load from DB also happens if network was successful but fetched data was the same,
     // to ensure local paths are re-validated/set correctly for existing items.
-     if (!networkSuccess || _courses.isEmpty) { // _courses could be empty if network failed OR if network succeeded but returned empty list
-        try {
-            final List<Map<String, dynamic>> courseMaps = await _dbHelper.query('courses', orderBy: 'title ASC');
-            _courses = courseMaps.map((map) => ApiCourse.fromMap(map)).toList();
+    if (!networkSuccess || _courses.isEmpty) { // _courses could be empty if network failed OR if network succeeded but returned empty list
+      try {
+        final List<Map<String, dynamic>> courseMaps = await _dbHelper.query('courses', orderBy: 'title ASC');
+        _courses = courseMaps.map((map) => ApiCourse.fromMap(map)).toList();
 
-            // Re-validate local thumbnail paths for loaded courses
-            for (var course in _courses) {
-              if (course.localThumbnailPath != null) {
-                final file = File(course.localThumbnailPath!);
-                if (!await file.exists()) {
-                   course.localThumbnailPath = null;
-                   // Optionally update DB here if path is null, but doing it
-                   // during a save transaction is safer/more efficient.
-                }
-              }
-            }
-
-            if (_courses.isEmpty) {
-               // No courses from network AND none from DB
-               _error = networkAttempted ? (networkError ?? _failedToLoadCoursesMessage) : _failedToLoadCoursesMessage;
-            } else {
-               // Courses loaded from DB (after network fail or if network returned same data)
-               _error = networkAttempted && networkError != null ? "Could not get latest courses from network ($networkError). Showing cached data." : null;
-            }
-
-          } catch (dbError, dbStack) {
-            print("Error loading courses from DB after network failure: $dbError\n$dbStack");
-            _courses = [];
-            _error = networkAttempted ? (networkError ?? "Failed to load courses from database.") : "Failed to load courses from database.";
-            if (networkAttempted && networkError != null) {
-               _error = "$networkError\nAlso failed to load from database.";
-            } else {
-               _error = "Failed to load courses from database.";
+        // Re-validate local thumbnail paths for loaded courses
+        for (var course in _courses) {
+          if (course.localThumbnailPath != null) {
+            final file = File(course.localThumbnailPath!);
+            if (!await file.exists()) {
+              course.localThumbnailPath = null;
+              // Optionally update DB here if path is null, but doing it
+              // during a save transaction is safer/more efficient.
             }
           }
-    }
+        }
 
+        if (_courses.isEmpty) {
+          // No courses from network AND none from DB
+          _error = networkAttempted
+              ? (networkError ?? _failedToLoadCoursesMessage)
+              : _failedToLoadCoursesMessage;
+        } else {
+          // Courses loaded from DB (after network fail or if network returned same data)
+          _error = networkAttempted && networkError != null
+              ? "Could not get latest courses from network ($networkError). Showing cached data."
+              : null;
+        }
+      } catch (dbError, dbStack) {
+        print("Error loading courses from DB after network failure: $dbError\n$dbStack");
+        _courses = [];
+        _error = networkAttempted
+            ? (networkError ?? "Failed to load courses from database.")
+            : "Failed to load courses from database.";
+        if (networkAttempted && networkError != null) {
+          _error = "$networkError\nAlso failed to load from database.";
+        } else {
+          _error = "Failed to load courses from database.";
+        }
+      }
+    }
 
     _isLoading = false;
     notifyListeners();
@@ -179,9 +212,9 @@ class ApiCourseProvider with ChangeNotifier {
         await db.transaction((txn) async {
           oldThumbnailPaths = await _dbHelper.getOldThumbnailPathsInTxn(txn);
           if (newCourseIds.isNotEmpty) {
-             await txn.delete('courses', where: 'id NOT IN (${newCourseIds.map((_) => '?').join(',')})', whereArgs: newCourseIds);
+            await txn.delete('courses', where: 'id NOT IN (${newCourseIds.map((_) => '?').join(',')})', whereArgs: newCourseIds);
           } else {
-             await txn.delete('courses'); // Delete all if the new list is empty
+            await txn.delete('courses'); // Delete all if the new list is empty
           }
         });
       } catch (e, s) {
@@ -195,10 +228,10 @@ class ApiCourseProvider with ChangeNotifier {
           final fileName = path.split('/').last;
           final parts = fileName.split('_');
           if (parts.length > 1) {
-              final courseIdPart = parts[1].split('.').first;
-               if (int.tryParse(courseIdPart) != null) {
-                 return !newCourseIds.contains(courseIdPart);
-               }
+            final courseIdPart = parts[1].split('.').first;
+            if (int.tryParse(courseIdPart) != null) {
+              return !newCourseIds.contains(courseIdPart);
+            }
           }
         } catch (e) {
           // Ignore parsing errors
@@ -209,7 +242,6 @@ class ApiCourseProvider with ChangeNotifier {
       if (thumbnailsToDelete.isNotEmpty) {
         await _dbHelper.deleteThumbnailFiles(thumbnailsToDelete);
       }
-
 
       if (coursesToSave.isEmpty) {
         return;
@@ -271,7 +303,6 @@ class ApiCourseProvider with ChangeNotifier {
     return true;
   }
 
-
   Future<void> _downloadAndSaveThumbnails(List<ApiCourse> courses) async {
     if (courses.isEmpty) {
       return;
@@ -311,8 +342,6 @@ class ApiCourseProvider with ChangeNotifier {
 
             // Check if a file with the same name already exists and is likely the correct one
             if (await localFile.exists()) {
-              // Add a basic size check? Or trust filename uniqueness based on course ID?
-              // For simplicity, we'll trust the filename based on course ID and original extension/format hint.
               course.localThumbnailPath = localPath;
               continue; // Skip download if file exists
             }
@@ -326,11 +355,11 @@ class ApiCourseProvider with ChangeNotifier {
               course.localThumbnailPath = null;
             }
           } on TimeoutException catch (e) {
-             course.localThumbnailPath = null;
+            course.localThumbnailPath = null;
           } on http.ClientException catch (e) {
-             course.localThumbnailPath = null;
+            course.localThumbnailPath = null;
           } catch (e, s) {
-             course.localThumbnailPath = null;
+            course.localThumbnailPath = null;
           }
         } else {
           course.localThumbnailPath = null;
