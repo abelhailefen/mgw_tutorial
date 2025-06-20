@@ -4,8 +4,8 @@ import 'package:mgw_tutorial/screens/library/library_content_view.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  }) ;
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();

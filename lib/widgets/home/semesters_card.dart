@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:mgw_tutorial/models/semester.dart';
 import 'package:mgw_tutorial/screens/enrollment/payment_method_screen.dart';
@@ -90,11 +91,7 @@ class SemestersCard extends StatelessWidget {
                     style: theme.textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
-                  import 'package:cached_network_image/cached_network_image.dart';
-
-...
-
-ClipRRect(
+                  ClipRRect(
   borderRadius: BorderRadius.circular(8.0),
   child: CachedNetworkImage(
     imageUrl: displayImageUrl,
