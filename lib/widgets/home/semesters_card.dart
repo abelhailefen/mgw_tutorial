@@ -90,23 +90,32 @@ class SemestersCard extends StatelessWidget {
                     style: theme.textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8.0),
-                    child: Image.network(
-                      displayImageUrl,
-                      height:180,
-                      width: double.infinity,
-                      fit: BoxFit.fill,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        height: 160,
-                        color: theme.colorScheme.surfaceVariant,
-                        child: Center(
-                            child: Icon(Icons.broken_image,
-                                color: theme.colorScheme.onSurfaceVariant,
-                                size: 50)),
-                      ),
-                    ),
-                  ),
+                  import 'package:cached_network_image/cached_network_image.dart';
+
+...
+
+ClipRRect(
+  borderRadius: BorderRadius.circular(8.0),
+  child: CachedNetworkImage(
+    imageUrl: displayImageUrl,
+    height: 180,
+    width: double.infinity,
+    fit: BoxFit.fill,
+    placeholder: (context, url) => Container(
+      height: 160,
+      child: Center(child: CircularProgressIndicator()),
+    ),
+    errorWidget: (context, url, error) => Container(
+      height: 160,
+      color: theme.colorScheme.surfaceVariant,
+      child: Center(
+        child: Icon(Icons.broken_image,
+            color: theme.colorScheme.onSurfaceVariant,
+            size: 50),
+      ),
+    ),
+  ),
+),
                   const SizedBox(height: 12),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -32,110 +32,119 @@ class SemesterProvider with ChangeNotifier {
 
   Future<void> fetchSemesters({bool forceRefresh = false}) async {
     print('[SemesterProvider] fetchSemesters called. forceRefresh: $forceRefresh');
-    if (!forceRefresh && _semesters.isNotEmpty && !_isLoading) {
-      print('[SemesterProvider] Semesters already loaded and not forcing refresh. Skipping fetch.');
-      return;
-    }
 
     _isLoading = true;
-    print('[SemesterProvider] Loading started');
-    if (forceRefresh || _semesters.isEmpty) {
-      _error = null;
-      print('[SemesterProvider] Error cleared due to forceRefresh or initial load');
-    }
-    if (forceRefresh) {
-      _semesters = [];
-      print('[SemesterProvider] Semesters list cleared for forceRefresh');
-    }
     notifyListeners();
 
     final connectivityResult = await Connectivity().checkConnectivity();
     final isOnline = connectivityResult != ConnectivityResult.none;
     print('[SemesterProvider] Connectivity check: $connectivityResult, isOnline: $isOnline');
 
-    if (!isOnline) {
-      // OFFLINE: Load from local DB
-      print('[SemesterProvider] Offline detected. Loading semesters from local SQLite DB...');
+    if (isOnline) {
+      // ONLINE: Fetch from API, save to DB, then display API data
+      final url = Uri.parse('$_apiBaseUrl/semesters');
+      print("[SemesterProvider] Fetching semesters from: $url");
+
       try {
-        final cachedSemesters = await _semesterDb.getSemesters();
-        print('[SemesterProvider] Loaded ${cachedSemesters.length} semesters from SQLite.');
-        if (cachedSemesters.isNotEmpty) {
-          _semesters = cachedSemesters;
-          _error = null;
+        final response = await http.get(
+          url,
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          },
+        ).timeout(const Duration(seconds: 20));
+
+        print("[SemesterProvider] Semesters API Response Status: ${response.statusCode}");
+
+        if (response.statusCode == 200) {
+          final List<dynamic> extractedData = json.decode(response.body);
+          print("[SemesterProvider] API returned ${extractedData.length} semesters.");
+          if (extractedData is List) {
+            final semestersFromApi = extractedData
+                .map((semesterJson) => Semester.fromJson(semesterJson as Map<String, dynamic>))
+                .toList();
+
+            // Upsert each semester (replace on conflict)
+            print('[SemesterProvider] Upserting semesters to SQLite...');
+            await _semesterDb.insertSemesters(semestersFromApi);
+            print('[SemesterProvider] Upsert complete.');
+
+            // Always display the latest API data
+            _semesters = semestersFromApi;
+            print('[SemesterProvider] Displaying API data, count: ${_semesters.length}');
+            _error = null;
+          } else {
+            _error = "Failed to load semesters: Unexpected API response format.";
+            _semesters = [];
+            print('[SemesterProvider] API response was not a List.');
+          }
         } else {
-          _error = "No cached data available. Please connect to the internet to load semesters.";
-          _semesters = [];
-          print('[SemesterProvider] No cached semesters found.');
+          print('[SemesterProvider] API response status not 200. Handling error.');
+          _handleHttpErrorResponse(response, _failedToLoadSemestersMessage);
+          // Try to load from DB if available (fallback)
+          await _loadSemestersFromDbIfAny();
         }
-      } catch (e) {
-        _error = "Failed to load local data: $e";
+      } on TimeoutException catch (e) {
+        print("[SemesterProvider] TimeoutException fetching semesters: $e");
+        _error = _timeoutErrorMessage;
         _semesters = [];
-        print('[SemesterProvider] Error loading semesters from SQLite: $e');
+        await _loadSemestersFromDbIfAny();
+      } on SocketException catch (e) {
+        print("[SemesterProvider] SocketException fetching semesters: $e");
+        _error = _networkErrorMessage;
+        _semesters = [];
+        await _loadSemestersFromDbIfAny();
+      } on http.ClientException catch (e) {
+        print("[SemesterProvider] ClientException fetching semesters: $e");
+        _error = _networkErrorMessage;
+        _semesters = [];
+        await _loadSemestersFromDbIfAny();
+      } catch (e) {
+        print("[SemesterProvider] Generic Exception during fetchSemesters: $e");
+        _error = _unexpectedErrorMessage;
+        _semesters = [];
+        await _loadSemestersFromDbIfAny();
       } finally {
         _isLoading = false;
-        print('[SemesterProvider] Loading finished (offline)');
         notifyListeners();
       }
       return;
     }
 
-    // ONLINE: Fetch from API as before
-    final url = Uri.parse('$_apiBaseUrl/semesters');
-    print("[SemesterProvider] Fetching semesters from: $url (Force Refresh: $forceRefresh)");
+    // OFFLINE: Load from local DB only
+    print('[SemesterProvider] Offline detected. Loading semesters from local SQLite DB...');
+    await _loadSemestersFromDb();
+  }
 
+  Future<void> _loadSemestersFromDb() async {
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-      ).timeout(const Duration(seconds: 20));
-
-      print("[SemesterProvider] Semesters API Response Status: ${response.statusCode}");
-
-      if (response.statusCode == 200) {
-        final List<dynamic> extractedData = json.decode(response.body);
-        print("[SemesterProvider] API returned ${extractedData.length} semesters.");
-        if (extractedData is List) {
-          _semesters = extractedData
-              .map((semesterJson) => Semester.fromJson(semesterJson as Map<String, dynamic>))
-              .toList();
-          _error = null;
-          // --- Cache to DB ---
-          print('[SemesterProvider] Caching semesters to SQLite...');
-          await _semesterDb.clearSemesters();
-          await _semesterDb.insertSemesters(_semesters);
-          print('[SemesterProvider] Semesters successfully cached to SQLite.');
-        } else {
-          _error = "Failed to load semesters: Unexpected API response format.";
-          _semesters = [];
-          print('[SemesterProvider] API response was not a List.');
-        }
+      final cachedSemesters = await _semesterDb.getSemesters();
+      print('[SemesterProvider] Loaded ${cachedSemesters.length} semesters from SQLite.');
+      if (cachedSemesters.isNotEmpty) {
+        _semesters = cachedSemesters;
+        _error = null;
       } else {
-        print('[SemesterProvider] API response status not 200. Handling error.');
-        _handleHttpErrorResponse(response, _failedToLoadSemestersMessage);
+        _error = "No cached data available. Please connect to the internet to load semesters.";
+        _semesters = [];
+        print('[SemesterProvider] No cached semesters found.');
       }
-    } on TimeoutException catch (e) {
-      print("[SemesterProvider] TimeoutException fetching semesters: $e");
-      _error = _timeoutErrorMessage;
-      _semesters = [];
-    } on SocketException catch (e) {
-      print("[SemesterProvider] SocketException fetching semesters: $e");
-      _error = _networkErrorMessage;
-      _semesters = [];
-    } on http.ClientException catch (e) {
-      print("[SemesterProvider] ClientException fetching semesters: $e");
-      _error = _networkErrorMessage;
-      _semesters = [];
     } catch (e) {
-      print("[SemesterProvider] Generic Exception during fetchSemesters: $e");
-      _error = _unexpectedErrorMessage;
+      _error = "Failed to load local data: $e";
       _semesters = [];
-    } finally {
-      _isLoading = false;
-      print('[SemesterProvider] Loading finished (online/API)');
-      notifyListeners();
+      print('[SemesterProvider] Error loading semesters from SQLite: $e');
+    }
+  }
+
+  Future<void> _loadSemestersFromDbIfAny() async {
+    try {
+      final cachedSemesters = await _semesterDb.getSemesters();
+      if (cachedSemesters.isNotEmpty) {
+        print('[SemesterProvider] Fallback: Loaded ${cachedSemesters.length} semesters from SQLite after API error.');
+        _semesters = cachedSemesters;
+        // Don't clear _error so user knows API failed, but they see cached data
+      }
+    } catch (e) {
+      print('[SemesterProvider] Fallback: Error loading semesters from SQLite: $e');
     }
   }
 
